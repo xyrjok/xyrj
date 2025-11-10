@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - Faka Admin</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding-top: 56px; }
+        .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; z-index: 100; padding: 48px 0 0; box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1); }
+        .main { margin-left: 240px; padding: 20px; }
+        @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">CF Faka Admin</a>
+        <button class="btn btn-outline-light btn-sm px-4 me-3" onclick="logout()">退出</button>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link" href="/admin/dashboard.html">仪表盘</a></li>
+                        <li class="nav-item"><a class="nav-link active fw-bold" href="/admin/products.html">商品管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/payments.html">支付设置</a></li>
+                        <!-- 其他菜单省略... -->
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h2>商品管理</h2>
+                    <button class="btn btn-primary" onclick="openModal()">+ 新建商品</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead><tr><th>ID</th><th>名称</th><th>规格数</th><th>排序</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody id="p-list"></tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div class="modal fade" id="editModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">编辑商品</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="p-form">
+                        <input type="hidden" id="p-id">
+                        <div class="row mb-3">
+                            <div class="col-md-8"><label>商品名称</label><input type="text" class="form-control" id="p-name" required></div>
+                            <div class="col-md-4"><label>排序权重</label><input type="number" class="form-control" id="p-sort" value="0"></div>
+                        </div>
+                        <div class="mb-3"><label>商品描述</label><textarea class="form-control" id="p-desc" rows="3"></textarea></div>
+                        <div class="mb-3 form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="p-active" checked>
+                            <label class="form-check-label" for="p-active">上架销售</label>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="m-0">规格列表 (Variants)</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addVariantRow()">+ 添加规格</button>
+                        </div>
+                        <div id="v-list"></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveProduct()">保存商品</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const TOKEN = localStorage.getItem('ADMIN_TOKEN');
+        if(!TOKEN) window.location.href = '/admin/index.html';
+        function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
+        async function api(path, options = {}) {
+            options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+            return (await fetch('/api/admin/' + path, options)).json();
+        }
+
+        let allProducts = [];
+        const modal = new bootstrap.Modal(document.getElementById('editModal'));
+
+        async function loadProducts() {
+            allProducts = await api('products/list');
+            document.getElementById('p-list').innerHTML = allProducts.map(p => `
+                <tr>
+                    <td>${p.id}</td><td><strong>${p.name}</strong></td>
+                    <td><span class="badge bg-info text-dark">${p.variants.length}</span></td>
+                    <td>${p.sort}</td>
+                    <td><span class="badge bg-${p.active?'success':'secondary'}">${p.active?'已上架':'已下架'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="openModal(${p.id})">编辑</button>
+                        <button class="btn btn-sm btn-outline-success" onclick="location.href='/admin/cards.html?pid=${p.id}'">卡密</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openModal(id = null) {
+            const p = allProducts.find(x => x.id === id) || { name:'', description:'', sort:0, active:1, variants:[{}] };
+            document.getElementById('p-id').value = p.id || '';
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-desc').value = p.description || '';
+            document.getElementById('p-sort').value = p.sort;
+            document.getElementById('p-active').checked = !!p.active;
+            
+            document.getElementById('v-list').innerHTML = '';
+            (p.variants.length ? p.variants : [{}]).forEach(v => addVariantRow(v));
+            modal.show();
+        }
+
+        function addVariantRow(v = {}) {
+            const div = document.createElement('div');
+            div.className = 'card mb-2 bg-light';
+            div.innerHTML = `
+                <div class="card-body py-2 px-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-3"><input type="text" class="form-control form-control-sm v-name" placeholder="规格名称 (如:月卡)" value="${v.name||''}" required></div>
+                        <div class="col-md-2"><div class="input-group input-group-sm"><span class="input-group-text">￥</span><input type="number" class="form-control v-price" placeholder="售价" value="${v.price||''}" required></div></div>
+                        <div class="col-md-2"><input type="number" class="form-control form-control-sm v-stock" placeholder="库存" value="${v.stock||0}" disabled title="请在卡密管理中添加"></div>
+                        <div class="col-md-4"><input type="text" class="form-control form-control-sm v-img" placeholder="图片URL (可选)" value="${v.image_url||''}"></div>
+                        <div class="col-md-1 text-end"><button type="button" class="btn btn-close" onclick="this.closest('.card').remove()"></button></div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('v-list').appendChild(div);
+        }
+
+        async function saveProduct() {
+            const data = {
+                id: document.getElementById('p-id').value || null,
+                name: document.getElementById('p-name').value,
+                description: document.getElementById('p-desc').value,
+                sort: parseInt(document.getElementById('p-sort').value) || 0,
+                active: document.getElementById('p-active').checked ? 1 : 0,
+                variants: []
+            };
+            
+            document.querySelectorAll('#v-list .card').forEach(row => {
+                data.variants.push({
+                    name: row.querySelector('.v-name').value,
+                    price: parseFloat(row.querySelector('.v-price').value) || 0,
+                    stock: parseInt(row.querySelector('.v-stock').value) || 0,
+                    image_url: row.querySelector('.v-img').value
+                });
+            });
+
+            if (!data.name || data.variants.length === 0) return alert('请填写商品名称并至少添加一个规格');
+            if (data.variants.some(v => !v.name || v.price < 0)) return alert('请完善规格名称和售价');
+
+            const res = await api('product/save', { method: 'POST', body: JSON.stringify(data) });
+            if (res.success) {
+                modal.hide();
+                loadProducts();
+            } else {
+                alert('保存失败: ' + (res.error || '未知错误'));
+            }
+        }
+
+        loadProducts();
+    </script>
+</body>
+</html>
