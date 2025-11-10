@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker Faka Backend (MPA 最终修复版 - 强制根路由接管)
+ * Cloudflare Worker Faka Backend (MPA 最终完整版 - 含支付宝验签)
  */
 
 // === 工具函数 ===
@@ -8,7 +8,7 @@ const errRes = (msg, status = 400) => jsonRes({ error: msg }, status);
 const time = () => Math.floor(Date.now() / 1000);
 const uuid = () => crypto.randomUUID().replace(/-/g, '');
 
-// 支付宝当面付签名核心逻辑 (Web Crypto API)
+// === 支付宝签名核心逻辑 (Web Crypto API) ===
 async function signAlipay(params, privateKeyPem) {
     const sortedParams = Object.keys(params).filter(k => k !== 'sign' && params[k]).sort().map(k => `${k}=${typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]}`).join('&');
     let pemContents = privateKeyPem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s+|\n/g, '');
@@ -16,6 +16,32 @@ async function signAlipay(params, privateKeyPem) {
     const key = await crypto.subtle.importKey("pkcs8", binaryDer.buffer, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
     const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(sortedParams));
     return btoa(String.fromCharCode(...new Uint8Array(signature)));
+}
+
+// === 支付宝验签核心逻辑 (新增) ===
+async function verifyAlipaySignature(params, alipayPublicKeyPem) {
+    const sign = params.get('sign');
+    if (!sign) return false;
+    
+    // 1. 构建待签名字符串 (剔除 sign 和 sign_type)
+    const sortedKeys = Array.from(params.keys()).filter(k => k !== 'sign' && k !== 'sign_type').sort();
+    const preSignStr = sortedKeys.map(k => {
+        let value = params.get(k);
+        // 对特定字段进行解码，防止验签失败 (支付宝返回有时会带编码)
+        if (k === 'fund_bill_list' || k === 'voucher_detail_list') {
+             value = value.replace(/&quot;/g, '"');
+        }
+        return `${k}=${decodeURIComponent(value)}`; 
+    }).join('&');
+
+    // 2. 导入支付宝公钥
+    let pemContents = alipayPublicKeyPem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s+|\n/g, '');
+    const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+    const key = await crypto.subtle.importKey("spki", binaryDer.buffer, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+
+    // 3. 验证签名
+    const signature = Uint8Array.from(atob(sign), c => c.charCodeAt(0));
+    return await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, signature, new TextEncoder().encode(preSignStr));
 }
 
 export default {
@@ -28,39 +54,27 @@ export default {
             return handleApi(request, env, url);
         }
 
-        // === 2. 强制接管根路由 (MPA 核心修复) ===
-        // 只要访问的是根目录 '/'，绝对不让它走默认行为，强制内部获取默认主题首页
+        // === 2. 强制接管根路由 (MPA 核心) ===
         if (path === '/') {
-            const theme = 'default'; // 你可以在这里从 D1 或 KV 读取配置来实现动态切换
-            // 构造内部请求 URL，指向实际存储的物理路径
-            const internalUrl = new URL(`${url.origin}/themes/${theme}/index.html`);
-            // 发起内部子请求，获取内容并直接返回，浏览器 URL 不会变
-            return env.ASSETS.fetch(new Request(internalUrl, request));
+            return env.ASSETS.fetch(new Request(new URL(`${url.origin}/themes/default/index.html`), request));
         }
 
-        // === 3. 其他 HTML 页面的内部重写 (可选，但推荐) ===
-        // 例如访问 /product.html 时，内部实际去取 /themes/default/product.html
+        // === 3. HTML 页面内部重写 ===
         if (path.endsWith('.html') && !path.startsWith('/admin/') && !path.startsWith('/themes/')) {
-             const theme = 'default';
-             const internalUrl = new URL(`${url.origin}/themes/${theme}${path}`);
-             return env.ASSETS.fetch(new Request(internalUrl, request));
+             return env.ASSETS.fetch(new Request(new URL(`${url.origin}/themes/default${path}`), request));
         }
 
-        // === 4. 默认静态资源回退 ===
-        // 对于 /admin/, /assets/, /themes/ 等路径，直接返回对应文件
+        // === 4. 默认回退 ===
         return env.ASSETS.fetch(request);
     }
 };
 
-// === 完整的 API 处理逻辑 (保持不变) ===
 async function handleApi(request, env, url) {
     const method = request.method;
     const path = url.pathname;
 
     try {
-        // ===========================
-        // --- 管理员 API (Admin) ---
-        // ===========================
+        // --- 管理员 API ---
         if (path.startsWith('/api/admin/')) {
             const authHeader = request.headers.get('Authorization');
             if (path !== '/api/admin/login' && (!authHeader || !authHeader.endsWith(env.ADMIN_TOKEN))) {
@@ -69,10 +83,8 @@ async function handleApi(request, env, url) {
 
             if (path === '/api/admin/login' && method === 'POST') {
                 const { user, pass } = await request.json();
-                if (user === env.ADMIN_USER && pass === env.ADMIN_PASS) {
-                    return jsonRes({ token: env.ADMIN_TOKEN });
-                }
-                return errRes('用户名或密码错误', 401);
+                if (user === env.ADMIN_USER && pass === env.ADMIN_PASS) return jsonRes({ token: env.ADMIN_TOKEN });
+                return errRes('登录失败', 401);
             }
 
             if (path === '/api/admin/dashboard') {
@@ -92,7 +104,6 @@ async function handleApi(request, env, url) {
                 return jsonRes(products.results);
             }
 
-            // [POST] 商品保存 (更新适配所有新字段)
             if (path === '/api/admin/product/save' && method === 'POST') {
                 const data = await request.json();
                 let productId = data.id;
@@ -104,32 +115,10 @@ async function handleApi(request, env, url) {
                         .bind(data.name, data.description, data.sort, data.active, time()).run();
                      productId = res.meta.last_row_id;
                 }
-                
-                // 处理变体 (全量替换模式，简化实现)
                 if (data.variants) {
-                     // 1. 删除旧变体 (生产环境可能需要更复杂的 diff 逻辑以保留库存数据，此处为简化直接删除重建)
-                     // 注意：如果直接删除，已存在的关联卡密可能会失去关联。
-                     // 更稳妥的做法是：遍历新变体，有 ID 的 update，没 ID 的 insert，不在列表里的 delete。
-                     // 这里为了演示核心字段，先采用简单模式。实际使用建议改进此处。
                      if(data.id) await env.MY_XYRJ.prepare("DELETE FROM variants WHERE product_id=?").bind(productId).run();
-                     
-                     const stmt = env.MY_XYRJ.prepare(`
-                        INSERT INTO variants 
-                        (product_id, name, price, stock, color, image_url, wholesale_config, custom_markup, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                     `);
-                     
-                     const batch = data.variants.map(v => stmt.bind(
-                         productId, 
-                         v.name, 
-                         v.price, 
-                         v.stock || 0, // 库存通常由卡密数量决定，这里仅作为初始值
-                         v.color || null,
-                         v.image_url || null,
-                         v.wholesale_config ? JSON.stringify(v.wholesale_config) : null,
-                         v.custom_markup || 0,
-                         time()
-                    ));
+                     const stmt = env.MY_XYRJ.prepare(`INSERT INTO variants (product_id, name, price, stock, color, image_url, wholesale_config, custom_markup, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+                     const batch = data.variants.map(v => stmt.bind(productId, v.name, v.price, v.stock || 0, v.color || null, v.image_url || null, v.wholesale_config ? JSON.stringify(v.wholesale_config) : null, v.custom_markup || 0, time()));
                      await env.MY_XYRJ.batch(batch);
                 }
                 return jsonRes({ success: true });
@@ -148,17 +137,21 @@ async function handleApi(request, env, url) {
 
             if (path === '/api/admin/gateways/save' && method === 'POST') {
                  const data = await request.json();
+                 // 确保 config 中包含 app_id, private_key, alipay_public_key
                  await env.MY_XYRJ.prepare("DELETE FROM pay_gateways WHERE type='alipay_f2f'").run();
                  await env.MY_XYRJ.prepare("INSERT INTO pay_gateways (name, type, config, active) VALUES (?, ?, ?, ?)")
                     .bind('支付宝当面付', 'alipay_f2f', JSON.stringify(data.config), 1).run();
                  return jsonRes({success: true});
             }
+
+            // 获取当前支付配置 (用于回显)
+            if (path === '/api/admin/gateways/get') {
+                const gateway = await env.MY_XYRJ.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f'").first();
+                return jsonRes(gateway ? JSON.parse(gateway.config) : {});
+            }
         }
 
-        // ===========================
-        // --- 公开 API (Shop) ---
-        // ===========================
-
+        // --- 公开 API ---
         if (path === '/api/shop/config') {
              const res = await env.MY_XYRJ.prepare("SELECT * FROM site_config").all();
              const config = {}; res.results.forEach(r => config[r.key] = r.value);
@@ -167,10 +160,7 @@ async function handleApi(request, env, url) {
 
         if (path === '/api/shop/products') {
             const res = await env.MY_XYRJ.prepare("SELECT * FROM products WHERE active=1 ORDER BY sort DESC").all();
-            for(let p of res.results) {
-                // 前台获取完整的变体信息用于展示
-                p.variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id=?").bind(p.id).all()).results;
-            }
+            for(let p of res.results) p.variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id=?").bind(p.id).all()).results;
             return jsonRes(res.results);
         }
 
@@ -186,16 +176,11 @@ async function handleApi(request, env, url) {
             const { variant_id, quantity, contact, payment_method } = await request.json();
             const variant = await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
             if (!variant || variant.stock < quantity) return errRes('库存不足');
-
             const product = await env.MY_XYRJ.prepare("SELECT name FROM products WHERE id=?").bind(variant.product_id).first();
             const order_id = uuid();
-            
-            // 计算总价 (此处可加入批发价和自选加价逻辑，暂时使用基础价)
             const total_amount = (variant.price * quantity).toFixed(2);
-
             await env.MY_XYRJ.prepare("INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                 .bind(order_id, variant_id, product.name, variant.name, variant.price, quantity, total_amount, contact, payment_method, time()).run();
-
             return jsonRes({ order_id, total_amount, payment_method });
         }
 
@@ -216,11 +201,7 @@ async function handleApi(request, env, url) {
                      format: 'JSON', charset: 'utf-8', sign_type: 'RSA2', version: '1.0',
                      timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
                      notify_url: `${url.origin}/api/notify/alipay`,
-                     biz_content: JSON.stringify({
-                         out_trade_no: order.id,
-                         total_amount: order.total_amount,
-                         subject: `${order.product_name}`
-                     })
+                     biz_content: JSON.stringify({ out_trade_no: order.id, total_amount: order.total_amount, subject: `${order.product_name}` })
                  };
                  params.sign = await signAlipay(params, config.private_key);
                  const query = Object.keys(params).map(k => `${k}=${encodeURIComponent(params[k])}`).join('&');
@@ -228,12 +209,7 @@ async function handleApi(request, env, url) {
                  const aliData = await aliRes.json();
 
                  if (aliData.alipay_trade_precreate_response?.code === '10000') {
-                     return jsonRes({
-                         type: 'qrcode',
-                         qr_code: aliData.alipay_trade_precreate_response.qr_code,
-                         order_id: order.id,
-                         amount: order.total_amount
-                     });
+                     return jsonRes({ type: 'qrcode', qr_code: aliData.alipay_trade_precreate_response.qr_code, order_id: order.id, amount: order.total_amount });
                  } else {
                      return errRes('支付宝错误: ' + (aliData.alipay_trade_precreate_response?.sub_msg || JSON.stringify(aliData)));
                  }
@@ -244,41 +220,50 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/order/status') {
             const order_id = url.searchParams.get('order_id');
             const order = await env.MY_XYRJ.prepare("SELECT status, cards_sent FROM orders WHERE id=?").bind(order_id).first();
-            if(order && order.status >= 1) {
-                return jsonRes({ status: order.status, cards: JSON.parse(order.cards_sent || '[]') });
-            }
+            if(order && order.status >= 1) return jsonRes({ status: order.status, cards: JSON.parse(order.cards_sent || '[]') });
             return jsonRes({ status: 0 });
         }
 
-        // ===========================
-        // --- 支付回调 (Notify) ---
-        // ===========================
+        // === 支付回调 (Notify) - 含验签 ===
         if (path === '/api/notify/alipay' && method === 'POST') {
-            const formData = await request.formData();
-            // 注意：生产环境请务必在此处增加验签！
+            const formData = await request.formData(); // 使用 formData 方便处理
+
+            // 1. 获取支付配置用于验签
+            const gateway = await env.MY_XYRJ.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
+            if (!gateway) return new Response('fail', {status: 500});
+            const config = JSON.parse(gateway.config);
+
+            // 2. 验证签名 (如果配置了公钥)
+            if (config.alipay_public_key) {
+                const isValid = await verifyAlipaySignature(formData, config.alipay_public_key);
+                if (!isValid) {
+                    console.error('支付宝回调验签失败');
+                    return new Response('fail (sign error)'); // 返回 fail 给支付宝，让它重试（或不返回 success）
+                }
+            }
+
+            // 3. 处理业务逻辑
             if (formData.get('trade_status') === 'TRADE_SUCCESS') {
                 const out_trade_no = formData.get('out_trade_no');
                 const trade_no = formData.get('trade_no');
-                
                 const order = await env.MY_XYRJ.prepare("SELECT * FROM orders WHERE id=? AND status=0").bind(out_trade_no).first();
+                
                 if (order) {
-                    await env.MY_XYRJ.prepare("UPDATE orders SET status=1, paid_at=?, trade_no=? WHERE id=?")
-                        .bind(time(), trade_no, out_trade_no).run();
-                    
-                    const cards = await env.MY_XYRJ.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?")
-                        .bind(order.variant_id, order.quantity).all();
+                    // 检查金额是否一致 (防止篡改)
+                    if (parseFloat(formData.get('total_amount')) < order.total_amount) {
+                         console.error('回调金额异常', out_trade_no);
+                         return new Response('fail (amount mismatch)');
+                    }
+
+                    await env.MY_XYRJ.prepare("UPDATE orders SET status=1, paid_at=?, trade_no=? WHERE id=?").bind(time(), trade_no, out_trade_no).run();
+                    const cards = await env.MY_XYRJ.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?").bind(order.variant_id, order.quantity).all();
                     
                     if (cards.results.length >= order.quantity) {
                         const cardIds = cards.results.map(c => c.id);
                         const cardContents = cards.results.map(c => c.content);
-                        await env.MY_XYRJ.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`)
-                            .bind(out_trade_no).run();
-                        await env.MY_XYRJ.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?")
-                            .bind(JSON.stringify(cardContents), out_trade_no).run();
-                        
-                        // 更新库存 和 销量(sales_count)
-                        await env.MY_XYRJ.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?")
-                            .bind(order.quantity, order.quantity, order.variant_id).run();
+                        await env.MY_XYRJ.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no).run();
+                        await env.MY_XYRJ.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(cardContents), out_trade_no).run();
+                        await env.MY_XYRJ.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.quantity, order.variant_id).run();
                     }
                 }
             }
