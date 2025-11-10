@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker Faka Backend (MPA 完全版 - 修复规格字段)
+ * Cloudflare Worker Faka Backend (MPA 完全版 - 修复规格字段 & 路由重写优化)
  */
 
 // === 工具函数 ===
@@ -23,26 +23,38 @@ export default {
         const url = new URL(request.url);
         const path = url.pathname;
 
-        // === 1. API 路由处理 ===
+        // === 1. API 路由处理 (保持不变) ===
         if (path.startsWith('/api/')) {
             return handleApi(request, env, url);
         }
 
-        // === 2. 静态资源路由重写 (MPA 核心支持) ===
+        // === 2. 静态资源路由重写 (MPA 核心优化版) ===
+        // 目的：访问 / 时显示 /themes/default/index.html 的内容，但 URL 不变
         let theme = 'default'; 
+
+        // 情况 A: 访问根目录 '/' 或 '/index.html'
         if (path === '/' || path === '/index.html') {
-            return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}/index.html`, request));
-        }
-        if (path.endsWith('.html') && !path.startsWith('/admin/') && !path.startsWith('/themes/')) {
-             return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}${path}`, request));
+            // 构建一个新的内部请求 URL指向实际文件位置
+            const rewriteUrl = new URL(url);
+            rewriteUrl.pathname = `/themes/${theme}/index.html`;
+            // 使用 env.ASSETS.fetch 进行“内部转发”，这不会导致浏览器 URL 变化
+            return env.ASSETS.fetch(new Request(rewriteUrl, request));
         }
 
-        // === 3. 默认静态资源回退 ===
+        // 情况 B: 访问其他前台 HTML 页面 (如 /product.html -> /themes/default/product.html)
+        // 排除 /admin/ 开头的路径，排除已经是 /themes/ 开头的路径
+        if (path.endsWith('.html') && !path.startsWith('/admin/') && !path.startsWith('/themes/')) {
+             const rewriteUrl = new URL(url);
+             rewriteUrl.pathname = `/themes/${theme}${path}`;
+             return env.ASSETS.fetch(new Request(rewriteUrl, request));
+        }
+
+        // === 3. 默认静态资源回退 (如 admin 文件、css、js 等) ===
         return env.ASSETS.fetch(request);
     }
 };
 
-// === 完整的 API 处理逻辑 ===
+// === 完整的 API 处理逻辑 (保持不变) ===
 async function handleApi(request, env, url) {
     const method = request.method;
     const path = url.pathname;
@@ -181,10 +193,6 @@ async function handleApi(request, env, url) {
             const order_id = uuid();
             
             // 计算总价 (此处可加入批发价和自选加价逻辑，暂时使用基础价)
-            // let finalPrice = variant.price;
-            // if (variant.custom_markup > 0) finalPrice += variant.custom_markup;
-            // TODO: 解析 wholesale_config 并应用批发价
-            
             const total_amount = (variant.price * quantity).toFixed(2);
 
             await env.MY_XYRJ.prepare("INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
