@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支付设置 - Faka Admin</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding-top: 56px; }
+        .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; z-index: 100; padding: 48px 0 0; box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1); }
+        .main { margin-left: 240px; padding: 20px; }
+        @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">CF Faka Admin</a>
+        <button class="btn btn-outline-light btn-sm px-4 me-3" onclick="logout()">退出</button>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link" href="/admin/dashboard.html">仪表盘</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/products.html">商品管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/orders.html">订单管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/cards.html">卡密管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/articles.html">文章管理</a></li>
+                        <li class="nav-item"><a class="nav-link active fw-bold" href="/admin/payments.html">支付设置</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/settings.html">系统设置</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main">
+                <h2 class="border-bottom pb-3 mb-4">支付宝当面付设置</h2>
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <strong>提示：</strong> 请前往 <a href="https://open.alipay.com/" target="_blank">支付宝开放平台</a> 创建应用并开通“当面付”能力。
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">AppID (应用ID)</label>
+                                    <input type="text" class="form-control" id="ali-appid" placeholder="例如: 202100xxxx">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">应用私钥 (Merchant Private Key)</label>
+                                    <textarea class="form-control font-monospace" id="ali-priv-key" rows="5" placeholder="MIIEv... (PKCS8 格式，不包含头尾和换行)"></textarea>
+                                    <div class="form-text text-danger">
+                                        必填。用于请求签名。请填入 <strong>PKCS8</strong> 格式的私钥，建议去除 `-----BEGIN...` 头尾和所有换行符，只保留一行长字符串。
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">支付宝公钥 (Alipay Public Key)</label>
+                                    <textarea class="form-control font-monospace" id="ali-pub-key" rows="4" placeholder="MIIBI... (不包含头尾和换行)"></textarea>
+                                    <div class="form-text text-primary">
+                                        必填。用于验证回调通知的真实性，保障资金安全。请在支付宝后台查看并复制“支付宝公钥”（不是应用公钥）。
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary" onclick="saveAlipay()">
+                                    <i class="bi bi-save"></i> 保存配置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const TOKEN = localStorage.getItem('ADMIN_TOKEN');
+        if(!TOKEN) window.location.href = '/admin/index.html';
+        function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
+        async function api(path, options = {}) {
+            options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+            const res = await fetch('/api/admin/' + path, options);
+            if(res.status === 401) logout();
+            return res.json();
+        }
+
+        async function init() {
+            const config = await api('gateways/get');
+            if (config.app_id) {
+                document.getElementById('ali-appid').value = config.app_id || '';
+                document.getElementById('ali-priv-key').value = config.private_key || '';
+                document.getElementById('ali-pub-key').value = config.alipay_public_key || '';
+            }
+        }
+
+        async function saveAlipay() {
+            const config = {
+                app_id: document.getElementById('ali-appid').value.trim(),
+                private_key: document.getElementById('ali-priv-key').value.trim(),
+                alipay_public_key: document.getElementById('ali-pub-key').value.trim()
+            };
+            if (!config.app_id || !config.private_key || !config.alipay_public_key) return alert('请填写所有必填项');
+            
+            const res = await api('gateways/save', { method: 'POST', body: JSON.stringify({ config }) });
+            if (res.success) {
+                alert('保存成功！请确保在支付宝后台配置了正确的回调地址。');
+            } else {
+                alert('保存失败: ' + (res.error || '未知错误'));
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
