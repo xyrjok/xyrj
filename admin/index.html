@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员登录</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+    <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
+        <h3 class="mb-4 text-center">管理后台</h3>
+        <div class="mb-3"><input type="text" id="user" class="form-control" placeholder="用户名"></div>
+        <div class="mb-3"><input type="password" id="pass" class="form-control" placeholder="密码"></div>
+        <button onclick="login()" class="btn btn-primary w-100">登录</button>
+    </div>
+    <script>
+        // 如果已有 token，直接跳转仪表盘
+        if(localStorage.getItem('ADMIN_TOKEN')) window.location.href = '/admin/dashboard.html';
+
+        async function login() {
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
+            try {
+                const res = await fetch('/api/admin/login', { method:'POST', body: JSON.stringify({user, pass})});
+                const data = await res.json();
+                if(data.token) {
+                    localStorage.setItem('ADMIN_TOKEN', data.token);
+                    window.location.href = '/admin/dashboard.html';
+                } else {
+                    alert(data.error || '登录失败');
+                }
+            } catch(e) { alert('网络错误'); }
+        }
+    </script>
+</body>
+</html>
