@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商店首页</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .product-item { transition: all 0.3s; border: 1px solid #eee; }
+        .product-item:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <header class="text-center mb-5">
+            <h1 id="site-name">Loading...</h1>
+            <div id="announce" class="alert alert-primary mt-3 d-none"></div>
+        </header>
+
+        <div class="row g-4" id="product-list">
+            <!-- 商品列表由 JS 加载 -->
+            <div class="text-center text-muted py-5">正在加载商品...</div>
+        </div>
+    </div>
+
+    <script>
+        async function init() {
+            // 1. 加载配置
+            const configRes = await fetch('/api/shop/config');
+            const config = await configRes.json();
+            document.title = config.site_name || '商店首页';
+            document.getElementById('site-name').innerText = config.site_name || 'Cloudflare Store';
+            if(config.announce) {
+                const annEl = document.getElementById('announce');
+                annEl.innerHTML = config.announce;
+                annEl.classList.remove('d-none');
+            }
+
+            // 2. 加载商品
+            const prodRes = await fetch('/api/shop/products');
+            const products = await prodRes.json();
+            const listEl = document.getElementById('product-list');
+            
+            if(products.length === 0) {
+                listEl.innerHTML = '<div class="col-12 text-center">暂无上架商品</div>';
+                return;
+            }
+
+            listEl.innerHTML = products.map(p => `
+                <div class="col-md-4 col-sm-6">
+                    <div class="card h-100 product-item">
+                        <div class="card-body">
+                            <h5 class="card-title text-truncate">${p.name}</h5>
+                            <p class="card-text text-muted small" style="height: 40px; overflow:hidden;">${p.description || '暂无描述'}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-danger fw-bold">￥${p.variants[0]?.price || '-'} 起</span>
+                                <a href="/product.html?id=${p.id}" class="btn btn-sm btn-primary">购买 &rarr;</a>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0">
+                             <small class="text-muted">库存: ${p.variants.reduce((sum, v) => sum + v.stock, 0)}</small>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        init();
+    </script>
+</body>
+</html>
