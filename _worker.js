@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker Faka Backend (MPA 完全版 - 修复规格字段 & 路由重写优化)
+ * Cloudflare Worker Faka Backend (MPA 最终修复版 - 强制根路由接管)
  */
 
 // === 工具函数 ===
@@ -23,33 +23,31 @@ export default {
         const url = new URL(request.url);
         const path = url.pathname;
 
-        // === 1. API 路由处理 (保持不变) ===
+        // === 1. API 路由处理 (最高优先级) ===
         if (path.startsWith('/api/')) {
             return handleApi(request, env, url);
         }
 
-        // === 2. 静态资源路由重写 (MPA 核心优化版) ===
-        // 目的：访问 / 时显示 /themes/default/index.html 的内容，但 URL 不变
-        let theme = 'default'; 
-
-        // 情况 A: 访问根目录 '/' 或 '/index.html'
-        if (path === '/' || path === '/index.html') {
-            // 构建一个新的内部请求 URL指向实际文件位置
-            const rewriteUrl = new URL(url);
-            rewriteUrl.pathname = `/themes/${theme}/index.html`;
-            // 使用 env.ASSETS.fetch 进行“内部转发”，这不会导致浏览器 URL 变化
-            return env.ASSETS.fetch(new Request(rewriteUrl, request));
+        // === 2. 强制接管根路由 (MPA 核心修复) ===
+        // 只要访问的是根目录 '/'，绝对不让它走默认行为，强制内部获取默认主题首页
+        if (path === '/') {
+            const theme = 'default'; // 你可以在这里从 D1 或 KV 读取配置来实现动态切换
+            // 构造内部请求 URL，指向实际存储的物理路径
+            const internalUrl = new URL(`${url.origin}/themes/${theme}/index.html`);
+            // 发起内部子请求，获取内容并直接返回，浏览器 URL 不会变
+            return env.ASSETS.fetch(new Request(internalUrl, request));
         }
 
-        // 情况 B: 访问其他前台 HTML 页面 (如 /product.html -> /themes/default/product.html)
-        // 排除 /admin/ 开头的路径，排除已经是 /themes/ 开头的路径
+        // === 3. 其他 HTML 页面的内部重写 (可选，但推荐) ===
+        // 例如访问 /product.html 时，内部实际去取 /themes/default/product.html
         if (path.endsWith('.html') && !path.startsWith('/admin/') && !path.startsWith('/themes/')) {
-             const rewriteUrl = new URL(url);
-             rewriteUrl.pathname = `/themes/${theme}${path}`;
-             return env.ASSETS.fetch(new Request(rewriteUrl, request));
+             const theme = 'default';
+             const internalUrl = new URL(`${url.origin}/themes/${theme}${path}`);
+             return env.ASSETS.fetch(new Request(internalUrl, request));
         }
 
-        // === 3. 默认静态资源回退 (如 admin 文件、css、js 等) ===
+        // === 4. 默认静态资源回退 ===
+        // 对于 /admin/, /assets/, /themes/ 等路径，直接返回对应文件
         return env.ASSETS.fetch(request);
     }
 };
