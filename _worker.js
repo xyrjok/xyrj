@@ -272,6 +272,30 @@ async function handleApi(request, env, url) {
                 return jsonRes(gateway ? JSON.parse(gateway.config) : {});
             }
 
+            // --- 商品分类 API (新增) ---
+            if (path === '/api/admin/categories/list') {
+                const { results } = await env.MY_XYRJ.prepare("SELECT * FROM categories ORDER BY sort DESC, id ASC").all();
+                return jsonRes(results);
+            }
+            if (path === '/api/admin/category/save' && method === 'POST') {
+                const { id, name, sort } = await request.json();
+                if (!name) return errRes('名称不能为空');
+                if (id) {
+                    await env.MY_XYRJ.prepare("UPDATE categories SET name=?, sort=? WHERE id=?").bind(name, sort, id).run();
+                } else {
+                    await env.MY_XYRJ.prepare("INSERT INTO categories (name, sort) VALUES (?,?)").bind(name, sort).run();
+                }
+                return jsonRes({ success: true });
+            }
+            if (path === '/api/admin/category/delete' && method === 'POST') {
+                const { id } = await request.json();
+                if (id === 1) return errRes('默认分类不能删除');
+                // 将该分类下的商品移到默认分类
+                await env.MY_XYRJ.prepare("UPDATE products SET category_id=1 WHERE category_id=?").bind(id).run();
+                await env.MY_XYRJ.prepare("DELETE FROM categories WHERE id=?").bind(id).run();
+                return jsonRes({ success: true });
+            }
+
             // --- 文章 API ---
             if (path === '/api/admin/articles/list') {
                 const { results } = await env.MY_XYRJ.prepare("SELECT id, title, is_notice, created_at FROM articles ORDER BY id DESC").all();
@@ -298,6 +322,14 @@ async function handleApi(request, env, url) {
                     await env.MY_XYRJ.prepare("INSERT INTO articles (title, content, is_notice, created_at, updated_at) VALUES (?,?,?,?,?)")
                         .bind(title, content, is_notice, time(), time()).run();
                 }
+                return jsonRes({ success: true });
+            }
+
+            // --- 系统设置 API (新增) ---
+            if (path === '/api/admin/settings/save' && method === 'POST') {
+                const { site_name, announce } = await request.json();
+                await env.MY_XYRJ.prepare("UPDATE site_config SET value=? WHERE key='site_name'").bind(site_name).run();
+                await env.MY_XYRJ.prepare("UPDATE site_config SET value=? WHERE key='announce'").bind(announce).run();
                 return jsonRes({ success: true });
             }
         }
