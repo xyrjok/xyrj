@@ -402,11 +402,36 @@ async function handleApi(request, env, url) {
             const product = await env.MY_XYRJ.prepare("SELECT name FROM products WHERE id=?").bind(variant.product_id).first();
             const order_id = uuid();
             
-            // TODO: 计算批发价和自选加价
-            const total_amount = (variant.price * quantity).toFixed(2);
+            // --- 价格计算开始 ---
+            let finalPrice = variant.price; // 1. 基础售价
+            
+            // 2. 计算批发价
+            if (variant.wholesale_config) {
+                try {
+                    const wholesaleConfig = JSON.parse(variant.wholesale_config);
+                    // 必须按数量倒序排序，以匹配最高档位
+                    wholesaleConfig.sort((a, b) => b.qty - a.qty);
+                    for (const tier of wholesaleConfig) {
+                        if (quantity >= tier.qty) {
+                            finalPrice = tier.price; // 找到适用的批发价
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    // JSON 解析失败，忽略批发价
+                }
+            }
+
+            // 3. 计算自选加价 (按每件商品加价)
+            if (variant.custom_markup > 0) {
+                finalPrice += variant.custom_markup;
+            }
+            
+            const total_amount = (finalPrice * quantity).toFixed(2);
+            // --- 价格计算结束 ---
 
             await env.MY_XYRJ.prepare("INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .bind(order_id, variant_id, product.name, variant.name, variant.price, quantity, total_amount, contact, payment_method, time()).run();
+                .bind(order_id, variant_id, product.name, variant.name, finalPrice, quantity, total_amount, contact, payment_method, time()).run();
 
             return jsonRes({ order_id, total_amount, payment_method });
         }
