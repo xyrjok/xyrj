@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡密管理 - Faka Admin</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding-top: 56px; }
+        .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; z-index: 100; padding: 48px 0 0; box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1); }
+        .main { margin-left: 240px; padding: 20px; }
+        @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">CF Faka Admin</a>
+        <button class="btn btn-outline-light btn-sm px-4 me-3" onclick="logout()">退出</button>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item"><a class="nav-link" href="/admin/dashboard.html">仪表盘</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/products.html">商品管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/orders.html">订单管理</a></li>
+                        <li class="nav-item"><a class="nav-link active fw-bold" href="/admin/cards.html">卡密管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/payments.html">支付设置</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/articles.html">文章管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/settings.html">系统设置</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main">
+                <div class="row g-4">
+                    <!-- 导入卡密 -->
+                    <div class="col-lg-6">
+                        <h2 class="border-bottom pb-3 mb-4">导入卡密</h2>
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">选择商品</label>
+                                    <select id="prod-select-import" class="form-select" onchange="populateVariants(this.value, 'var-select-import')"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">选择规格</label>
+                                    <select id="var-select-import" class="form-select"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">卡密 (每行一条)</label>
+                                    <textarea id="cards-content" class="form-control" rows="8" placeholder="卡号1...&#10;卡号2...&#10;卡号3#[预设信息]..."></textarea>
+                                </div>
+                                <button class="btn btn-primary" onclick="importCards()">开始导入</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 查看卡密 -->
+                    <div class="col-lg-6">
+                        <h2 class="border-bottom pb-3 mb-4">查看库存</h2>
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">选择商品</label>
+                                    <select id="prod-select-view" class="form-select" onchange="populateVariants(this.value, 'var-select-view')"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">选择规格</label>
+                                    <select id="var-select-view" class="form-select"></select>
+                                </div>
+                                <button class="btn btn-outline-primary" onclick="loadCards()">查看卡密</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive mt-3" style="max-height: 450px;">
+                            <table class="table table-striped table-sm align-middle">
+                                <thead><tr><th>ID</th><th>内容 (部分)</th><th>状态</th><th>操作</th></tr></thead>
+                                <tbody id="cards-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const TOKEN = localStorage.getItem('ADMIN_TOKEN');
+        if(!TOKEN) window.location.href = '/admin/index.html';
+        function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
+        async function api(path, options = {}) {
+            options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+            const res = await fetch('/api/admin/' + path, options);
+            if(res.status === 401) logout();
+            return res.json();
+        }
+
+        let allProducts = [];
+
+        // 初始化加载商品列表到下拉框
+        async function init() {
+            allProducts = await api('products/list');
+            const pSelectImport = document.getElementById('prod-select-import');
+            const pSelectView = document.getElementById('prod-select-view');
+            
+            pSelectImport.innerHTML = '<option value="">-- 选择商品 --</option>';
+            pSelectView.innerHTML = '<option value="">-- 选择商品 --</option>';
+
+            allProducts.forEach(p => {
+                pSelectImport.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                pSelectView.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+
+            // 检查 URL 是否带参数 (从商品页跳转过来)
+            const urlParams = new URLSearchParams(window.location.search);
+            const pid = urlParams.get('pid');
+            if (pid) {
+                pSelectView.value = pid;
+                populateVariants(pid, 'var-select-view');
+            }
+        }
+
+        // 根据商品选择，填充规格下拉框
+        function populateVariants(productId, variantSelectId) {
+            const variantSelect = document.getElementById(variantSelectId);
+            const product = allProducts.find(p => p.id == productId);
+            
+            if (product) {
+                variantSelect.innerHTML = product.variants.map(v => `<option value="${v.id}">${v.name} (库存:${v.stock})</option>`).join('');
+            } else {
+                variantSelect.innerHTML = '';
+            }
+        }
+
+        // 导入卡密
+        async function importCards() {
+            const variant_id = document.getElementById('var-select-import').value;
+            const content = document.getElementById('cards-content').value;
+            if (!variant_id || !content) return alert('请选择规格并填写卡密');
+
+            const res = await api('cards/import', {
+                method: 'POST',
+                body: JSON.stringify({ variant_id, content })
+            });
+            
+            if (res.imported > 0) {
+                alert(`成功导入 ${res.imported} 张卡密！`);
+                document.getElementById('cards-content').value = '';
+                // 刷新数据
+                init();
+            } else {
+                alert('导入失败或没有有效卡密');
+            }
+        }
+
+        // 加载卡密列表
+        async function loadCards() {
+            const variant_id = document.getElementById('var-select-view').value;
+            if (!variant_id) return alert('请选择规格');
+            
+            const cards = await api(`cards/list?variant_id=${variant_id}`);
+            const listEl = document.getElementById('cards-list');
+            
+            if (cards.length === 0) {
+                listEl.innerHTML = '<tr><td colspan="4" class="text-center">该规格暂无卡密</td></tr>';
+                return;
+            }
+
+            listEl.innerHTML = cards.map(c => `
+                <tr>
+                    <td>${c.id}</td>
+                    <td><small class="font-monospace">${c.content.substring(0, 20)}...</small></td>
+                    <td>${c.status === 0 ? '<span class="badge bg-success">未售</span>' : `<span class="badge bg-secondary">已售</span>`}</td>
+                    <td>
+                        ${c.status === 0 ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCard(${c.id}, ${c.variant_id})">删除</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 删除卡密
+        async function deleteCard(id, variant_id) {
+            if (!confirm(`确定要删除卡密 (ID: ${id}) 吗？此操作不可逆！`)) return;
+            
+            const res = await api('card/delete', {
+                method: 'POST',
+                body: JSON.stringify({ id, variant_id })
+            });
+
+            if (res.success) {
+                alert('删除成功');
+                loadCards(); // 重新加载列表
+                init(); // 刷新商品列表以更新库存显示
+            } else {
+                alert('删除失败（可能已售出或不存在）');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
