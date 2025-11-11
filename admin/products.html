@@ -12,7 +12,8 @@
         .main { margin-left: 240px; padding: 20px; }
         @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
         .variant-row { background-color: #f8f9fa; }
-        .form-label-sm { font-size: .8rem; font-weight: 500; color: #555; }
+        .form-label-sm { font-size: .8rem; font-weight: 500; color: #555; margin-bottom: 0.2rem; }
+        .form-control-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
     </style>
 </head>
 <body>
@@ -152,54 +153,53 @@
                 wholesaleString = v.wholesale_config.map(tier => `${tier.qty}=${tier.price}`).join(', ');
             }
             
+            // 紧凑型布局，按照指定顺序
             row.innerHTML = `
                 <input type="hidden" class="v-id" value="${v.id || ''}">
                 <button type="button" class="btn-close float-end" aria-label="删除此规格" onclick="this.closest('.variant-row').remove()"></button>
                 
-                <!-- 按照您要求的顺序重新排列布局 -->
-                <div class="row g-3">
+                <div class="row g-2 align-items-end">
                     <!-- 1. 规格名称 -->
-                    <div class="col-md-4">
+                    <div class="col-md-4 col-lg-3">
                         <label class="form-label-sm">规格名称</label>
                         <input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="e.g., 月卡">
                     </div>
                     <!-- 2. 规格字体颜色代码 -->
-                    <div class="col-md-4">
+                    <div class="col-md-4 col-lg-3">
                         <label class="form-label-sm">字体颜色代码</label>
                         <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFFFFF">
                     </div>
                     <!-- 4. 售价 (元) -->
-                    <div class="col-md-4">
+                    <div class="col-md-4 col-lg-3">
                         <label class="form-label-sm">售价 (元)</label>
                         <input type="number" step="0.01" class="form-control form-control-sm v-price" value="${v.price || ''}" placeholder="e.g., 10.00">
                     </div>
+                     <!-- 7. 自选加价 (元) -->
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label-sm">自选加价 (元)</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}">
+                    </div>
 
                     <!-- 3. 图片链接 (URL) -->
-                    <div class="col-md-8">
+                    <div class="col-md-8 col-lg-6">
                         <label class="form-label-sm">图片链接 (URL)</label>
                         <input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="https://...">
                     </div>
-                    <!-- 7. 自选加价 (元) -->
-                    <div class="col-md-4">
-                        <label class="form-label-sm">自选加价 (元)</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}">
+                    <!-- 6. 当前库存 -->
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label-sm">当前库存</label>
+                        <input type="text" class="form-control form-control-sm" value="${v.stock || 0}" disabled readonly title="库存由卡密导入自动计算">
+                    </div>
+                    <!-- 8. 累计销量 -->
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label-sm">累计销量</label>
+                        <input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly>
                     </div>
 
                     <!-- 5. 批发价配置 -->
                     <div class="col-12">
                         <label class="form-label-sm">批发价配置 (格式: 数量=价格, 逗号分隔)</label>
-                        <textarea class="form-control form-control-sm v-wholesale_config" rows="2" placeholder="例如: 5=3, 10=2, 50=1">${wholesaleString}</textarea>
-                    </div>
-
-                    <!-- 6. 当前库存 -->
-                    <div class="col-md-6">
-                        <label class="form-label-sm">当前库存</label>
-                        <input type="text" class="form-control form-control-sm" value="${v.stock || 0}" disabled readonly title="库存由卡密导入自动计算">
-                    </div>
-                    <!-- 8. 累计销量 -->
-                    <div class="col-md-6">
-                        <label class="form-label-sm">累计销量</label>
-                        <input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly>
+                        <textarea class="form-control form-control-sm v-wholesale_config" rows="1" placeholder="例如: 5=3, 10=2, 50=1">${wholesaleString}</textarea>
                     </div>
                 </div>
             `;
@@ -233,7 +233,7 @@
                                     const parts = pair.split('=');
                                     const qty = parseInt(parts[0].trim(), 10);
                                     const price = parseFloat(parts[1].trim());
-                                    if (isNaN(qty) || isNaN(price) || qty <= 0 || price <= 0) {
+                                    if (isNaN(qty) || isNaN(price) || qty <= 0 || price < 0) { // 价格可以为0
                                         throw new Error(`无效的键值对: ${pair}`);
                                     }
                                     return { qty, price };
@@ -253,8 +253,8 @@
                     }
                     
                     const price = parseFloat(row.querySelector('.v-price').value);
-                    if (isNaN(price) || price <= 0) {
-                         throw new Error(`规格 "${row.querySelector('.v-name').value}" 的售价必须是大于0的数字。`);
+                    if (isNaN(price) || price < 0) { // 价格可以为0
+                         throw new Error(`规格 "${row.querySelector('.v-name').value}" 的售价必须是大于等于0的数字。`);
                     }
 
                     data.variants.push({
