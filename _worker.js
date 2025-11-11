@@ -153,10 +153,23 @@ async function handleApi(request, env, url) {
                 return jsonRes(results);
             }
 
+            // [GET] 商品列表 (已包含 wholesale_config 解析修复)
             if (path === '/api/admin/products/list') {
                 const products = await env.MY_XYRJ.prepare("SELECT * FROM products ORDER BY sort DESC, id DESC").all();
                 for (let p of products.results) {
                     p.variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id = ?").bind(p.id).all()).results;
+                    // [--- 修复 ---]
+                    // 将 wholesale_config 从 JSON 字符串解析为对象，方便前端编辑
+                    for (let v of p.variants) {
+                        try {
+                            if (v.wholesale_config) {
+                                v.wholesale_config = JSON.parse(v.wholesale_config);
+                            }
+                        } catch (e) {
+                            v.wholesale_config = null; // 解析失败则置空
+                        }
+                    }
+                    // [--- 修复结束 ---]
                 }
                 return jsonRes(products.results);
             }
@@ -197,7 +210,7 @@ async function handleApi(request, env, url) {
                         const wholesale_config = v.wholesale_config ? JSON.stringify(v.wholesale_config) : null;
                         
                         if (v.id) { // 更新
-                            newIds.push(v.id);
+                            newIds.push(parseInt(v.id)); // 确保是数字
                             batchOps.push(updateStmt.bind(
                                 v.name, v.price, stock, v.color, v.image_url, wholesale_config, v.custom_markup,
                                 v.id, productId
@@ -367,7 +380,7 @@ async function handleApi(request, env, url) {
         
         // --- 文章 (Shop) ---
         if (path === '/api/shop/articles/list') {
-            const { results } = await env.MY_XYRJ.prepare("SELECT id, title, created_at FROM articles WHERE is_notice=0 ORDER BY id DESC").all();
+            const { results } = await env.MY_XYRJ.prepare("SELECT id, title, created_at FROM articles WHERE is_note=0 ORDER BY id DESC").all();
             return jsonRes(results);
         }
         if (path === '/api/shop/article/get') {
