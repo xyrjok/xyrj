@@ -96,6 +96,21 @@ async function handleApi(request, env, url) {
                  });
             }
 
+            // [GET] 获取订单列表 (新增)
+            if (path === '/api/admin/orders/list') {
+                const contact = url.searchParams.get('contact');
+                let query, binder;
+                if (contact) {
+                    query = "SELECT * FROM orders WHERE contact LIKE ? ORDER BY created_at DESC LIMIT 50";
+                    binder = env.MY_XYRJ.prepare(query).bind(`%${contact}%`);
+                } else {
+                    query = "SELECT * FROM orders ORDER BY created_at DESC LIMIT 50"; // 限制最近50条
+                    binder = env.MY_XYRJ.prepare(query);
+                }
+                const { results } = await binder.all();
+                return jsonRes(results);
+            }
+
             if (path === '/api/admin/products/list') {
                 const products = await env.MY_XYRJ.prepare("SELECT * FROM products ORDER BY sort DESC").all();
                 for (let p of products.results) {
