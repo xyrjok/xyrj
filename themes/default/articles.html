@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章列表</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-5" style="max-width: 800px;">
+        <header class="text-center mb-5">
+            <h1 id="site-name">文章中心</h1>
+            <a href="/">返回首页</a>
+        </header>
+
+        <div class="card shadow-sm">
+            <div class="list-group list-group-flush" id="article-list">
+                <!-- JS 渲染 -->
+                <div class="list-group-item">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatTime(timestamp) {
+            return new Date(timestamp * 1000).toLocaleDateString();
+        }
+
+        async function loadArticles() {
+            const res = await fetch('/api/shop/articles/list');
+            const articles = await res.json();
+            const listEl = document.getElementById('article-list');
+
+            if (articles.length === 0) {
+                listEl.innerHTML = '<div class="list-group-item text-center">暂无文章</div>';
+                return;
+            }
+
+            listEl.innerHTML = articles.map(a => `
+                <a href="/article.html?id=${a.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    ${a.title}
+                    <small class="text-muted">${formatTime(a.created_at)}</small>
+                </a>
+            `).join('');
+        }
+        loadArticles();
+    </script>
+</body>
+</html>
