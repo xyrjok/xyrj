@@ -26,12 +26,12 @@
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item"><a class="nav-link" href="/admin/dashboard.html">仪表盘</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/categories.html">商品分类</a></li>
                         <li class="nav-item"><a class="nav-link active fw-bold" href="/admin/products.html">商品管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/categories.html">商品分类</a></li>
                         <li class="nav-item"><a class="nav-link" href="/admin/orders.html">订单管理</a></li>
                         <li class="nav-item"><a class="nav-link" href="/admin/cards.html">卡密管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/payments.html">支付设置</a></li>
                         <li class="nav-item"><a class="nav-link" href="/admin/articles.html">文章管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/payments.html">支付设置</a></li>
                         <li class="nav-item"><a class="nav-link" href="/admin/settings.html">系统设置</a></li>
                     </ul>
                 </div>
@@ -145,6 +145,13 @@
             const vList = document.getElementById('v-list');
             const row = document.createElement('div');
             row.className = 'variant-row border rounded p-3 mb-3';
+            
+            // [--- 格式转换：从 JSON 对象转为 5=3, 10=2 字符串 ---]
+            let wholesaleString = '';
+            if (v.wholesale_config && Array.isArray(v.wholesale_config)) {
+                wholesaleString = v.wholesale_config.map(tier => `${tier.qty}=${tier.price}`).join(', ');
+            }
+            
             row.innerHTML = `
                 <input type="hidden" class="v-id" value="${v.id || ''}">
                 <button type="button" class="btn-close float-end" aria-label="删除此规格" onclick="this.closest('.variant-row').remove()"></button>
@@ -170,8 +177,8 @@
                         <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFFFFF">
                     </div>
                     <div class="col-12">
-                        <label class="form-label-sm">批发价配置 (JSON)</label>
-                        <textarea class="form-control form-control-sm v-wholesale_config" rows="2" placeholder='[{"qty":10, "price":9.5}]'>${v.wholesale_config ? JSON.stringify(v.wholesale_config, null, 2) : ''}</textarea>
+                        <label class="form-label-sm">批发价配置 (格式: 数量=价格, 逗号分隔)</label>
+                        <textarea class="form-control form-control-sm v-wholesale_config" rows="2" placeholder="例如: 5=3, 10=2, 50=1">${wholesaleString}</textarea>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label-sm">当前库存</label>
@@ -199,13 +206,36 @@
             
             try {
                 document.querySelectorAll('#v-list .variant-row').forEach(row => {
-                    const wholesaleValue = row.querySelector('.v-wholesale_config').value;
+                    const wholesaleValue = row.querySelector('.v-wholesale_config').value.trim();
                     let wholesale_config = null;
+
+                    // [--- 格式转换：从 5=3, 10=2 字符串转为 JSON 对象 ---]
                     if (wholesaleValue) {
                         try {
-                            wholesale_config = JSON.parse(wholesaleValue);
+                            wholesale_config = wholesaleValue
+                                .split(',') // 按逗号分割
+                                .map(pair => pair.trim()) // 去除空格
+                                .filter(pair => pair.includes('=')) // 确保包含=
+                                .map(pair => {
+                                    const parts = pair.split('=');
+                                    const qty = parseInt(parts[0].trim(), 10);
+                                    const price = parseFloat(parts[1].trim());
+                                    if (isNaN(qty) || isNaN(price) || qty <= 0 || price <= 0) {
+                                        throw new Error(`无效的键值对: ${pair}`);
+                                    }
+                                    return { qty, price };
+                                });
+                            
+                            if (wholesale_config.length === 0 && wholesaleValue.length > 0) {
+                                throw new Error('格式不正确，应为 数量=价格, 逗号分隔。');
+                            }
+                            
+                            if (wholesale_config.length === 0) {
+                                wholesale_config = null; // 如果解析后为空，则存 null
+                            }
+
                         } catch (e) {
-                            throw new Error(`规格 "${row.querySelector('.v-name').value}" 的批发价配置中包含无效的 JSON 格式。`);
+                            throw new Error(`规格 "${row.querySelector('.v-name').value}" 的批发价配置解析失败: ${e.message}。请使用格式: 5=3, 10=2`);
                         }
                     }
                     
