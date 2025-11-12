@@ -83,13 +83,27 @@ CREATE TABLE orders (
     paid_at INTEGER 
 );
 
+DROP TABLE IF EXISTS article_categories;
+CREATE TABLE article_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    sort INTEGER DEFAULT 0
+);
+INSERT INTO article_categories (name, sort) VALUES ('默认分类', 0);
+
 DROP TABLE IF EXISTS articles;
 CREATE TABLE articles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,     
-    title TEXT NOT NULL,     
-    content TEXT,     
-    is_notice INTEGER DEFAULT 0,     
-    view_count INTEGER DEFAULT 0,     
-    created_at INTEGER,     
-    updated_at INTEGER 
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER DEFAULT 1,
+    title TEXT NOT NULL,
+    content TEXT,
+    is_notice INTEGER DEFAULT 0,
+    view_count INTEGER DEFAULT 0,
+    created_at INTEGER,
+    updated_at INTEGER,
+    FOREIGN KEY (category_id)
+    REFERENCES article_categories (id)
+    ON DELETE SET DEFAULT
 );
+
+
