@@ -47,6 +47,13 @@
                                     <input type="text" class="form-control" id="site_name">
                                 </div>
                                 <div class="mb-3">
+                                    <label class="form-label">前端模板风格</label>
+                                    <select class="form-select" id="theme_select">
+                                        <option value="default">默认主题 (Default)</option>
+                                        <option value="TBshop">仿淘宝 (TBshop)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label">默认公告 (将被文章公告覆盖)</label>
                                     <textarea class="form-control" id="announce" rows="3"></textarea>
                                 </div>
@@ -73,12 +80,14 @@
         async function init() {
             const config = await fetch('/api/shop/config').then(r => r.json());
             document.getElementById('site_name').value = config.site_name || '';
+            document.getElementById('theme_select').value = config.theme || 'default';
             document.getElementById('announce').value = config.announce || '';
         }
 
         async function saveSettings() {
             const data = {
                 site_name: document.getElementById('site_name').value,
+                theme: document.getElementById('theme_select').value,
                 announce: document.getElementById('announce').value
             };
             const res = await api('settings/save', { method: 'POST', body: JSON.stringify(data) });
