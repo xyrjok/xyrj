@@ -5,14 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文章管理 - Faka Admin</title>
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <!-- 引入 TinyMCE -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
     <style>
         body { padding-top: 56px; }
         .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; z-index: 100; padding: 48px 0 0; box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1); }
         .main { margin-left: 240px; padding: 20px; }
         @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
-        /* 修正 TinyMCE 在 Modal 中的 Z-index 问题 */
+        /* TinyMCE 弹窗层级问题修复 */
         .tox-tinymce-aux { z-index: 1060 !important; }
     </style>
 </head>
@@ -28,8 +26,8 @@
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item"><a class="nav-link" href="/admin/dashboard.html">仪表盘</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/categories.html">商品分类</a></li>
                         <li class="nav-item"><a class="nav-link" href="/admin/products.html">商品管理</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/categories.html">商品分类</a></li>
                         <li class="nav-item"><a class="nav-link" href="/admin/orders.html">订单管理</a></li>
                         <li class="nav-item"><a class="nav-link" href="/admin/cards.html">卡密管理</a></li>
                         <li class="nav-item"><a class="nav-link" href="/admin/payments.html">支付设置</a></li>
@@ -47,17 +45,29 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle">
-                        <thead><tr><th>ID</th><th>标题</th><th>是否公告</th><th>创建时间</th><th>操作</th></tr></thead>
-                        <tbody id="articles-list"></tbody>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>标题</th>
+                                <th>分类</th>
+                                <th>是否公告</th>
+                                <th>浏览量</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="article-list">
+                            <!-- JS 动态加载 -->
+                        </tbody>
                     </table>
                 </div>
             </main>
         </div>
     </div>
 
-    <!-- 编辑弹窗 -->
-    <div class="modal fade" id="article-modal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <!-- 文章编辑弹窗 -->
+    <div class="modal fade" id="article-modal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modal-title">新建文章</h5>
@@ -65,51 +75,68 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="article-id">
-                    <div class="mb-3">
-                        <label class="form-label">文章标题</label>
-                        <input type="text" class="form-control" id="article-title">
-                    </div>
-                    <div class="mb-3 form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="article-is-notice">
-                        <label class="form-check-label" for="article-is-notice">设为站点公告 (会覆盖 `site_config` 中的公告)</label>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">文章标题</label>
+                            <input type="text" class="form-control" id="article-title">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">文章分类</label>
+                            <select id="article-category" class="form-select"></select>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">文章内容</label>
                         <textarea id="article-content"></textarea>
                     </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="article-is-notice">
+                        <label class="form-check-label" for="article-is-notice">
+                            设为置顶公告 (将显示在首页)
+                        </label>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" onclick="saveArticle()">保存文章</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveArticle()">保存</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 引入 TinyMCE -->
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"></script>
     <script>
         const TOKEN = localStorage.getItem('ADMIN_TOKEN');
-        if(!TOKEN) window.location.href = '/admin/index.html';
+        if (!TOKEN) window.location.href = '/admin/index.html';
         function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
+        
         async function api(path, options = {}) {
             options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
             const res = await fetch('/api/admin/' + path, options);
-            if(res.status === 401) logout();
+            if (res.status === 401) logout();
             return res.json();
         }
 
-        const modal = new bootstrap.Modal(document.getElementById('article-modal'));
+        const articleModal = new bootstrap.Modal(document.getElementById('article-modal'));
+        let allArticles = [];
+        let allCategories = [];
 
         function formatTime(timestamp) {
             return new Date(timestamp * 1000).toLocaleString();
         }
 
         async function loadArticles() {
-            const articles = await api('articles/list');
-            document.getElementById('articles-list').innerHTML = articles.map(a => `
+            allArticles = await api('articles/list');
+            const listEl = document.getElementById('article-list');
+            listEl.innerHTML = allArticles.map(a => `
                 <tr>
                     <td>${a.id}</td>
                     <td>${a.title}</td>
-                    <td><span class="badge bg-${a.is_notice ? 'danger' : 'secondary'}">${a.is_notice ? '是' : '否'}</span></td>
+                    <td><span class="badge bg-secondary">${a.category_name}</span></td>
+                    <td><span class="badge bg-${a.is_notice ? 'success' : 'light text-dark'}">${a.is_notice ? '是' : '否'}</span></td>
+                    <td>${a.view_count}</td>
                     <td>${formatTime(a.created_at)}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary me-2" onclick="openModal(${a.id})">编辑</button>
@@ -118,41 +145,61 @@
                 </tr>
             `).join('');
         }
+        
+        async function loadCategories() {
+            allCategories = await api('article_categories/list');
+            const catSelect = document.getElementById('article-category');
+            catSelect.innerHTML = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+
+        async function initEditor() {
+            await tinymce.init({
+                selector: '#article-content',
+                height: 400,
+                menubar: false,
+                plugins: 'lists link image media table code',
+                toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image media | table | code'
+            });
+        }
 
         async function openModal(id = null) {
-            // 初始化编辑器
-            await initTinyMCE();
+            await initEditor(); // 确保编辑器已初始化
+            await loadCategories(); // 确保分类已加载
             
             if (id) {
-                const article = await api(`article/get?id=${id}`);
+                const article = allArticles.find(a => a.id === id);
                 document.getElementById('modal-title').innerText = '编辑文章';
                 document.getElementById('article-id').value = article.id;
                 document.getElementById('article-title').value = article.title;
-                document.getElementById('article-is-notice').checked = !!article.is_notice;
+                document.getElementById('article-category').value = article.category_id;
+                document.getElementById('article-is-notice').checked = article.is_notice;
                 tinymce.get('article-content').setContent(article.content || '');
             } else {
                 document.getElementById('modal-title').innerText = '新建文章';
                 document.getElementById('article-id').value = '';
                 document.getElementById('article-title').value = '';
+                document.getElementById('article-category').value = '1'; // 默认选中第一个
                 document.getElementById('article-is-notice').checked = false;
                 tinymce.get('article-content').setContent('');
             }
-            modal.show();
+            articleModal.show();
         }
-
+        
         async function saveArticle() {
             const data = {
                 id: document.getElementById('article-id').value || null,
                 title: document.getElementById('article-title').value,
+                content: tinymce.get('article-content').getContent(),
                 is_notice: document.getElementById('article-is-notice').checked ? 1 : 0,
-                content: tinymce.get('article-content').getContent()
+                category_id: document.getElementById('article-category').value
             };
-
+            
             if (!data.title) return alert('请填写标题');
             
             const res = await api('article/save', { method: 'POST', body: JSON.stringify(data) });
             if (res.success) {
-                modal.hide();
+                articleModal.hide();
+                tinymce.remove('#article-content'); // 必须销毁编辑器实例
                 loadArticles();
             } else {
                 alert('保存失败: ' + (res.error || '未知错误'));
@@ -169,22 +216,7 @@
             }
         }
 
-        function initTinyMCE() {
-            return tinymce.init({
-                selector: '#article-content',
-                height: 500,
-                menubar: false,
-                plugins: 'lists link image media table codesample',
-                toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image media | removeformat | codesample',
-                language: 'zh_CN'
-            });
-        }
-        
-        // 销毁编辑器实例，防止在 Modal 中重复初始化
-        document.getElementById('article-modal').addEventListener('hidden.bs.modal', () => {
-             tinymce.remove('#article-content');
-        });
-
+        // 初始化
         loadArticles();
     </script>
 </body>
