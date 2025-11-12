@@ -1,5 +1,6 @@
 /**
- * Cloudflare Worker Faka Backend (MPA 完全版 - 修复规格字段 - 完整 API)
+ * Cloudflare Worker Faka Backend (MPA 完全版)
+ * 包含: 支付宝当面付(签名+验签), 商品/分类/订单/卡密/文章/支付/设置管理, MPA路由
  */
 
 // === 工具函数 ===
@@ -8,9 +9,12 @@ const errRes = (msg, status = 400) => jsonRes({ error: msg }, status);
 const time = () => Math.floor(Date.now() / 1000);
 const uuid = () => crypto.randomUUID().replace(/-/g, '');
 
-// --- 支付宝签名 (Web Crypto API) ---
+// === 支付宝签名与验签 ===
 
-// 导入 PKCS8 私钥
+/**
+ * 导入 PKCS8 私钥 (用于签名)
+ * @param {string} pem - PKCS8 PEM 格式的私钥字符串 (可包含头尾和换行)
+ */
 async function importRsaPrivateKey(pem) {
     const pemContents = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s+|\n/g, '');
     const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
@@ -23,7 +27,10 @@ async function importRsaPrivateKey(pem) {
     );
 }
 
-// 导入 X.509 公钥
+/**
+ * 导入 X.509 公钥 (用于验签)
+ * @param {string} pem - X.509 PEM 格式的公钥字符串 (可包含头尾和换行)
+ */
 async function importRsaPublicKey(pem) {
     const pemContents = pem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s+|\n/g, '');
     const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
@@ -36,77 +43,98 @@ async function importRsaPublicKey(pem) {
     );
 }
 
-// 支付宝签名
+/**
+ * 对支付宝参数进行签名
+ * @param {Object} params - 待签名的参数对象
+ * @param {string} privateKeyPem - 你的应用私钥
+ */
 async function signAlipay(params, privateKeyPem) {
+    const key = await importRsaPrivateKey(privateKeyPem);
+    // 筛选、排序、拼接
     const sortedParams = Object.keys(params)
-        .filter(k => k !== 'sign' && params[k] !== undefined && params[k] !== null && params[k] !== '')
+        .filter(k => k !== 'sign' && params[k] !== undefined && params[k] !== '')
         .sort()
-        .map(k => `${k}=${typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]}`)
+        .map(k => `${k}=${params[k]}`) // 注意：biz_content 已经是字符串了
         .join('&');
     
-    const key = await importRsaPrivateKey(privateKeyPem);
     const signature = await crypto.subtle.sign(
         "RSASSA-PKCS1-v1_5",
         key,
         new TextEncoder().encode(sortedParams)
     );
+    // 转换为 Base64
     return btoa(String.fromCharCode(...new Uint8Array(signature)));
 }
 
-// 支付宝验签
+/**
+ * 验证支付宝回调签名
+ * @param {Object} params - 支付宝回调的 Form Data 对象 (key-value)
+ * @param {string} alipayPublicKeyPem - 你的支付宝公钥
+ */
 async function verifyAlipaySignature(params, alipayPublicKeyPem) {
-    const sign = params.get('sign');
-    const signType = params.get('sign_type');
-    if (!sign || !signType || signType.toUpperCase() !== 'RSA2') return false;
+    try {
+        const key = await importRsaPublicKey(alipayPublicKeyPem);
+        const sign = params.sign;
+        const signType = params.sign_type;
+        if (signType !== 'RSA2') return false;
+        
+        // 筛选、排序、拼接
+        const sortedParams = Object.keys(params)
+            .filter(k => k !== 'sign' && k !== 'sign_type' && params[k] !== undefined && params[k] !== '')
+            .sort()
+            .map(k => `${k}=${params[k]}`)
+            .join('&');
 
-    const sortedParams = Array.from(params.keys())
-        .filter(k => k !== 'sign' && k !== 'sign_type' && params.get(k) !== '')
-        .sort()
-        .map(k => `${k}=${params.get(k)}`)
-        .join('&');
-    
-    const key = await importRsaPublicKey(alipayPublicKeyPem);
-    const binarySign = Uint8Array.from(atob(sign), c => c.charCodeAt(0));
-    
-    return crypto.subtle.verify(
-        "RSASSA-PKCS1-v1_5",
-        key,
-        binarySign.buffer,
-        new TextEncoder().encode(sortedParams)
-    );
+        // 解码 Base64 签名
+        const signature = Uint8Array.from(atob(sign), c => c.charCodeAt(0));
+        
+        return await crypto.subtle.verify(
+            "RSASSA-PKCS1-v1_5",
+            key,
+            signature,
+            new TextEncoder().encode(sortedParams)
+        );
+    } catch (e) {
+        console.error("Alipay verify error:", e.message);
+        return false;
+    }
 }
 
-
-// === Worker 入口 ===
+// === 主路由 ===
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const path = url.pathname;
 
-        // === 1. API 路由处理 ===
-        if (path.startsWith('/api/')) {
-            return handleApi(request, env, url);
-        }
+        try {
+            // 1. API 路由
+            if (path.startsWith('/api/')) {
+                return handleApi(request, env, url);
+            }
 
-        // === 2. 静态资源路由重写 (MPA 核心支持) ===
-        // 访问 / 时, 内部转发到 /themes/default/index.html
-        if (path === '/') {
-            const newUrl = new URL('/themes/default/index.html', request.url);
-            return env.ASSETS.fetch(new Request(newUrl, request));
-        }
-        
-        // 访问 /product.html 或 /article.html 时, 内部转发到 /themes/default/
-        if ((path.endsWith('.html') || path.endsWith('.htm')) && !path.startsWith('/admin/') && !path.startsWith('/themes/')) {
-             const newUrl = new URL(`/themes/default${path}`, request.url);
-             return env.ASSETS.fetch(new Request(newUrl, request));
-        }
+            // 2. 静态资源路由重写 (MPA 核心支持)
+            const theme = 'default'; // 此处可从数据库读取, 暂时写死
+            
+            // 访问根目录 /
+            if (path === '/') {
+                return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}/index.html`, request));
+            }
+            
+            // 访问 /some-page.html
+            if (path.endsWith('.html') && !path.startsWith('/admin/') && !path.startsWith('/themes/')) {
+                 return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}${path}`, request));
+            }
 
-        // === 3. 默认静态资源回退 ===
-        return env.ASSETS.fetch(request);
+            // 3. 默认静态资源处理 (admin/*, themes/*, config.js 等)
+            return env.ASSETS.fetch(request);
+            
+        } catch (e) {
+            return errRes(e.message, 500);
+        }
     }
 };
 
-// === 完整的 API 处理逻辑 ===
+// === API 路由处理器 ===
 async function handleApi(request, env, url) {
     const method = request.method;
     const path = url.pathname;
@@ -116,18 +144,22 @@ async function handleApi(request, env, url) {
         // --- 管理员 API (Admin) ---
         // ===========================
         if (path.startsWith('/api/admin/')) {
-            const authHeader = request.headers.get('Authorization');
-            if (path !== '/api/admin/login' && (!authHeader || !authHeader.endsWith(env.ADMIN_TOKEN))) {
-                return errRes('Unauthorized', 401);
-            }
-
-            if (path === '/api/admin/login' && method === 'POST') {
+            if (path === '/api/admin/login') {
+                if (method !== 'POST') return errRes('Method Not Allowed', 405);
                 const { user, pass } = await request.json();
                 if (user === env.ADMIN_USER && pass === env.ADMIN_PASS) {
                     return jsonRes({ token: env.ADMIN_TOKEN });
                 }
                 return errRes('用户名或密码错误', 401);
             }
+            
+            // 鉴权中间件
+            const authHeader = request.headers.get('Authorization');
+            if (!authHeader || !authHeader.endsWith(env.ADMIN_TOKEN)) {
+                return errRes('Unauthorized', 401);
+            }
+            
+            // --- 登录后才能访问的 Admin API ---
 
             if (path === '/api/admin/dashboard') {
                 const today = new Date().setHours(0,0,0,0) / 1000;
@@ -138,212 +170,182 @@ async function handleApi(request, env, url) {
                 });
             }
             
-            // [GET] 获取订单列表
-            if (path === '/api/admin/orders/list') {
-                const contact = url.searchParams.get('contact');
-                let query, binder;
-                if (contact) {
-                    query = "SELECT * FROM orders WHERE contact LIKE ? ORDER BY created_at DESC LIMIT 50";
-                    binder = env.MY_XYRJ.prepare(query).bind(`%${contact}%`);
-                } else {
-                    query = "SELECT * FROM orders ORDER BY created_at DESC LIMIT 50"; // 限制最近50条
-                    binder = env.MY_XYRJ.prepare(query);
-                }
-                const { results } = await binder.all();
-                return jsonRes(results);
-            }
-
-            // [GET] 商品列表 (已包含 wholesale_config 解析修复)
+            // -- 商品管理 (Products) --
             if (path === '/api/admin/products/list') {
-                const products = await env.MY_XYRJ.prepare("SELECT * FROM products ORDER BY sort DESC, id DESC").all();
+                const products = await env.MY_XYRJ.prepare("SELECT * FROM products ORDER BY sort DESC").all();
                 for (let p of products.results) {
-                    p.variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id = ?").bind(p.id).all()).results;
-                    // [--- 修复 ---]
-                    // 将 wholesale_config 从 JSON 字符串解析为对象，方便前端编辑
-                    for (let v of p.variants) {
-                        try {
-                            if (v.wholesale_config) {
-                                v.wholesale_config = JSON.parse(v.wholesale_config);
-                            }
-                        } catch (e) {
-                            v.wholesale_config = null; // 解析失败则置空
-                        }
-                    }
-                    // [--- 修复结束 ---]
+                    const variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id = ?").bind(p.id).all()).results;
+                    // 修复：解析 wholesale_config
+                    p.variants = variants.map(v => ({
+                        ...v,
+                        wholesale_config: v.wholesale_config ? JSON.parse(v.wholesale_config) : null
+                    }));
                 }
                 return jsonRes(products.results);
             }
 
-            // [POST] 商品保存 (更新适配所有新字段)
             if (path === '/api/admin/product/save' && method === 'POST') {
                 const data = await request.json();
                 let productId = data.id;
+
                 if (productId) {
                     await env.MY_XYRJ.prepare("UPDATE products SET name=?, description=?, sort=?, active=?, category_id=? WHERE id=?")
-                        .bind(data.name, data.description, data.sort, data.active, data.category_id || 1, productId).run();
+                        .bind(data.name, data.description, data.sort, data.active, data.category_id, productId).run();
                 } else {
                     const res = await env.MY_XYRJ.prepare("INSERT INTO products (name, description, sort, active, category_id, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-                        .bind(data.name, data.description, data.sort, data.active, data.category_id || 1, time()).run();
+                        .bind(data.name, data.description, data.sort, data.active, data.category_id, time()).run();
                     productId = res.meta.last_row_id;
                 }
                 
-                // 处理变体 (更稳妥的 Diff 逻辑)
-                if (data.variants) {
-                    const oldVariants = await env.MY_XYRJ.prepare("SELECT id FROM variants WHERE product_id = ?").bind(productId).all();
-                    const oldIds = oldVariants.results.map(v => v.id);
-                    const newIds = [];
-                    
-                    const batchOps = [];
-                    const insertStmt = env.MY_XYRJ.prepare(`
-                        INSERT INTO variants 
-                        (product_id, name, price, stock, color, image_url, wholesale_config, custom_markup, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `);
-                    const updateStmt = env.MY_XYRJ.prepare(`
-                        UPDATE variants SET
-                        name = ?, price = ?, stock = ?, color = ?, image_url = ?, wholesale_config = ?, custom_markup = ?
-                        WHERE id = ? AND product_id = ?
-                    `);
+                // 处理规格 (Variants) - 采用有 ID 更新、无 ID 插入、多余删除的逻辑
+                const existingVariants = (await env.MY_XYRJ.prepare("SELECT id FROM variants WHERE product_id = ?").bind(productId).all()).results;
+                const newVariantIds = new Set();
+                const updateStmts = [];
+                const insertStmt = env.MY_XYRJ.prepare(
+                    `INSERT INTO variants (product_id, name, price, color, image_url, wholesale_config, custom_markup, created_at) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+                );
+                const updateStmt = env.MY_XYRJ.prepare(
+                    `UPDATE variants SET name=?, price=?, color=?, image_url=?, wholesale_config=?, custom_markup=? 
+                     WHERE id=? AND product_id=?`
+                );
 
-                    for(const v of data.variants) {
-                        const stock = v.stock || 0; // 库存由卡密导入更新，这里仅作记录
-                        const wholesale_config = v.wholesale_config ? JSON.stringify(v.wholesale_config) : null;
-                        
-                        if (v.id) { // 更新
-                            newIds.push(parseInt(v.id)); // 确保是数字
-                            batchOps.push(updateStmt.bind(
-                                v.name, v.price, stock, v.color, v.image_url, wholesale_config, v.custom_markup,
-                                v.id, productId
-                            ));
-                        } else { // 新增
-                             batchOps.push(insertStmt.bind(
-                                productId, v.name, v.price, stock, v.color, v.image_url, wholesale_config, v.custom_markup, time()
-                            ));
-                        }
+                for (const v of data.variants) {
+                    const wholesaleConfig = v.wholesale_config ? JSON.stringify(v.wholesale_config) : null;
+                    if (v.id) {
+                        // 更新
+                        newVariantIds.add(v.id);
+                        updateStmts.push(updateStmt.bind(
+                            v.name, v.price, v.color, v.image_url, wholesaleConfig, v.custom_markup,
+                            v.id, productId
+                        ));
+                    } else {
+                        // 插入
+                        updateStmts.push(insertStmt.bind(
+                            productId, v.name, v.price, v.color, v.image_url, wholesaleConfig, v.custom_markup, time()
+                        ));
                     }
-                    
-                    // 删除
-                    const deleteIds = oldIds.filter(id => !newIds.includes(id));
-                    if(deleteIds.length > 0) {
-                        batchOps.push(env.MY_XYRJ.prepare(`DELETE FROM variants WHERE id IN (${deleteIds.join(',')}) AND product_id = ?`).bind(productId));
+                }
+                
+                // 删除
+                const deleteStmt = env.MY_XYRJ.prepare("DELETE FROM variants WHERE id = ?");
+                for (const ev of existingVariants) {
+                    if (!newVariantIds.has(ev.id)) {
+                        updateStmts.push(deleteStmt.bind(ev.id));
                     }
-                    
-                    await env.MY_XYRJ.batch(batchOps);
+                }
+
+                if (updateStmts.length > 0) await env.MY_XYRJ.batch(updateStmts);
+                return jsonRes({ success: true, id: productId });
+            }
+            
+            // -- 分类管理 (Categories) --
+            if (path === '/api/admin/categories/list') {
+                return jsonRes((await env.MY_XYRJ.prepare("SELECT * FROM categories ORDER BY sort DESC").all()).results);
+            }
+            if (path === '/api/admin/category/save' && method === 'POST') {
+                const data = await request.json();
+                if(data.id) {
+                    await env.MY_XYRJ.prepare("UPDATE categories SET name=?, sort=? WHERE id=?").bind(data.name, data.sort, data.id).run();
+                } else {
+                    await env.MY_XYRJ.prepare("INSERT INTO categories (name, sort) VALUES (?, ?)").bind(data.name, data.sort).run();
                 }
                 return jsonRes({ success: true });
             }
+            if (path === '/api/admin/category/delete' && method === 'POST') {
+                const { id } = await request.json();
+                if(id === 1) return errRes('默认分类不能删除');
+                await env.MY_XYRJ.batch([
+                    env.MY_XYRJ.prepare("DELETE FROM categories WHERE id = ?").bind(id),
+                    env.MY_XYRJ.prepare("UPDATE products SET category_id = 1 WHERE category_id = ?").bind(id) // 商品移至默认分类
+                ]);
+                return jsonRes({ success: true });
+            }
 
+            // -- 卡密管理 (Cards) --
             if (path === '/api/admin/cards/import' && method === 'POST') {
                 const { variant_id, content } = await request.json();
                 const cards = content.split('\n').filter(c => c.trim()).map(c => c.trim());
                 if (cards.length > 0) {
                     const stmt = env.MY_XYRJ.prepare("INSERT INTO cards (variant_id, content, status, created_at) VALUES (?, ?, 0, ?)");
                     await env.MY_XYRJ.batch(cards.map(c => stmt.bind(variant_id, c, time())));
-                    // 重新计算库存
-                    const stock = (await env.MY_XYRJ.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id = ? AND status = 0").bind(variant_id).first()).c;
-                    await env.MY_XYRJ.prepare("UPDATE variants SET stock = ? WHERE id = ?").bind(stock, variant_id).run();
+                    await env.MY_XYRJ.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
+                        .bind(variant_id, variant_id).run();
                 }
                 return jsonRes({ imported: cards.length });
             }
-
-            // [GET] 获取卡密列表
             if (path === '/api/admin/cards/list') {
-                const variant_id = url.searchParams.get('variant_id');
-                if (!variant_id) return errRes('缺少 variant_id');
-
-                const { results } = await env.MY_XYRJ.prepare("SELECT * FROM cards WHERE variant_id = ? ORDER BY id DESC LIMIT 100")
-                    .bind(variant_id)
-                    .all();
-                return jsonRes(results);
+                const vid = url.searchParams.get('variant_id');
+                const cards = await env.MY_XYRJ.prepare("SELECT * FROM cards WHERE variant_id=? ORDER BY id DESC").bind(vid).all();
+                return jsonRes(cards.results);
             }
-
-            // [POST] 删除卡密
             if (path === '/api/admin/card/delete' && method === 'POST') {
-                const { id, variant_id } = await request.json();
-                // 只能删除未售出的卡密
-                const res = await env.MY_XYRJ.prepare("DELETE FROM cards WHERE id = ? AND status = 0").bind(id).run();
-                if (res.meta.changes > 0) {
-                    // 重新计算库存
-                    const stock = (await env.MY_XYRJ.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id = ? AND status = 0").bind(variant_id).first()).c;
-                    await env.MY_XYRJ.prepare("UPDATE variants SET stock = ? WHERE id = ?").bind(stock, variant_id).run();
-                }
-                return jsonRes({ success: res.meta.changes > 0 });
+                const { id } = await request.json();
+                const card = await env.MY_XYRJ.prepare("SELECT * FROM cards WHERE id=?").bind(id).first();
+                if(card.status !== 0) return errRes('已售出的卡密不能删除');
+                
+                await env.MY_XYRJ.prepare("DELETE FROM cards WHERE id=?").bind(id).run();
+                // 重新计算库存
+                await env.MY_XYRJ.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
+                        .bind(card.variant_id, card.variant_id).run();
+                return jsonRes({ success: true });
             }
 
-            // [POST] 保存支付网关
-            if (path === '/api/admin/gateways/save' && method === 'POST') {
-                const { config } = await request.json();
-                await env.MY_XYRJ.prepare("DELETE FROM pay_gateways WHERE type='alipay_f2f'").run();
-                await env.MY_XYRJ.prepare("INSERT INTO pay_gateways (name, type, config, active) VALUES (?, ?, ?, ?)")
-                    .bind('支付宝当面付', 'alipay_f2f', JSON.stringify(config), 1).run();
-                return jsonRes({success: true});
+            // -- 订单管理 (Orders) --
+            if (path === '/api/admin/orders/list') {
+                const orders = await env.MY_XYRJ.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
+                return jsonRes(orders.results);
             }
             
-            // [GET] 获取当前支付配置
-            if (path === '/api/admin/gateways/get') {
-                const gateway = await env.MY_XYRJ.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f'").first();
-                return jsonRes(gateway ? JSON.parse(gateway.config) : {});
-            }
-
-            // --- 商品分类 API (新增) ---
-            if (path === '/api/admin/categories/list') {
-                const { results } = await env.MY_XYRJ.prepare("SELECT * FROM categories ORDER BY sort DESC, id ASC").all();
-                return jsonRes(results);
-            }
-            if (path === '/api/admin/category/save' && method === 'POST') {
-                const { id, name, sort } = await request.json();
-                if (!name) return errRes('名称不能为空');
-                if (id) {
-                    await env.MY_XYRJ.prepare("UPDATE categories SET name=?, sort=? WHERE id=?").bind(name, sort, id).run();
-                } else {
-                    await env.MY_XYRJ.prepare("INSERT INTO categories (name, sort) VALUES (?,?)").bind(name, sort).run();
-                }
-                return jsonRes({ success: true });
-            }
-            if (path === '/api/admin/category/delete' && method === 'POST') {
-                const { id } = await request.json();
-                if (id === 1) return errRes('默认分类不能删除');
-                // 将该分类下的商品移到默认分类
-                await env.MY_XYRJ.prepare("UPDATE products SET category_id=1 WHERE category_id=?").bind(id).run();
-                await env.MY_XYRJ.prepare("DELETE FROM categories WHERE id=?").bind(id).run();
-                return jsonRes({ success: true });
-            }
-
-            // --- 文章 API ---
+            // -- 文章管理 (Articles) --
             if (path === '/api/admin/articles/list') {
-                const { results } = await env.MY_XYRJ.prepare("SELECT id, title, is_notice, created_at FROM articles ORDER BY id DESC").all();
-                return jsonRes(results);
+                return jsonRes((await env.MY_XYRJ.prepare("SELECT id, title, is_notice, created_at FROM articles ORDER BY created_at DESC").all()).results);
             }
             if (path === '/api/admin/article/get') {
-                const id = url.searchParams.get('id');
-                return jsonRes(await env.MY_XYRJ.prepare("SELECT * FROM articles WHERE id=?").bind(id).first());
-            }
-            if (path === '/api/admin/article/delete' && method === 'POST') {
-                const { id } = await request.json();
-                await env.MY_XYRJ.prepare("DELETE FROM articles WHERE id=?").bind(id).run();
-                return jsonRes({ success: true });
+                return jsonRes(await env.MY_XYRJ.prepare("SELECT * FROM articles WHERE id=?").bind(url.searchParams.get('id')).first());
             }
             if (path === '/api/admin/article/save' && method === 'POST') {
-                const { id, title, content, is_notice } = await request.json();
-                if (is_notice) { // 设为公告时，取消其他公告
-                    await env.MY_XYRJ.prepare("UPDATE articles SET is_notice=0").run();
-                }
-                if (id) {
+                const data = await request.json();
+                const now = time();
+                if(data.id) {
                     await env.MY_XYRJ.prepare("UPDATE articles SET title=?, content=?, is_notice=?, updated_at=? WHERE id=?")
-                        .bind(title, content, is_notice, time(), id).run();
+                        .bind(data.title, data.content, data.is_notice, now, data.id).run();
                 } else {
-                    await env.MY_XYRJ.prepare("INSERT INTO articles (title, content, is_notice, created_at, updated_at) VALUES (?,?,?,?,?)")
-                        .bind(title, content, is_notice, time(), time()).run();
+                    await env.MY_XYRJ.prepare("INSERT INTO articles (title, content, is_notice, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+                        .bind(data.title, data.content, data.is_notice, now, now).run();
                 }
+                return jsonRes({ success: true });
+            }
+            if (path === '/api/admin/article/delete' && method === 'POST') {
+                await env.MY_XYRJ.prepare("DELETE FROM articles WHERE id=?").bind((await request.json()).id).run();
                 return jsonRes({ success: true });
             }
 
-            // --- 系统设置 API (新增) ---
+            // -- 支付管理 (Gateways) --
+            if (path === '/api/admin/gateways/list') {
+                return jsonRes((await env.MY_XYRJ.prepare("SELECT * FROM pay_gateways").all()).results);
+            }
+            if (path === '/api/admin/gateway/save' && method === 'POST') {
+                const data = await request.json();
+                const configStr = JSON.stringify(data.config || {});
+                if(data.id) {
+                     await env.MY_XYRJ.prepare("UPDATE pay_gateways SET name=?, type=?, config=?, active=? WHERE id=?")
+                        .bind(data.name, data.type, configStr, data.active, data.id).run();
+                } else {
+                    await env.MY_XYRJ.prepare("INSERT INTO pay_gateways (name, type, config, active) VALUES (?, ?, ?, ?)")
+                        .bind(data.name, data.type, configStr, data.active).run();
+                }
+                return jsonRes({success: true});
+            }
+
+            // -- 系统设置 (Settings) --
             if (path === '/api/admin/settings/save' && method === 'POST') {
                 const { site_name, announce } = await request.json();
-                await env.MY_XYRJ.prepare("UPDATE site_config SET value=? WHERE key='site_name'").bind(site_name).run();
-                await env.MY_XYRJ.prepare("UPDATE site_config SET value=? WHERE key='announce'").bind(announce).run();
-                return jsonRes({ success: true });
+                await env.MY_XYRJ.batch([
+                    env.MY_XYRJ.prepare("UPDATE site_config SET value = ? WHERE key = 'site_name'").bind(site_name),
+                    env.MY_XYRJ.prepare("UPDATE site_config SET value = ? WHERE key = 'announce'").bind(announce)
+                ]);
+                return jsonRes({success: true});
             }
         }
 
@@ -354,86 +356,84 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/config') {
             const res = await env.MY_XYRJ.prepare("SELECT * FROM site_config").all();
             const config = {}; res.results.forEach(r => config[r.key] = r.value);
-            // 查找最新的公告
-            const notice = await env.MY_XYRJ.prepare("SELECT content FROM articles WHERE is_notice=1 ORDER BY id DESC LIMIT 1").first();
-            if (notice) {
-                config.notice_content = notice.content; // 使用文章公告覆盖
-            }
+            
+            // 检查是否有公告
+            const notice = await env.MY_XYRJ.prepare("SELECT content FROM articles WHERE is_notice = 1 ORDER BY created_at DESC LIMIT 1").first();
+            if(notice) config.notice_content = notice.content; // 使用文章公告覆盖默认公告
+            
             return jsonRes(config);
         }
 
         if (path === '/api/shop/products') {
-            const res = await env.MY_XYRJ.prepare("SELECT * FROM products WHERE active=1 ORDER BY sort DESC, id DESC").all();
-            for(let p of res.results) {
-                p.variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id=?").bind(p.id).all()).results;
+            const res = await env.MY_XYRJ.prepare("SELECT * FROM products WHERE active=1 ORDER BY sort DESC").all();
+            for (let p of res.results) {
+                // 前台获取完整的变体信息用于展示 (解析 wholesale_config)
+                const variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id=?").bind(p.id).all()).results;
+                p.variants = variants.map(v => ({
+                    ...v,
+                    wholesale_config: v.wholesale_config ? JSON.parse(v.wholesale_config) : null
+                }));
             }
             return jsonRes(res.results);
         }
 
         if (path === '/api/shop/product/detail') {
+            // (此路由在 MPA 架构中暂未使用，但保留)
             const id = url.searchParams.get('id');
             const p = await env.MY_XYRJ.prepare("SELECT * FROM products WHERE id=? AND active=1").bind(id).first();
             if(!p) return errRes('商品不存在', 404);
-            p.variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id=?").bind(id).all()).results;
+            const variants = (await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE product_id=?").bind(id).all()).results;
+            p.variants = variants.map(v => ({
+                ...v,
+                wholesale_config: v.wholesale_config ? JSON.parse(v.wholesale_config) : null
+            }));
             return jsonRes(p);
         }
         
-        // --- 文章 (Shop) ---
+        // -- 文章 API --
         if (path === '/api/shop/articles/list') {
-            const { results } = await env.MY_XYRJ.prepare("SELECT id, title, created_at FROM articles WHERE is_note=0 ORDER BY id DESC").all();
-            return jsonRes(results);
+            return jsonRes((await env.MY_XYRJ.prepare("SELECT id, title, created_at FROM articles WHERE is_notice=0 ORDER BY created_at DESC").all()).results);
         }
         if (path === '/api/shop/article/get') {
             const id = url.searchParams.get('id');
-            const article = await env.MY_XYRJ.prepare("SELECT * FROM articles WHERE id=?").bind(id).first();
-            if(article) {
-                // 更新浏览量 (无需 await)
-                ctx.waitUntil(env.MY_XYRJ.prepare("UPDATE articles SET view_count = view_count + 1 WHERE id=?").bind(id).run());
-                return jsonRes(article);
-            }
-            return errRes('文章不存在', 404);
+            return jsonRes(await env.MY_XYRJ.prepare("SELECT title, content, created_at FROM articles WHERE id=?").bind(id).first());
         }
 
         if (path === '/api/shop/order/create' && method === 'POST') {
-            const { variant_id, quantity, contact, payment_method } = await request.json();
+            const { variant_id, quantity, contact } = await request.json();
             const variant = await env.MY_XYRJ.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
-            if (!variant || variant.stock < quantity) return errRes('库存不足');
+            if (!variant) return errRes('规格不存在');
+            
+            // TODO: 此处应实现一个库存锁定机制，防止超卖
+            if (variant.stock < quantity) return errRes('库存不足');
 
             const product = await env.MY_XYRJ.prepare("SELECT name FROM products WHERE id=?").bind(variant.product_id).first();
             const order_id = uuid();
             
-            // --- 价格计算开始 ---
-            let finalPrice = variant.price; // 1. 基础售价
-            
-            // 2. 计算批发价
+            // === 价格计算 ===
+            let finalPrice = variant.price;
+            // 1. 检查批发价
             if (variant.wholesale_config) {
-                try {
-                    const wholesaleConfig = JSON.parse(variant.wholesale_config);
-                    // 必须按数量倒序排序，以匹配最高档位
-                    wholesaleConfig.sort((a, b) => b.qty - a.qty);
-                    for (const tier of wholesaleConfig) {
-                        if (quantity >= tier.qty) {
-                            finalPrice = tier.price; // 找到适用的批发价
-                            break;
-                        }
+                const config = JSON.parse(variant.wholesale_config);
+                let matchedPrice = null;
+                // 倒序查找匹配的最大数量
+                config.sort((a, b) => b.qty - a.qty).forEach(tier => {
+                    if (quantity >= tier.qty && matchedPrice === null) {
+                        matchedPrice = tier.price;
                     }
-                } catch (e) {
-                    // JSON 解析失败，忽略批发价
-                }
+                });
+                if (matchedPrice !== null) finalPrice = matchedPrice;
             }
-
-            // 3. 计算自选加价 (按每件商品加价)
-            if (variant.custom_markup > 0) {
-                finalPrice += variant.custom_markup;
-            }
+            // 2. 应用自选加价
+            finalPrice += (variant.custom_markup || 0);
             
             const total_amount = (finalPrice * quantity).toFixed(2);
-            // --- 价格计算结束 ---
 
-            await env.MY_XYRJ.prepare("INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .bind(order_id, variant_id, product.name, variant.name, finalPrice, quantity, total_amount, contact, payment_method, time()).run();
+            await env.MY_XYRJ.prepare(
+                "INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, payment_method, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)"
+            ).bind(order_id, variant_id, product.name, variant.name, finalPrice, quantity, total_amount, contact, 'alipay_f2f', time()).run();
 
-            return jsonRes({ order_id, total_amount, payment_method });
+            return jsonRes({ order_id, total_amount, payment_method: 'alipay_f2f' });
         }
 
         if (path === '/api/shop/pay' && method === 'POST') {
@@ -446,6 +446,12 @@ async function handleApi(request, env, url) {
                 const gateway = await env.MY_XYRJ.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
                 if(!gateway) return errRes('支付方式未配置');
                 const config = JSON.parse(gateway.config);
+                
+                const bizContent = {
+                    out_trade_no: order.id,
+                    total_amount: order.total_amount,
+                    subject: `${order.product_name} - ${order.variant_name}`
+                };
 
                 const params = {
                     app_id: config.app_id,
@@ -453,13 +459,10 @@ async function handleApi(request, env, url) {
                     format: 'JSON', charset: 'utf-8', sign_type: 'RSA2', version: '1.0',
                     timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
                     notify_url: `${url.origin}/api/notify/alipay`,
-                    biz_content: JSON.stringify({
-                        out_trade_no: order.id,
-                        total_amount: order.total_amount,
-                        subject: `${order.product_name}`
-                    })
+                    biz_content: JSON.stringify(bizContent)
                 };
                 params.sign = await signAlipay(params, config.private_key);
+
                 const query = Object.keys(params).map(k => `${k}=${encodeURIComponent(params[k])}`).join('&');
                 const aliRes = await fetch(`https://openapi.alipay.com/gateway.do?${query}`);
                 const aliData = await aliRes.json();
@@ -481,10 +484,10 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/order/status') {
             const order_id = url.searchParams.get('order_id');
             const order = await env.MY_XYRJ.prepare("SELECT status, cards_sent FROM orders WHERE id=?").bind(order_id).first();
-            if(order && order.status >= 2) { // 必须是 2 (已发货) 才返回
+            if (order && order.status >= 1) { // 1=已支付, 2=已发货
                 return jsonRes({ status: order.status, cards: JSON.parse(order.cards_sent || '[]') });
             }
-            return jsonRes({ status: order?.status || 0 });
+            return jsonRes({ status: 0 }); // 0=待支付
         }
 
         // ===========================
@@ -492,29 +495,34 @@ async function handleApi(request, env, url) {
         // ===========================
         if (path === '/api/notify/alipay' && method === 'POST') {
             const formData = await request.formData();
-            
-            // 1. 验签
+            const params = Object.fromEntries(formData.entries());
+
+            // 1. 获取支付配置
             const gateway = await env.MY_XYRJ.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
-            if(!gateway) return new Response('FAIL: Gateway not configured', { status: 500 });
+            if(!gateway) { console.error('Alipay Notify: Gateway not found'); return new Response('fail'); }
             const config = JSON.parse(gateway.config);
-            
-            const valid = await verifyAlipaySignature(formData, config.alipay_public_key);
-            if (!valid) {
-                return new Response('FAIL: Invalid Signature', { status: 400 });
+
+            // 2. 验签
+            const verified = await verifyAlipaySignature(params, config.alipay_public_key);
+            if (!verified) {
+                console.error('Alipay Notify: Signature verification failed');
+                return new Response('fail');
             }
-            
-            // 2. 处理业务
-            if (formData.get('trade_status') === 'TRADE_SUCCESS') {
-                const out_trade_no = formData.get('out_trade_no');
-                const trade_no = formData.get('trade_no');
+
+            // 3. 处理业务
+            if (params.trade_status === 'TRADE_SUCCESS') {
+                const out_trade_no = params.out_trade_no;
+                const trade_no = params.trade_no;
                 
+                // 4. 检查订单状态，防止重复处理
                 const order = await env.MY_XYRJ.prepare("SELECT * FROM orders WHERE id=? AND status=0").bind(out_trade_no).first();
+                
                 if (order) {
                     // 更新订单为“已支付”
                     await env.MY_XYRJ.prepare("UPDATE orders SET status=1, paid_at=?, trade_no=? WHERE id=?")
                         .bind(time(), trade_no, out_trade_no).run();
                     
-                    // 提取卡密
+                    // 5. 提取卡密
                     const cards = await env.MY_XYRJ.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?")
                         .bind(order.variant_id, order.quantity).all();
                     
@@ -522,20 +530,22 @@ async function handleApi(request, env, url) {
                         const cardIds = cards.results.map(c => c.id);
                         const cardContents = cards.results.map(c => c.content);
                         
-                        // 标记卡密为“已售”
-                        await env.MY_XYRJ.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`)
-                            .bind(out_trade_no).run();
-                        
-                        // 更新订单为“已完成/已发货”
-                        await env.MY_XYRJ.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?")
-                            .bind(JSON.stringify(cardContents), out_trade_no).run();
-                        
-                        // 更新库存 和 销量(sales_count)
-                        const stock = (await env.MY_XYRJ.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id = ? AND status = 0").bind(order.variant_id).first()).c;
-                        await env.MY_XYRJ.prepare("UPDATE variants SET stock = ?, sales_count = sales_count + ? WHERE id=?")
-                            .bind(stock, order.quantity, order.variant_id).run();
+                        // 标记卡密为“已售出”并更新订单
+                        await env.MY_XYRJ.batch([
+                            env.MY_XYRJ.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.map(_=>'?').join(',')})`)
+                                .bind(out_trade_no, ...cardIds),
+                            
+                            env.MY_XYRJ.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?") // 2=已发货
+                                .bind(JSON.stringify(cardContents), out_trade_no),
+                            
+                            // 更新库存 和 销量(sales_count)
+                            env.MY_XYRJ.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?")
+                                .bind(order.quantity, order.quantity, order.variant_id)
+                        ]);
                     } else {
-                        // 库存不足，订单标记为“已支付”但未发货，等待人工处理
+                        // 库存不足，订单标记为异常（需要人工处理）
+                        console.error(`Order ${out_trade_no} paid but insufficient cards!`);
+                        await env.MY_XYRJ.prepare("UPDATE orders SET status=-1 WHERE id=?").bind(out_trade_no).run(); // -1 = 异常
                     }
                 }
             }
@@ -543,8 +553,9 @@ async function handleApi(request, env, url) {
         }
 
     } catch (e) {
+        console.error("API Error", e.stack);
         return errRes('API Error: ' + e.message, 500);
     }
 
-    return new Response('API Not Found', { status: 404 });
+    return errRes('API Not Found', 404);
 }
