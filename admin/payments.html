@@ -36,83 +36,166 @@
             </nav>
 
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main">
-                <h2 class="border-bottom pb-3 mb-4">支付宝当面付设置</h2>
-                <div class="row">
-                    <div class="col-lg-8">
-                        <div class="card shadow-sm">
-                            <div class="card-body">
-                                <div class="alert alert-info">
-                                    <strong>提示：</strong> 请前往 <a href="https://open.alipay.com/" target="_blank">支付宝开放平台</a> 创建应用并开通“当面付”能力。
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">AppID (应用ID)</label>
-                                    <input type="text" class="form-control" id="ali-appid" placeholder="例如: 202100xxxx">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">应用私钥 (Merchant Private Key)</label>
-                                    <textarea class="form-control font-monospace" id="ali-priv-key" rows="5" placeholder="MIIEv... (PKCS8 格式，不包含头尾和换行)"></textarea>
-                                    <div class="form-text text-danger">
-                                        必填。用于请求签名。请填入 <strong>PKCS8</strong> 格式的私钥，建议去除 `-----BEGIN...` 头尾和所有换行符，只保留一行长字符串。
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold">支付宝公钥 (Alipay Public Key)</label>
-                                    <textarea class="form-control font-monospace" id="ali-pub-key" rows="4" placeholder="MIIBI... (不包含头尾和换行)"></textarea>
-                                    <div class="form-text text-primary">
-                                        必填。用于验证回调通知的真实性，保障资金安全。请在支付宝后台查看并复制“支付宝公钥”（不是应用公钥）。
-                                    </div>
-                                </div>
-
-                                <button class="btn btn-primary" onclick="saveAlipay()">
-                                    <i class="bi bi-save"></i> 保存配置
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <h2 class="border-bottom pb-3 mb-4">支付网关管理</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>支付名称</th>
+                                <th>类型</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gateway-list">
+                            <!-- JS 动态加载 -->
+                        </tbody>
+                    </table>
                 </div>
             </main>
         </div>
     </div>
 
+    <!-- 支付宝当面付编辑弹窗 -->
+    <div class="modal fade" id="alipay-modal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">编辑支付宝当面付</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="gateway-id">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">AppID (应用ID)</label>
+                        <input type="text" class="form-control" id="ali-appid" placeholder="例如: 202100xxxx">
+                        <div class="form-text">在支付宝开放平台创建应用后获得的 ID。</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">应用私钥 (Merchant Private Key)</label>
+                        <textarea class="form-control font-monospace" id="ali-priv-key" rows="4" placeholder="MIIEv... (PKCS8 格式)"></textarea>
+                        <div class="form-text text-danger">
+                            必填。用于请求签名。请填入 PKCS8 格式的私钥。建议去除头尾的 `-----BEGIN...` 和换行符。
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">支付宝公钥 (Alipay Public Key)</label>
+                        <textarea class="form-control font-monospace" id="ali-pub-key" rows="4" placeholder="MIIBI..."></textarea>
+                        <div class="form-text text-primary">
+                            必填。用于验证回调通知的真实性。请在支付宝后台查看并复制“支付宝公钥”（不是应用公钥）。
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveGateway()">保存配置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const TOKEN = localStorage.getItem('ADMIN_TOKEN');
-        if(!TOKEN) window.location.href = '/admin/index.html';
+        if (!TOKEN) window.location.href = '/admin/index.html';
         function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
+        
         async function api(path, options = {}) {
             options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
-            const res = await fetch('/api/admin/' + path, options);
-            if(res.status === 401) logout();
+            const res = await fetch('/api/admin/'G + path, options);
+            if (res.status === 401) logout();
             return res.json();
         }
 
-        async function init() {
-            const config = await api('gateways/get');
-            if (config.app_id) {
+        let allGateways = [];
+        const alipayModal = new bootstrap.Modal(document.getElementById('alipay-modal'));
+
+        async function loadGateways() {
+            allGateways = await api('gateways/list');
+            const listEl = document.getElementById('gateway-list');
+            
+            if (allGateways.length === 0) {
+                 // 如果数据库为空，插入一个默认的 alipay_f2f 配置项
+                await api('gateway/save', { 
+                    method: 'POST', 
+                    body: JSON.stringify({ 
+                        id: null,
+                        type: 'alipay_f2f',
+                        name: '支付宝当面付',
+                        active: 0,
+                        config: {}
+                    }) 
+                });
+                // 重新加载
+                return loadGateways();
+            }
+            
+            listEl.innerHTML = allGateways.map(g => `
+                <tr>
+                    <td>${g.id}</td>
+                    <td>${g.name}</td>
+                    <td><span class="badge bg-secondary">${g.type}</span></td>
+                    <td><span class="badge bg-${g.active ? 'success' : 'danger'}">${g.active ? '已启用' : '未启用'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="openModal(${g.id})">配置</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openModal(id) {
+            const gateway = allGateways.find(g => g.id === id);
+            if (!gateway) return alert('未找到支付方式');
+
+            // 目前只支持 alipay_f2f
+            if (gateway.type === 'alipay_f2f') {
+                document.getElementById('gateway-id').value = gateway.id;
+                const config = gateway.config || {};
                 document.getElementById('ali-appid').value = config.app_id || '';
                 document.getElementById('ali-priv-key').value = config.private_key || '';
                 document.getElementById('ali-pub-key').value = config.alipay_public_key || '';
+                alipayModal.show();
+            } else {
+                alert('暂不支持的支付类型配置');
             }
         }
 
-        async function saveAlipay() {
+        async function saveGateway() {
+            const id = document.getElementById('gateway-id').value;
+            const gateway = allGateways.find(g => g.id == id);
+            
             const config = {
                 app_id: document.getElementById('ali-appid').value.trim(),
                 private_key: document.getElementById('ali-priv-key').value.trim(),
                 alipay_public_key: document.getElementById('ali-pub-key').value.trim()
             };
-            if (!config.app_id || !config.private_key || !config.alipay_public_key) return alert('请填写所有必填项');
             
-            const res = await api('gateways/save', { method: 'POST', body: JSON.stringify({ config }) });
+            // 简单验证
+            if (!config.app_id || !config.private_key || !config.alipay_public_key) {
+                return alert('请填写所有三项配置！');
+            }
+
+            // 构造保存数据
+            const dataToSave = {
+                id: gateway.id,
+                name: gateway.name,
+                type: gateway.type,
+                active: 1, // 保存配置后自动启用
+                config: config
+            };
+
+            const res = await api('gateway/save', { method: 'POST', body: JSON.stringify(dataToSave) });
             if (res.success) {
-                alert('保存成功！请确保在支付宝后台配置了正确的回调地址。');
+                alert('保存成功！');
+                alipayModal.hide();
+                loadGateways();
             } else {
                 alert('保存失败: ' + (res.error || '未知错误'));
             }
         }
 
-        init();
+        loadGateways();
     </script>
 </body>
 </html>
