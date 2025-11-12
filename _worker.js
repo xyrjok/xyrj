@@ -117,13 +117,14 @@ export default {
             
             // 访问根目录 /
             if (path === '/') {
-               // return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}/index.html`, request));
+                //return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}/index.html`, request));
                 return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}/`, request));
             }
             
             // 访问 /some-page.html
             if (path.endsWith('.html') && !path.startsWith('/admin/') && !path.startsWith('/themes/')) {
-                 return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}${path}`, request));
+                 const newPath = path.replace(/\.html$/, ''); 
+                 return env.ASSETS.fetch(new Request(`${url.origin}/themes/${theme}${newPath}`, request));
             }
 
             // 3. 默认静态资源处理 (admin/*, themes/*, config.js 等)
