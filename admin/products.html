@@ -73,7 +73,6 @@
         </div>
     </div>
 
-    <!-- 商品编辑弹窗 (完整版) -->
     <div class="modal fade" id="editModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
             <div class="modal-content">
@@ -99,8 +98,7 @@
                     <hr class="my-4">
                     <h5>规格列表 (Variants) <button class="btn btn-sm btn-outline-success ms-3" onclick="addVariantRow({})"><i class="fa fa-plus"></i> 添加规格</button></h5>
                     <div id="v-list" class="mt-3">
-                        <!-- 规格行将由 JS 动态插入 -->
-                    </div>
+                        </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
@@ -179,49 +177,41 @@
                 
                 <div class="variant-fields-container">
                     
-                    <!-- 1. 规格名称 -->
                     <div class="variant-field v-name">
                         <label class="form-label-sm">规格名称</label>
                         <input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="月卡">
                     </div>
                     
-                    <!-- 2. 规格字体颜色代码 -->
                     <div class="variant-field">
                         <label class="form-label-sm">颜色</label>
                         <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFFFFF">
                     </div>
                     
-                    <!-- 3. 图片链接 -->
                     <div class="variant-field v-image_url">
                         <label class="form-label-sm">图片链接</label>
                         <input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="https://...">
                     </div>
                     
-                    <!-- 4. 售价 (元) -->
                     <div class="variant-field">
                         <label class="form-label-sm">售价</label>
                         <input type="number" step="0.01" class="form-control form-control-sm v-price" value="${v.price || ''}" placeholder="10.00">
                     </div>
                     
-                    <!-- 5. 批发价配置 -->
                     <div class="variant-field v-wholesale_config">
                         <label class="form-label-sm">批发价 (5=3,10=2)</label>
                         <input type="text" class="form-control form-control-sm v-wholesale_config" value="${wholesaleString}" placeholder="5=3, 10=2">
                     </div>
                     
-                    <!-- 6. 库存 -->
                     <div class="variant-field">
                         <label class="form-label-sm">库存</label>
                         <input type="text" class="form-control form-control-sm" value="${v.stock || 0}" disabled readonly title="自动计算">
                     </div>
                     
-                    <!-- 7. 自选加价 (元) -->
                     <div class="variant-field">
                         <label class="form-label-sm">加价</label>
                         <input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}">
                     </div>
                     
-                    <!-- 8. 销量 -->
                     <div class="variant-field">
                         <label class="form-label-sm">销量</label>
                         <input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly>
@@ -246,7 +236,10 @@
             
             try {
                 document.querySelectorAll('#v-list .variant-row').forEach(row => {
-                    const wholesaleValue = row.querySelector('.v-wholesale_config').value.trim();
+                    // 修正：使用 input.v-wholesale_config 确保选中输入框而不是父级 div
+                    const wholesaleInput = row.querySelector('input.v-wholesale_config');
+                    const wholesaleValue = wholesaleInput ? wholesaleInput.value.trim() : '';
+                    
                     let wholesale_config = null;
 
                     if (wholesaleValue) {
@@ -270,21 +263,28 @@
                             }
                             if (wholesale_config.length === 0) wholesale_config = null;
                         } catch (e) {
-                            throw new Error(`规格 "${row.querySelector('.v-name').value}" 的批发价配置解析失败: ${e.message}。请使用格式: 5=3, 10=2`);
+                            // 修正：获取名称时也需要加 input. 前缀
+                            const nameVal = row.querySelector('input.v-name') ? row.querySelector('input.v-name').value : '未知规格';
+                            throw new Error(`规格 "${nameVal}" 的批发价配置解析失败: ${e.message}。请使用格式: 5=3, 10=2`);
                         }
                     }
                     
                     const price = parseFloat(row.querySelector('.v-price').value);
+                    // 修正：获取名称时也需要加 input. 前缀
+                    const nameInput = row.querySelector('input.v-name');
+                    const nameVal = nameInput ? nameInput.value : '默认规格';
+
                     if (isNaN(price) || price < 0) {
-                         throw new Error(`规格 "${row.querySelector('.v-name').value}" 的售价必须是大于等于0的数字。`);
+                         throw new Error(`规格 "${nameVal}" 的售价必须是大于等于0的数字。`);
                     }
 
                     data.variants.push({
                         id: row.querySelector('.v-id').value || null,
-                        name: row.querySelector('.v-name').value || '默认规格',
+                        name: nameVal,
                         price: price,
                         color: row.querySelector('.v-color').value || null,
-                        image_url: row.querySelector('.v-image_url').value || null,
+                        // 修正：获取图片链接时也需要加 input. 前缀
+                        image_url: row.querySelector('input.v-image_url') ? row.querySelector('input.v-image_url').value : null,
                         custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0,
                         wholesale_config: wholesale_config
                     });
