@@ -38,7 +38,10 @@
 
             listEl.innerHTML = articles.map(a => `
                 <a href="/article.html?id=${a.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    ${a.title}
+                    <div>
+                        <span class="badge bg-primary me-2">${a.category_name}</span>
+                        ${a.title}
+                    </div>
                     <small class="text-muted">${formatTime(a.created_at)}</small>
                 </a>
             `).join('');
