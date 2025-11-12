@@ -99,7 +99,7 @@ export default {
 
         // === 2. 静态资源路由重写 (Pretty URLs 逻辑) ===
         
-        let theme = 'default'; // 后续可改为从 KV 或 D1 读取
+        let theme = 'TBshop'; // 后续可改为从 KV 或 D1 读取
         
         // 规则 A: 排除不需要重写的系统路径
         // 如果访问的是 admin 后台、themes 资源目录或 assets 目录，直接放行
