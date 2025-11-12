@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker Faka Backend (MPA 完全版 - 包含所有功能)
+ * Cloudflare Worker Faka Backend (最终修复版 - 完美隐藏路径)
  */
 
 // === 工具函数 ===
@@ -12,15 +12,13 @@ const uuid = () => crypto.randomUUID().replace(/-/g, '');
 
 /**
  * [签名] 对参数进行 RSA2 签名
- * @param {object} params - 待签名参数
- * @param {string} privateKeyPem - PKCS8 PEM 格式私钥
  */
 async function signAlipay(params, privateKeyPem) {
     // 1. 排序并拼接参数
     const sortedParams = Object.keys(params)
         .filter(k => k !== 'sign' && params[k] !== undefined && params[k] !== null && params[k] !== '')
         .sort()
-        .map(k => `${k}=${params[k]}`) // 注意：支付宝文档说 biz_content 整体作为值，但实测对象也需转JSON
+        .map(k => `${k}=${params[k]}`) 
         .join('&');
 
     // 2. 导入私钥
@@ -47,8 +45,6 @@ async function signAlipay(params, privateKeyPem) {
 
 /**
  * [验签] 验证支付宝异步通知
- * @param {object} params - 支付宝 POST 过来的所有参数
- * @param {string} alipayPublicKeyPem - 支付宝公钥
  */
 async function verifyAlipaySignature(params, alipayPublicKeyPem) {
     try {
@@ -101,44 +97,44 @@ export default {
             return handleApi(request, env, url);
         }
 
-        // === 2. 静态资源路由重写 (MPA 核心支持) ===
-        // 目标：访问 / => 显示 /themes/default/index.html
-        // 访问 /product.html => 显示 /themes/default/product.html
-
-        let theme = 'default'; // 暂时硬编码，未来可从 D1 读取
+        // === 2. 静态资源路由重写 (Pretty URLs 逻辑) ===
         
-        // 规则 1: 根路径
-        if (path === '/' || path === '/index.html') {
-             // 使用内部抓取 (fetch) 来重写，而不是重定向
-            const newUrl = new URL(`/themes/${theme}/index.html`, url.origin);
-            return env.ASSETS.fetch(new Request(newUrl, request));
-        }
+        let theme = 'default'; // 后续可改为从 KV 或 D1 读取
         
-        // 规则 2: /admin/ 路径下的静态文件
-        if (path.startsWith('/admin/')) {
+        // 规则 A: 排除不需要重写的系统路径
+        // 如果访问的是 admin 后台、themes 资源目录或 assets 目录，直接放行
+        if (path.startsWith('/admin/') || path.startsWith('/themes/') || path.startsWith('/assets/')) {
              return env.ASSETS.fetch(request);
         }
 
-        // 规则 3: /themes/ 路径下的静态文件 (如 /themes/default/assets/css/style.css)
-        if (path.startsWith('/themes/')) {
-            return env.ASSETS.fetch(request);
+        // 规则 B: 根路径处理 -> 请求主题目录
+        // 访问 "/" 或 "/index.html" -> 内部请求 "/themes/default/" (注意末尾斜杠)
+        // Cloudflare 会自动识别目录并返回 index.html，不会产生 301 跳转
+        if (path === '/' || path === '/index.html') {
+             const newUrl = new URL(`/themes/${theme}/`, url.origin);
+             return env.ASSETS.fetch(new Request(newUrl, request));
         }
         
-        // 规则 4: 根目录的其他 .html 文件 (如 /product.html, /pay.html)
+        // 规则 C: 普通 HTML 页面 -> 请求无后缀路径
+        // 访问 "/product.html" -> 内部请求 "/themes/default/product" (去掉 .html)
+        // Cloudflare 会自动匹配 product.html 并返回内容，地址栏保持不变
         if (path.endsWith('.html')) {
-            const newUrl = new URL(`/themes/${theme}${path}`, url.origin);
+            const newPath = path.replace(/\.html$/, ''); // 去掉 .html 后缀
+            const newUrl = new URL(`/themes/${theme}${newPath}`, url.origin);
             const newRequest = new Request(newUrl, request);
             
-            // 尝试抓取主题文件，如果 404，则回退到原始请求（以防万一）
+            // 尝试抓取
             const response = await env.ASSETS.fetch(newRequest);
-            if (response.status === 404) {
-                return env.ASSETS.fetch(request);
+            
+            // 如果找到了(不是404)，就直接返回内容
+            if (response.status !== 404) {
+                return response;
             }
-            return response;
+            // 如果真的找不到文件，回退去请求原始路径(防止误杀其他文件)
+            return env.ASSETS.fetch(request);
         }
 
-        // === 3. 默认静态资源回退 ===
-        // 处理 /config.js, /assets/img/logo.png 等其他根目录资源
+        // === 3. 默认回退 ===
         return env.ASSETS.fetch(request);
     }
 };
@@ -212,7 +208,6 @@ async function handleApi(request, env, url) {
                 const products = (await db.prepare("SELECT * FROM products ORDER BY sort DESC, id DESC").all()).results;
                 for (let p of products) {
                     p.variants = (await db.prepare("SELECT * FROM variants WHERE product_id = ?").bind(p.id).all()).results;
-                    // 修复：将 wholesale_config 转回对象，方便后台编辑
                     p.variants.forEach(v => {
                         if (v.wholesale_config) {
                              try { v.wholesale_config = JSON.parse(v.wholesale_config); } catch(e) { v.wholesale_config = null; }
@@ -236,7 +231,7 @@ async function handleApi(request, env, url) {
                     productId = res.meta.last_row_id;
                 }
 
-                // 2. 处理规格 (采用 Diff 策略：更新/插入/删除)
+                // 2. 处理规格
                 const existingVariants = (await db.prepare("SELECT id FROM variants WHERE product_id=?").bind(productId).all()).results;
                 const newVariantIds = [];
                 const updateStmts = [];
@@ -250,7 +245,6 @@ async function handleApi(request, env, url) {
                 `);
 
                 for (const v of data.variants) {
-                    // 修正：保存时将 wholesale_config 转回 JSON 字符串
                     const wholesale_config_json = v.wholesale_config ? JSON.stringify(v.wholesale_config) : null;
                     
                     if (v.id) { // 更新
@@ -274,7 +268,6 @@ async function handleApi(request, env, url) {
                 // 3. 删除旧规格
                 const deleteIds = existingVariants.filter(v => !newVariantIds.includes(v.id)).map(v => v.id);
                 if (deleteIds.length > 0) {
-                    // 注意：删除规格会级联删除关联的卡密，请确保前端已提示
                     updateStmts.push(db.prepare(`DELETE FROM variants WHERE id IN (${deleteIds.join(',')})`));
                 }
 
@@ -324,14 +317,12 @@ async function handleApi(request, env, url) {
             // --- 支付网关 API ---
             if (path === '/api/admin/gateways/list') {
                  let { results } = await db.prepare("SELECT * FROM pay_gateways").all();
-                 // 如果列表为空，自动初始化一个
                  if (results.length === 0) {
                      const emptyConfig = { app_id: "", private_key: "", alipay_public_key: "" };
                      await db.prepare("INSERT INTO pay_gateways (name, type, config, active) VALUES (?, ?, ?, ?)")
                         .bind('支付宝当面付', 'alipay_f2f', JSON.stringify(emptyConfig), 0).run();
                      results = (await db.prepare("SELECT * FROM pay_gateways").all()).results;
                  }
-                 // 解析 config
                  results.forEach(g => g.config = JSON.parse(g.config));
                  return jsonRes(results);
             }
@@ -415,7 +406,6 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/config') {
             const res = await db.prepare("SELECT * FROM site_config").all();
             const config = {}; res.results.forEach(r => config[r.key] = r.value);
-            // 额外获取置顶公告
             const notice = await db.prepare("SELECT content FROM articles WHERE is_notice=1 ORDER BY created_at DESC LIMIT 1").first();
             if(notice) config.notice_content = notice.content;
             
@@ -426,7 +416,6 @@ async function handleApi(request, env, url) {
             const res = (await db.prepare("SELECT * FROM products WHERE active=1 ORDER BY sort DESC").all()).results;
             for(let p of res) {
                 p.variants = (await db.prepare("SELECT * FROM variants WHERE product_id=?").bind(p.id).all()).results;
-                // 解析批发价
                 p.variants.forEach(v => {
                     if (v.wholesale_config) {
                          try { v.wholesale_config = JSON.parse(v.wholesale_config); } catch(e) { v.wholesale_config = null; }
@@ -435,12 +424,7 @@ async function handleApi(request, env, url) {
             }
             return jsonRes(res);
         }
-
-        if (path === '/api/shop/product/detail') {
-            // (MPA 架构下，此接口暂时可以不用，改为在 product.html 中调用 /api/shop/products)
-        }
         
-        // --- 文章 API (Shop) ---
         if (path === '/api/shop/articles/list') {
             const { results } = await db.prepare(`
                 SELECT a.id, a.title, a.created_at, ac.name as category_name
@@ -470,26 +454,21 @@ async function handleApi(request, env, url) {
             const variant = await db.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
             if (!variant) return errRes('规格不存在');
 
-            // 检查库存
             const stock = (await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(variant_id).first()).c;
             if (stock < quantity) return errRes('库存不足');
 
             const product = await db.prepare("SELECT name FROM products WHERE id=?").bind(variant.product_id).first();
             const order_id = uuid();
             
-            // 计算总价 (此处可加入批发价和自选加价逻辑)
             let finalPrice = variant.price;
-            // 1. 自选加价
             if (variant.custom_markup > 0) finalPrice += variant.custom_markup;
-            // 2. 批发价
             if (variant.wholesale_config) {
                 try {
                     const wholesaleConfig = JSON.parse(variant.wholesale_config);
-                    // 倒序排列，优先匹配最高的数量
                     wholesaleConfig.sort((a, b) => b.qty - a.qty);
                     for (const rule of wholesaleConfig) {
                         if (quantity >= rule.qty) {
-                            finalPrice = rule.price; // 应用批发价
+                            finalPrice = rule.price; 
                             break;
                         }
                     }
@@ -509,7 +488,7 @@ async function handleApi(request, env, url) {
               const { order_id } = await request.json();
               const order = await db.prepare("SELECT * FROM orders WHERE id=?").bind(order_id).first();
               if (!order) return errRes('订单不存在');
-              if (order.status >= 1) return jsonRes({ paid: true }); // 已支付
+              if (order.status >= 1) return jsonRes({ paid: true });
 
               if (order.payment_method === 'alipay_f2f') {
                   const gateway = await db.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
@@ -554,7 +533,7 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/order/status') {
             const order_id = url.searchParams.get('order_id');
             const order = await db.prepare("SELECT status, cards_sent FROM orders WHERE id=?").bind(order_id).first();
-            if(order && order.status >= 1) { // 1:已支付, 2:已发货
+            if(order && order.status >= 1) {
                 return jsonRes({ status: order.status, cards: JSON.parse(order.cards_sent || '[]') });
             }
             return jsonRes({ status: 0 });
@@ -570,34 +549,29 @@ async function handleApi(request, env, url) {
                 params[key] = value;
             }
             
-            // 1. 获取配置
             const gateway = await db.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
             if (!gateway) { console.error('Alipay Notify: Gateway not found'); return new Response('fail'); }
             const config = JSON.parse(gateway.config);
 
-            // 2. 验签
             const signVerified = await verifyAlipaySignature(params, config.alipay_public_key);
             if (!signVerified) {
                 console.error('Alipay Notify: Signature verification failed');
                 return new Response('fail');
             }
 
-            // 3. 处理业务
             if (params.trade_status === 'TRADE_SUCCESS') {
                 const out_trade_no = params.out_trade_no;
                 const trade_no = params.trade_no;
                 
-                // 使用事务保证原子性
                 await db.batch([
                     db.prepare("BEGIN TRANSACTION"),
                     db.prepare("UPDATE orders SET status=1, paid_at=?, trade_no=? WHERE id=? AND status=0")
                         .bind(time(), trade_no, out_trade_no)
                 ]);
 
-                const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status=1").bind(out_trade_no).first(); // status=1: 刚支付成功，尚未发货
+                const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status=1").bind(out_trade_no).first();
                 
                 if (order) {
-                    // 锁定卡密
                     const cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?")
                         .bind(order.variant_id, order.quantity).all();
                     
@@ -608,22 +582,18 @@ async function handleApi(request, env, url) {
                         await db.batch([
                             db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no),
                             db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(cardContents), out_trade_no),
-                            // 更新销量
                             db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.variant_id),
                             db.prepare("COMMIT")
                         ]);
                         
-                        // 提交后更新最终库存
                         await db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
                                 .bind(order.variant_id, order.variant_id).run();
                                 
                     } else {
-                        // 库存不足，回滚
                         await db.prepare("ROLLBACK").run();
                         console.error(`Notify Error: Insufficient stock for order ${out_trade_no}`);
                     }
                 } else {
-                     // 订单不存在或已处理
                     await db.prepare("COMMIT").run();
                 }
             }
