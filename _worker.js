@@ -245,16 +245,19 @@ async function handleApi(request, env, url) {
 
                 for (const v of data.variants) {
                     const wholesale_config_json = v.wholesale_config ? JSON.stringify(v.wholesale_config) : null;
-                    // 确保 auto_delivery 有默认值 1，手动发货可以保存库存
                     const auto_delivery = v.auto_delivery !== undefined ? v.auto_delivery : 1;
                     const stock = v.stock !== undefined ? v.stock : 0;
-                    
-                    if (v.id) { // 更新
-                        newVariantIds.push(v.id);
+
+                    // 核心修复：将前端传来的 ID 强制转换为数字，防止类型不匹配导致误删
+                    // 如果 v.id 是空字符串或 null，parseInt 会变成 NaN，这里做个判断
+                    const variantId = v.id ? parseInt(v.id) : null;
+
+                    if (variantId) { // 更新
+                        newVariantIds.push(variantId); // 存入数字类型的 ID
                         updateStmts.push(
                             updateStmt.bind(
                                 v.name, v.price, stock, v.color, v.image_url, wholesale_config_json, 
-                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, v.id, productId
+                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, variantId, productId
                             )
                         );
                     } else { // 插入
