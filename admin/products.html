@@ -13,27 +13,33 @@
         @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
         
         .variant-row { background-color: #f8f9fa; }
-        .form-label-sm { font-size: .8rem; font-weight: 500; color: #555; margin-bottom: 0.2rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .form-control-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+        .form-label-sm { font-size: .75rem; font-weight: 500; color: #555; margin-bottom: 0.1rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .form-control-sm { padding: 0.2rem 0.3rem; font-size: 0.85rem; }
+        .form-select-sm { padding: 0.2rem 1.5rem 0.2rem 0.3rem; font-size: 0.85rem; }
 
         /* 强制单行 Flex 布局 */
         .variant-fields-container {
             display: flex;
             flex-wrap: nowrap; /* 强制不换行 */
-            gap: 10px;
+            gap: 5px; /* === 间距调小 === */
             align-items: flex-end; /* 底部对齐 */
             overflow-x: auto; /* 如果屏幕太窄，允许水平滚动 */
             padding-bottom: 10px;
         }
         .variant-field {
             flex-shrink: 0; /* 防止被压缩 */
-            min-width: 80px; /* 默认最小宽度 */
+            min-width: 60px; /* 默认最小宽度调小 */
         }
-        /* 为特定字段设置基础宽度 */
-        .v-name { min-width: 120px; }
-        .v-color-wrap { min-width: 90px; } /* 颜色框宽度 */
-        .v-wholesale_config { min-width: 140px; }
-        .v-image_url { min-width: 140px; }
+        /* === 针对各个字段调窄宽度 === */
+        .v-name { min-width: 100px; }         /* 规格名称 */
+        .v-color-wrap { min-width: 70px; }    /* 颜色 */
+        .v-mode-wrap { min-width: 85px; }     /* 发货模式 */
+        .v-image_url { min-width: 100px; }    /* 图片链接 */
+        .v-price-wrap { min-width: 65px; }    /* 售价 */
+        .v-stock-wrap { min-width: 65px; }    /* 库存 */
+        .v-markup-wrap { min-width: 65px; }   /* 加价 */
+        .v-sales-wrap { min-width: 50px; }    /* 销量 */
+        .v-wholesale_config { min-width: 100px; } /* 批发价 */
     </style>
 </head>
 <body>
@@ -161,7 +167,7 @@
             modal.show();
         }
 
-        // === 更新 addVariantRow 函数：加回了颜色输入框 ===
+        // === 修改：addVariantRow 使用更紧凑的布局 ===
         function addVariantRow(v) {
             const vList = document.getElementById('v-list');
             const row = document.createElement('div');
@@ -172,11 +178,9 @@
                 wholesaleString = v.wholesale_config.map(tier => `${tier.qty}=${tier.price}`).join(', ');
             }
             
-            // 判断自动发货状态，默认为1 (自动)
             const autoDelivery = (v.auto_delivery !== undefined) ? v.auto_delivery : 1;
             const isAuto = (autoDelivery == 1);
 
-            // 强制单行 Flex 布局
             row.innerHTML = `
                 <input type="hidden" class="v-id" value="${v.id || ''}">
                 <button type="button" class="btn-close position-absolute top-0 end-0 m-2" aria-label="删除此规格" onclick="this.closest('.variant-row').remove()"></button>
@@ -190,44 +194,44 @@
 
                     <div class="variant-field v-color-wrap">
                         <label class="form-label-sm">颜色</label>
-                        <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFFFFF">
+                        <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFF">
                     </div>
 
-                    <div class="variant-field">
+                    <div class="variant-field v-mode-wrap">
                         <label class="form-label-sm">发货模式</label>
                         <select class="form-select form-select-sm v-auto_delivery" onchange="toggleStockInput(this)">
-                            <option value="1" ${isAuto ? 'selected' : ''}>自动 (卡密)</option>
-                            <option value="0" ${!isAuto ? 'selected' : ''}>手动 (人工)</option>
+                            <option value="1" ${isAuto ? 'selected' : ''}>自动</option>
+                            <option value="0" ${!isAuto ? 'selected' : ''}>手动</option>
                         </select>
                     </div>
                     
                     <div class="variant-field v-image_url">
                         <label class="form-label-sm">图片链接</label>
-                        <input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="https://...">
+                        <input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="http://...">
                     </div>
                     
-                    <div class="variant-field">
+                    <div class="variant-field v-price-wrap">
                         <label class="form-label-sm">售价</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm v-price" value="${v.price || ''}" placeholder="10.00">
+                        <input type="number" step="0.01" class="form-control form-control-sm v-price" value="${v.price || ''}" placeholder="0.00">
                     </div>
                     
                     <div class="variant-field v-wholesale_config">
-                        <label class="form-label-sm">批发价 (5=3,10=2)</label>
-                        <input type="text" class="form-control form-control-sm v-wholesale_config" value="${wholesaleString}" placeholder="5=3, 10=2">
+                        <label class="form-label-sm">批发价 (5=3)</label>
+                        <input type="text" class="form-control form-control-sm v-wholesale_config" value="${wholesaleString}" placeholder="5=3">
                     </div>
                     
-                    <div class="variant-field">
+                    <div class="variant-field v-stock-wrap">
                         <label class="form-label-sm">库存</label>
                         <input type="number" class="form-control form-control-sm v-stock" value="${v.stock || 0}" 
                             ${isAuto ? 'disabled readonly title="自动从卡密库计算"' : ''}>
                     </div>
                     
-                    <div class="variant-field">
+                    <div class="variant-field v-markup-wrap">
                         <label class="form-label-sm">加价</label>
                         <input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}">
                     </div>
                     
-                    <div class="variant-field">
+                    <div class="variant-field v-sales-wrap">
                         <label class="form-label-sm">销量</label>
                         <input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly>
                     </div>
@@ -237,17 +241,14 @@
             vList.appendChild(row);
         }
 
-        // 切换发货模式逻辑
         function toggleStockInput(selectEl) {
             const row = selectEl.closest('.variant-row');
             const stockInput = row.querySelector('.v-stock');
             if (selectEl.value == "1") {
-                // 自动发货
                 stockInput.disabled = true;
                 stockInput.readOnly = true;
                 stockInput.title = "自动从卡密库计算";
             } else {
-                // 手动发货
                 stockInput.disabled = false;
                 stockInput.readOnly = false;
                 stockInput.title = "";
@@ -306,7 +307,6 @@
                          throw new Error(`规格 "${nameVal}" 的售价必须是大于等于0的数字。`);
                     }
                     
-                    // 获取发货模式和库存
                     const autoDelivery = parseInt(row.querySelector('.v-auto_delivery').value);
                     const stockVal = parseInt(row.querySelector('.v-stock').value) || 0;
 
@@ -314,12 +314,10 @@
                         id: row.querySelector('.v-id').value || null,
                         name: nameVal,
                         price: price,
-                        // 获取颜色值
                         color: row.querySelector('.v-color') ? row.querySelector('.v-color').value : null,
                         image_url: row.querySelector('input.v-image_url') ? row.querySelector('input.v-image_url').value : null,
                         custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0,
                         wholesale_config: wholesale_config,
-                        // 传递新字段
                         auto_delivery: autoDelivery,
                         stock: stockVal
                     });
