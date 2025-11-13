@@ -250,7 +250,8 @@
             document.getElementById('p-sales').innerText = `已售: ${totalSales}`;
             document.getElementById('p-stock').innerText = `库存: ${totalStock}`;
             
-            // === 优先显示商品主图，如果没有则尝试规格图 ===
+            // === 修改：初始化优先显示商品主图 ===
+            // 逻辑：如果有主图，用主图；如果没主图但有规格图，用规格图；否则用占位图
             const img = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
             document.getElementById('p-img').src = img;
             document.getElementById('sku-img').src = img;
@@ -282,10 +283,20 @@
             document.getElementById('p-price').innerText = selectedVariant.price;
             document.getElementById('p-select-text').innerText = `已选: ${selectedVariant.name}`;
             
-            // === 切换图片逻辑：只有当规格有图片时才切换，否则保留主图 ===
+            // === 修改：切换图片逻辑 ===
+            // 1. 计算出默认显示的“主图”（优先用商品主图，其次用第一规格图）
+            const p = currentProduct;
+            const defV = p.variants[0];
+            const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
+
+            // 2. 如果当前选中的规格有专属图片，则显示专属图片；
+            //    否则，显示“主图”（即回退，保持主图不动）
             if(selectedVariant.image_url) {
                 document.getElementById('sku-img').src = selectedVariant.image_url;
                 document.getElementById('p-img').src = selectedVariant.image_url;
+            } else {
+                document.getElementById('sku-img').src = mainImg;
+                document.getElementById('p-img').src = mainImg;
             }
         }
 
