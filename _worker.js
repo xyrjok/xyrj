@@ -231,7 +231,7 @@ async function handleApi(request, env, url) {
                     await db.prepare("UPDATE products SET name=?, description=?, category_id=?, sort=?, active=? WHERE id=?")
                         .bind(data.name, data.description, data.category_id, data.sort, data.active, productId).run();
                 } else {
-                    const res = await db.prepare("INSERT INTO products (name, description, category_id=?, sort=?, active=?, created_at=?) VALUES (?, ?, ?, ?, ?, ?)")
+                    const res = await db.prepare("INSERT INTO products (category_id, sort, active, created_at, name, description) VALUES (?, ?, ?, ?, ?, ?)")
                         .bind(data.category_id, data.sort, data.active, time(), data.name, data.description).run();
                     productId = res.meta.last_row_id;
                 }
