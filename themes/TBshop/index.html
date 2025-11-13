@@ -179,8 +179,10 @@
                     const mainVariant = p.variants[0] || {};
                     // 计算总销量
                     const totalSales = p.variants.reduce((sum, v) => sum + (v.sales_count || 0), 0);
-                    // 图片地址：如果没有图，用一个灰底占位图
-                    const imgUrl = mainVariant.image_url || 'https://via.placeholder.com/300x300/e0e0e0/999999?text=No+Image';
+                    
+                    // === 修改：优先使用商品主图，如果没有再用规格图 ===
+                    const imgUrl = p.image_url || mainVariant.image_url || 'https://via.placeholder.com/300x300/e0e0e0/999999?text=No+Image';
+                    
                     // 价格
                     const price = mainVariant.price || '0.00';
 
