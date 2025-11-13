@@ -20,16 +20,55 @@
         .price-num { font-size: 24px; font-weight: bold; }
         .prod-title { font-size: 16px; font-weight: 600; color: #051b28; line-height: 1.4; margin-bottom: 8px; }
         
-        /* 销量库存行 */
         .prod-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-bottom: 5px; }
         
-        /* 额外信息 (批发/自选) */
-        .extra-info { background: #f9f9f9; border-radius: 4px; padding: 8px; font-size: 12px; color: #666; margin-top: 8px; }
-        .extra-tag { display: inline-block; background: #fff1eb; color: #ff5000; padding: 1px 4px; border-radius: 2px; margin-right: 4px; transform: scale(0.9); transform-origin: left center; }
+        /* === 修改：优惠信息模块样式 (仿图片风格) === */
+        .extra-info { 
+            background: #fff5f7; /* 浅粉背景 */
+            border: 1px solid #ff0036; /* 红色边框 */
+            border-radius: 4px; 
+            padding: 8px; 
+            font-size: 12px; 
+            color: #ff0036; 
+            margin-top: 10px; 
+            line-height: 1.6;
+        }
+        .extra-tag-solid { 
+            display: inline-block; 
+            background: #ff0036; /* 实心红 */
+            color: #fff; 
+            padding: 1px 5px; 
+            border-radius: 2px; 
+            margin-right: 5px; 
+            font-size: 11px;
+        }
+        .extra-tag-outline {
+            display: inline-block;
+            color: #ff5000;
+            border: 1px solid #ff5000;
+            padding: 0 4px;
+            border-radius: 2px;
+            margin-right: 5px;
+            margin-left: 5px;
+            font-size: 11px;
+        }
+
+        /* === 修改：首页规格预览标签样式 (浅色边框) === */
+        .sku-preview-tag {
+            display: inline-block;
+            border: 1px solid #dcdcdc; /* 浅灰边框 */
+            background: #fcfcfc;
+            color: #333;
+            padding: 3px 10px;
+            border-radius: 4px;
+            margin-right: 6px;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
 
         .cell-item { background: #fff; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #333; cursor: pointer; }
-        .cell-label { color: #999; margin-right: 10px; font-weight: bold; }
-        .cell-content { flex: 1; font-weight: 500; }
+        .cell-label { color: #999; margin-right: 10px; font-weight: bold; min-width: 30px; }
+        .cell-content { flex: 1; font-weight: 500; display: flex; flex-wrap: wrap; } /* 允许标签换行 */
 
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background: #fff; display: flex; align-items: center; box-shadow: 0 -1px 5px rgba(0,0,0,0.05); z-index: 900; }
         .icon-btn { width: 60px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; text-decoration: none; }
@@ -38,7 +77,6 @@
         .btn-buy { flex: 1; height: 36px; border-radius: 18px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; font-size: 14px; border: none; display: flex; align-items: center; justify-content: center; }
         .btn-buy:active { opacity: 0.9; }
 
-        /* 抽屉样式 */
         .sku-sheet { border-top-left-radius: 16px; border-top-right-radius: 16px; height: 80vh !important; }
         .sku-header { display: flex; padding: 15px; position: relative; border-bottom: 1px solid #f5f5f5; }
         .sku-thumb { width: 90px; height: 90px; border-radius: 6px; margin-top: -30px; border: 3px solid #fff; background: #fff; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -52,11 +90,8 @@
         
         .spec-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .spec-btn { padding: 6px 15px; background: #f5f5f5; border-radius: 16px; font-size: 13px; color: #333; border: 1px solid transparent; transition: all 0.2s; }
-        
-        /* 选中时强制橙色 */
         .spec-btn.active { background: #ffefe7 !important; color: #ff5000 !important; border-color: #ff5000 !important; }
 
-        /* 购买方式 Radio 样式 */
         .buy-mode-group { display: flex; gap: 15px; margin-bottom: 15px; }
         .mode-radio { display: none; }
         .mode-label { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: center; font-size: 13px; cursor: pointer; position: relative; }
@@ -64,7 +99,6 @@
         .mode-label small { display: block; font-size: 10px; color: #999; margin-top: 2px; }
         .mode-radio:checked + .mode-label small { color: #ff5000; }
 
-        /* 自选卡密列表 */
         .card-select-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 200px; overflow-y: auto; }
         .card-option { padding: 8px; border: 1px solid #eee; border-radius: 6px; font-size: 12px; text-align: center; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-option.active { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
@@ -81,7 +115,7 @@
 
     <a href="/" class="nav-back"><i class="fa fa-arrow-left"></i></a>
 
-    <div class="prod-img-wrap"><img id="p-img" src="" class="prod-img"></div>
+    <div class="prod-img-wrap"><img id="p-img" src="" class="prod-img" alt="Product Image"></div>
 
     <div class="info-card">
         <div class="price-row"><span class="price-symbol">¥</span><span class="price-num" id="p-price">-</span></div>
@@ -96,7 +130,9 @@
 
     <div class="cell-item" onclick="openSkuSheet()">
         <span class="cell-label">选择</span>
-        <span class="cell-content text-truncate" id="p-select-text">规格加载中...</span>
+        <div class="cell-content" id="p-select-text">
+            规格加载中...
+        </div>
         <i class="fa fa-angle-right text-muted"></i>
     </div>
 
@@ -231,40 +267,57 @@
             document.getElementById('p-img').src = mainImg;
             document.getElementById('sku-img').src = mainImg;
 
-            // 规格列表
-            document.getElementById('p-select-text').innerText = '选择：' + p.variants.map(v => v.name).join(' ');
+            // 渲染规格按钮 (抽屉)
             const vList = document.getElementById('variant-list');
             vList.innerHTML = p.variants.map((v) => {
                 const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
                 return `<div class="spec-btn" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
             }).join('');
 
-            // 渲染额外信息
+            // === 修改：渲染首页的选择标签 (带浅色边框) ===
+            const skuTags = p.variants.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
+            document.getElementById('p-select-text').innerHTML = skuTags;
+
+            // === 修改：渲染优惠信息模块 ===
             renderExtraInfo(p.variants);
             
             document.getElementById('sku-selected-text').innerText = '未选择';
             selectedVariant = null;
         }
         
+        // 渲染首页的额外信息模块 (自选加价 & 批发价)
         function renderExtraInfo(variants) {
             const infoDiv = document.getElementById('p-extra-info');
             let html = '';
-            let hasInfo = false;
-            variants.forEach(v => {
-                if(v.custom_markup > 0) {
-                    html += `<div><span class="extra-tag">加价</span> ${v.name}: 自选 +${v.custom_markup}元</div>`;
-                    hasInfo = true;
-                }
-                if(v.wholesale_config) {
-                    try {
-                        const ws = JSON.parse(v.wholesale_config);
-                        const wsStr = ws.map(w => `${w.qty}起${w.price}元`).join('，');
-                        html += `<div><span class="extra-tag">批发</span> ${v.name}: ${wsStr}</div>`;
-                        hasInfo = true;
-                    } catch(e) {}
-                }
-            });
-            if (hasInfo) { infoDiv.innerHTML = html; infoDiv.classList.remove('d-none'); } else { infoDiv.classList.add('d-none'); }
+            
+            // 检查是否有自选加价
+            const hasMarkup = variants.some(v => v.custom_markup > 0);
+            if (hasMarkup) {
+                html += `<span class="extra-tag-solid">自选加价</span> `;
+            }
+
+            // 检查是否有批发价，并格式化文本
+            let wsText = '';
+            // 简单起见，取第一个有配置批发价的规则展示，避免太长
+            const vWithWs = variants.find(v => v.wholesale_config);
+            if (vWithWs) {
+                try {
+                    const ws = JSON.parse(vWithWs.wholesale_config); // [{qty:5, price:3}, ...]
+                    ws.sort((a, b) => a.qty - b.qty); // 按数量升序
+                    wsText = ws.map(w => `${w.qty}起${w.price}元/1个`).join('，');
+                } catch(e) {}
+            }
+
+            if (wsText) {
+                html += `<span class="extra-tag-outline">批发价:</span> ${wsText}`;
+            }
+
+            if (hasMarkup || wsText) {
+                infoDiv.innerHTML = html;
+                infoDiv.classList.remove('d-none');
+            } else {
+                infoDiv.classList.add('d-none');
+            }
         }
 
         function openSkuSheet() { skuSheet.show(); }
@@ -276,9 +329,14 @@
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
             document.getElementById('p-price').innerText = selectedVariant.price;
+            
+            // 在抽屉选择时，首页的选择栏文字也更新，但格式保持标签? 
+            // 淘宝逻辑通常是：选了就显示“已选：xxx”。如果不选显示“规格1 规格2”。
+            // 为了简单，我们这里更新为纯文本提示，或者保持原样？
+            // 既然用户要求“显示规格1 规格2”，那应该是未选状态。选中后通常显示“已选：xxx”。
             document.getElementById('p-select-text').innerText = `已选: ${selectedVariant.name}`;
             
-            // 图片切换逻辑 (有图切图，无图显主图)
+            // 图片切换
             const p = currentProduct;
             const defV = p.variants[0];
             const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
@@ -323,7 +381,7 @@
             try {
                 const res = await fetch(`/api/shop/cards/notes?variant_id=${selectedVariant.id}`);
                 const notes = await res.json();
-                if (notes.length === 0) { listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">暂无号码</div>'; return; }
+                if (notes.length === 0) { listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">暂无可自选号码</div>'; return; }
                 listEl.innerHTML = notes.map(n => `<div class="card-option" onclick="selectCard(this, ${n.id})">${n.note}</div>`).join('');
             } catch(e) { listEl.innerHTML = '<div class="text-danger">加载失败</div>'; }
         }
