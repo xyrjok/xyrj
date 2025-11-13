@@ -33,7 +33,7 @@
         }
         .price-row { color: #ff5000; display: flex; align-items: baseline; margin-bottom: 8px; }
         .price-symbol { font-size: 14px; font-weight: bold; }
-        .price-num { font-size: 28px; font-weight: bold; }
+        .price-num { font-size: 24px; font-weight: bold; } /* 字体稍微调小以适应区间显示 */
         .prod-title { font-size: 16px; font-weight: 600; color: #051b28; line-height: 1.4; margin-bottom: 8px; }
         .prod-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; }
 
@@ -85,8 +85,12 @@
             padding: 6px 15px; background: #f5f5f5; border-radius: 16px;
             font-size: 13px; color: #333; border: 1px solid transparent; transition: all 0.2s;
         }
+        
+        /* === 修改：选中状态强制覆盖颜色 === */
         .spec-btn.active {
-            background: #ffefe7; color: #ff5000; border-color: #ff5000;
+            background: #ffefe7 !important; 
+            color: #ff5000 !important; /* 强制橙色，覆盖行内样式 */
+            border-color: #ff5000 !important;
         }
 
         /* 数量加减 */
@@ -238,34 +242,55 @@
 
         function renderPage() {
             const p = currentProduct;
-            const defV = p.variants[0];
             
+            // === 1. 计算价格区间 ===
+            const prices = p.variants.map(v => v.price);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            // 如果最低价等于最高价，显示单价；否则显示区间
+            const priceDisplay = (minPrice === maxPrice) ? minPrice : `${minPrice} - ${maxPrice}`;
+
+            // === 2. 初始化显示 ===
             document.title = p.name;
             document.getElementById('p-title').innerText = p.name;
             document.getElementById('p-desc').innerText = p.description || '暂无详细介绍';
-            document.getElementById('p-price').innerText = defV ? defV.price : '-';
             
+            // 显示价格区间
+            document.getElementById('p-price').innerText = priceDisplay;
+            document.getElementById('sku-price-text').innerText = priceDisplay;
+
+            // 统计总销量和总库存
             const totalSales = p.variants.reduce((s,v) => s + (v.sales_count||0), 0);
             const totalStock = p.variants.reduce((s,v) => s + (v.stock||0), 0);
             document.getElementById('p-sales').innerText = `已售: ${totalSales}`;
             document.getElementById('p-stock').innerText = `库存: ${totalStock}`;
             
-            // === 修改：初始化优先显示商品主图 ===
-            // 逻辑：如果有主图，用主图；如果没主图但有规格图，用规格图；否则用占位图
-            const img = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
-            document.getElementById('p-img').src = img;
-            document.getElementById('sku-img').src = img;
+            // === 3. 初始化图片：优先显示主图，没有主图显示第一规格图，都没有显示占位图 ===
+            const defV = p.variants[0];
+            const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
+            document.getElementById('p-img').src = mainImg;
+            document.getElementById('sku-img').src = mainImg;
 
+            // === 4. 渲染规格按钮 (不默认选中) ===
             const vList = document.getElementById('variant-list');
-            vList.innerHTML = p.variants.map((v, index) => `
-                <div class="spec-btn ${index === 0 ? 'active' : ''}" 
+            vList.innerHTML = p.variants.map((v) => {
+                // 如果后台设置了颜色，就应用行内样式；选中时会被 CSS !important 覆盖
+                const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
+                return `
+                <div class="spec-btn" 
+                     ${style}
                      onclick="selectVariant(${v.id})" 
                      data-id="${v.id}">
                      ${v.name}
                 </div>
-            `).join('');
+            `}).join('');
 
-            if(p.variants.length > 0) selectVariant(p.variants[0].id);
+            // === 5. 重置选中状态文字 ===
+            document.getElementById('p-select-text').innerText = '请选择 规格';
+            document.getElementById('sku-selected-text').innerText = '未选择';
+            
+            // 初始不选中任何规格
+            selectedVariant = null;
         }
 
         function openSkuSheet() { skuSheet.show(); }
@@ -273,24 +298,28 @@
         function selectVariant(vid) {
             selectedVariant = currentProduct.variants.find(v => v.id == vid);
             
+            // 更新按钮选中状态
             document.querySelectorAll('.spec-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.id == vid);
+                const isActive = (btn.dataset.id == vid);
+                btn.classList.toggle('active', isActive);
             });
 
+            // 更新价格、库存、已选文字
             document.getElementById('sku-price-text').innerText = selectedVariant.price;
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
+            
+            // 主页面的价格也同步更新为具体价格
             document.getElementById('p-price').innerText = selectedVariant.price;
             document.getElementById('p-select-text').innerText = `已选: ${selectedVariant.name}`;
             
-            // === 修改：切换图片逻辑 ===
-            // 1. 计算出默认显示的“主图”（优先用商品主图，其次用第一规格图）
+            // === 6. 图片切换逻辑 ===
+            // 计算主图（回退图）
             const p = currentProduct;
             const defV = p.variants[0];
             const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
 
-            // 2. 如果当前选中的规格有专属图片，则显示专属图片；
-            //    否则，显示“主图”（即回退，保持主图不动）
+            // 如果当前规格有图，显示规格图；否则显示主图
             if(selectedVariant.image_url) {
                 document.getElementById('sku-img').src = selectedVariant.image_url;
                 document.getElementById('p-img').src = selectedVariant.image_url;
