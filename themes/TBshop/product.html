@@ -215,40 +215,29 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script> <script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+    <script>
         let allProducts = [];
         let currentProduct = null;
         let selectedVariant = null;
         const skuSheet = new bootstrap.Offcanvas(document.getElementById('skuSheet'));
         const payModal = new bootstrap.Modal(document.getElementById('payModal'));
 
-        // 初始化
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const id = urlParams.get('id');
-            
             if(!id) return alert('未指定商品');
-
             try {
-                // 由于是 MPA 架构，我们直接获取所有商品列表然后在前端筛选
-                // 这样利用了 Worker 的缓存，速度很快
                 const res = await fetch('/api/shop/products');
                 allProducts = await res.json();
                 currentProduct = allProducts.find(p => p.id == id);
-
                 if (!currentProduct) return alert('商品不存在或已下架');
-
                 renderPage();
-            } catch (e) {
-                console.error(e);
-                alert('加载失败');
-            }
+            } catch (e) { console.error(e); alert('加载失败'); }
         }
 
-        // 渲染主页面
         function renderPage() {
             const p = currentProduct;
-            // 默认取第一个规格的信息展示
             const defV = p.variants[0];
             
             document.title = p.name;
@@ -261,11 +250,11 @@
             document.getElementById('p-sales').innerText = `已售: ${totalSales}`;
             document.getElementById('p-stock').innerText = `库存: ${totalStock}`;
             
-            const img = defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image';
+            // === 优先显示商品主图，如果没有则尝试规格图 ===
+            const img = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
             document.getElementById('p-img').src = img;
             document.getElementById('sku-img').src = img;
 
-            // 渲染规格列表
             const vList = document.getElementById('variant-list');
             vList.innerHTML = p.variants.map((v, index) => `
                 <div class="spec-btn ${index === 0 ? 'active' : ''}" 
@@ -275,55 +264,44 @@
                 </div>
             `).join('');
 
-            // 默认选中第一个
             if(p.variants.length > 0) selectVariant(p.variants[0].id);
         }
 
-        // 打开底部抽屉
-        function openSkuSheet() {
-            skuSheet.show();
-        }
+        function openSkuSheet() { skuSheet.show(); }
 
-        // 选择规格
         function selectVariant(vid) {
             selectedVariant = currentProduct.variants.find(v => v.id == vid);
             
-            // 更新 UI 状态
             document.querySelectorAll('.spec-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.id == vid);
             });
 
-            // 更新抽屉数据
             document.getElementById('sku-price-text').innerText = selectedVariant.price;
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
-            
-            // 更新主页数据
             document.getElementById('p-price').innerText = selectedVariant.price;
             document.getElementById('p-select-text').innerText = `已选: ${selectedVariant.name}`;
             
+            // === 切换图片逻辑：只有当规格有图片时才切换，否则保留主图 ===
             if(selectedVariant.image_url) {
                 document.getElementById('sku-img').src = selectedVariant.image_url;
                 document.getElementById('p-img').src = selectedVariant.image_url;
             }
         }
 
-        // 数量加减
         function changeQty(delta) {
             const input = document.getElementById('buy-qty');
             let val = parseInt(input.value) + delta;
             if(val < 1) val = 1;
-            if(selectedVariant && val > selectedVariant.stock) val = selectedVariant.stock; // 不超库存
+            if(selectedVariant && val > selectedVariant.stock) val = selectedVariant.stock;
             input.value = val;
         }
 
-        // 提交订单
         async function submitOrder() {
             if(!selectedVariant) return alert('请选择规格');
             const quantity = parseInt(document.getElementById('buy-qty').value);
             const contact = document.getElementById('contact-info').value;
-            
-            if(!contact) return alert('请填写联系方式(邮箱或QQ)');
+            if(!contact) return alert('请填写联系方式');
             if(selectedVariant.stock < quantity) return alert('库存不足');
 
             const btn = document.querySelector('.btn-confirm');
@@ -331,7 +309,6 @@
             btn.disabled = true; btn.innerText = '正在创建...';
 
             try {
-                // 1. 创建订单
                 const res = await fetch('/api/shop/order/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -343,60 +320,38 @@
                     })
                 });
                 const order = await res.json();
-
                 if(order.error) throw new Error(order.error);
 
-                // 2. 发起支付
-                btn.innerText = '正在获取支付二维码...';
+                btn.innerText = '获取支付码...';
                 const payRes = await fetch('/api/shop/pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ order_id: order.order_id })
                 });
                 const payData = await payRes.json();
-
                 if(payData.error) throw new Error(payData.error);
 
-                // 3. 展示二维码
                 if(payData.type === 'qrcode') {
-                    skuSheet.hide(); // 关闭抽屉
+                    skuSheet.hide();
                     document.getElementById('qr-container').innerHTML = '';
-                    new QRCode(document.getElementById("qr-container"), {
-                        text: payData.qr_code,
-                        width: 200,
-                        height: 200
-                    });
+                    new QRCode(document.getElementById("qr-container"), { text: payData.qr_code, width: 200, height: 200 });
                     document.getElementById('pay-amount').innerText = order.total_amount;
                     payModal.show();
-                    
-                    // 手机端尝试直接唤起支付宝 (Schema)
-                    // const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                    // if(isMobile) {
-                    //     window.location.href = payData.qr_code; // 支付宝部分链接支持直接跳转，或尝试 alipays://
-                    // }
-                    
-                    // 轮询查单
                     checkOrderLoop(order.order_id);
                 }
-
-            } catch (e) {
-                alert(e.message);
-            } finally {
-                btn.disabled = false; btn.innerText = oldText;
-            }
+            } catch (e) { alert(e.message); } 
+            finally { btn.disabled = false; btn.innerText = oldText; }
         }
 
-        // 轮询检查订单状态
         function checkOrderLoop(orderId) {
             const timer = setInterval(async () => {
                 try {
                     const res = await fetch(`/api/shop/order/status?order_id=${orderId}`);
                     const data = await res.json();
-                    if(data.status >= 1) { // 已支付
+                    if(data.status >= 1) {
                         clearInterval(timer);
                         payModal.hide();
-                        alert('支付成功！卡密将发送到您的联系方式，或在查询页查看。');
-                        // 简单处理：刷新页面或跳转到查单页
+                        alert('支付成功！');
                         window.location.reload(); 
                     }
                 } catch(e) {}
