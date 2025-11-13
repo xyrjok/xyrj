@@ -22,14 +22,14 @@
         
         .prod-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-bottom: 5px; }
         
-        /* === 修改：优惠信息模块样式 (仿图片风格) === */
+        /* === 修改：优惠信息模块 (去掉了红色边框) === */
         .extra-info { 
             background: #fff5f7; /* 浅粉背景 */
-            border: 1px solid #ff0036; /* 红色边框 */
+            /* border: 1px solid #ff0036;  <-- 已移除边框 */
             border-radius: 4px; 
             padding: 8px; 
             font-size: 12px; 
-            color: #ff0036; 
+            color: #ff0036; /* 文字颜色保持红色 */
             margin-top: 10px; 
             line-height: 1.6;
         }
@@ -41,22 +41,13 @@
             border-radius: 2px; 
             margin-right: 5px; 
             font-size: 11px;
+            vertical-align: middle;
         }
-        .extra-tag-outline {
-            display: inline-block;
-            color: #ff5000;
-            border: 1px solid #ff5000;
-            padding: 0 4px;
-            border-radius: 2px;
-            margin-right: 5px;
-            margin-left: 5px;
-            font-size: 11px;
-        }
-
-        /* === 修改：首页规格预览标签样式 (浅色边框) === */
+        
+        /* 首页规格预览标签样式 */
         .sku-preview-tag {
             display: inline-block;
-            border: 1px solid #dcdcdc; /* 浅灰边框 */
+            border: 1px solid #dcdcdc; 
             background: #fcfcfc;
             color: #333;
             padding: 3px 10px;
@@ -68,7 +59,7 @@
 
         .cell-item { background: #fff; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #333; cursor: pointer; }
         .cell-label { color: #999; margin-right: 10px; font-weight: bold; min-width: 30px; }
-        .cell-content { flex: 1; font-weight: 500; display: flex; flex-wrap: wrap; } /* 允许标签换行 */
+        .cell-content { flex: 1; font-weight: 500; display: flex; flex-wrap: wrap; }
 
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background: #fff; display: flex; align-items: center; box-shadow: 0 -1px 5px rgba(0,0,0,0.05); z-index: 900; }
         .icon-btn { width: 60px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; text-decoration: none; }
@@ -274,45 +265,56 @@
                 return `<div class="spec-btn" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
             }).join('');
 
-            // === 修改：渲染首页的选择标签 (带浅色边框) ===
+            // 渲染首页的选择标签 (带浅色边框)
             const skuTags = p.variants.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
             document.getElementById('p-select-text').innerHTML = skuTags;
 
-            // === 修改：渲染优惠信息模块 ===
-            renderExtraInfo(p.variants);
+            // === 渲染优惠信息 (新逻辑) ===
+            renderExtraInfo(null);
             
             document.getElementById('sku-selected-text').innerText = '未选择';
             selectedVariant = null;
         }
         
-        // 渲染首页的额外信息模块 (自选加价 & 批发价)
-        function renderExtraInfo(variants) {
+        // === 修改：渲染首页的额外信息模块 ===
+        function renderExtraInfo(selectedV) {
             const infoDiv = document.getElementById('p-extra-info');
+            const variants = currentProduct.variants;
             let html = '';
             
-            // 检查是否有自选加价
-            const hasMarkup = variants.some(v => v.custom_markup > 0);
-            if (hasMarkup) {
+            // 1. 自选加价标签
+            // 逻辑：如果选中了规格，看该规格；如果没选，看是否任意规格有加价
+            const showMarkup = selectedV ? (selectedV.custom_markup > 0) : variants.some(v => v.custom_markup > 0);
+            
+            if (showMarkup) {
                 html += `<span class="extra-tag-solid">自选加价</span> `;
             }
 
-            // 检查是否有批发价，并格式化文本
+            // 2. 批发价文本
             let wsText = '';
-            // 简单起见，取第一个有配置批发价的规则展示，避免太长
-            const vWithWs = variants.find(v => v.wholesale_config);
-            if (vWithWs) {
-                try {
-                    const ws = JSON.parse(vWithWs.wholesale_config); // [{qty:5, price:3}, ...]
-                    ws.sort((a, b) => a.qty - b.qty); // 按数量升序
-                    wsText = ws.map(w => `${w.qty}起${w.price}元/1个`).join('，');
-                } catch(e) {}
+            if (selectedV) {
+                // 已选规格：显示具体规则
+                if (selectedV.wholesale_config) {
+                    try {
+                        const ws = JSON.parse(selectedV.wholesale_config);
+                        ws.sort((a, b) => a.qty - b.qty);
+                        wsText = `批发价：${ws.map(w => `${w.qty}起${w.price}元/1个`).join('，')}`;
+                    } catch(e) {}
+                }
+            } else {
+                // 未选规格：如果有任意规格含批发价，提示“请选择”
+                const hasWholesale = variants.some(v => v.wholesale_config);
+                if (hasWholesale) {
+                    wsText = `批发价：请选择规格`;
+                }
             }
 
             if (wsText) {
-                html += `<span class="extra-tag-outline">批发价:</span> ${wsText}`;
+                // 红色文字，紧接在标签后面
+                html += `<span>${wsText}</span>`;
             }
 
-            if (hasMarkup || wsText) {
+            if (html) {
                 infoDiv.innerHTML = html;
                 infoDiv.classList.remove('d-none');
             } else {
@@ -329,11 +331,6 @@
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
             document.getElementById('p-price').innerText = selectedVariant.price;
-            
-            // 在抽屉选择时，首页的选择栏文字也更新，但格式保持标签? 
-            // 淘宝逻辑通常是：选了就显示“已选：xxx”。如果不选显示“规格1 规格2”。
-            // 为了简单，我们这里更新为纯文本提示，或者保持原样？
-            // 既然用户要求“显示规格1 规格2”，那应该是未选状态。选中后通常显示“已选：xxx”。
             document.getElementById('p-select-text').innerText = `已选: ${selectedVariant.name}`;
             
             // 图片切换
@@ -343,6 +340,9 @@
             const targetImg = selectedVariant.image_url || mainImg;
             document.getElementById('sku-img').src = targetImg;
             document.getElementById('p-img').src = targetImg;
+
+            // === 更新优惠信息栏 ===
+            renderExtraInfo(selectedVariant);
 
             // 购买方式逻辑
             const modeContainer = document.getElementById('buy-mode-container');
