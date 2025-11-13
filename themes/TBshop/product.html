@@ -20,15 +20,13 @@
         
         /* 优惠信息模块 */
         .extra-info { 
-            display: flex;
-            background: #fff5f7;
-            border-radius: 4px;
-            padding: 8px;
-            font-size: 12px;
-            color: #ff0036;
-            margin-top: 10px;
+            background: #fff5f7; 
+            border-radius: 4px; 
+            padding: 8px; 
+            font-size: 12px; 
+            color: #ff0036; 
+            margin-top: 10px; 
             line-height: 1.6;
-            align-items: center;
         }
         .extra-tag-solid { 
             display: inline-block; 
@@ -67,7 +65,18 @@
         .mode-radio { display: none; }
         .mode-label { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: center; font-size: 13px; cursor: pointer; position: relative; }
         .mode-radio:checked + .mode-label { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
-        .mode-label small { display: block; font-size: 10px; color: #999; margin-top: 2px; }
+        
+        /* 修改 small 标签样式，防止长文本撑破 */
+        .mode-label small { 
+            display: block; 
+            font-size: 10px; 
+            color: #999; 
+            margin-top: 2px; 
+            word-break: break-all; 
+            white-space: normal; 
+            line-height: 1.4;
+        }
+        
         .mode-radio:checked + .mode-label small { color: #ff5000; }
         .card-select-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 200px; overflow-y: auto; }
         .card-option { padding: 8px; border: 1px solid #eee; border-radius: 6px; font-size: 12px; text-align: center; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -124,9 +133,17 @@
                 <div class="section-title">购买方式 <small class="text-muted fw-normal ms-2">(自选与批发互斥)</small></div>
                 <div class="buy-mode-group">
                     <input type="radio" name="buy_mode" id="mode_random" class="mode-radio" value="random" checked onchange="toggleBuyMode()">
-                    <label for="mode_random" class="mode-label">随机发货<small>享受批发优惠</small></label>
+                    
+                    <label for="mode_random" class="mode-label">
+                        随机发货
+                        <small id="random-mode-desc">享受批发优惠</small>
+                    </label>
+
                     <input type="radio" name="buy_mode" id="mode_select" class="mode-radio" value="select" onchange="toggleBuyMode()">
-                    <label for="mode_select" class="mode-label">自选号码<small>加价 <span id="markup-amount">0</span> 元</small></label>
+                    <label for="mode_select" class="mode-label">
+                        自选号码
+                        <small>加价 <span id="markup-amount">0</span> 元</small>
+                    </label>
                 </div>
                 <div id="card-selector" class="d-none">
                     <div class="d-flex justify-content-between mb-2">
@@ -224,6 +241,10 @@
 
             renderExtraInfo(null);
             document.getElementById('sku-selected-text').innerText = '未选择';
+            
+            // 重置抽屉里的批发价文本
+            document.getElementById('random-mode-desc').innerText = '享受批发优惠';
+            
             selectedVariant = null;
         }
         
@@ -239,16 +260,13 @@
 
             let wsText = '';
             if (selectedV) {
-                // === 修复：不使用 JSON.parse，因为后端已解析 ===
                 if (selectedV.wholesale_config) {
                     try {
                         let ws = selectedV.wholesale_config;
-                        // 兼容性判断：虽然正常是对象，但万一是字符串也处理一下
                         if (typeof ws === 'string') ws = JSON.parse(ws);
-                        
                         if (Array.isArray(ws)) {
                             ws.sort((a, b) => a.qty - b.qty);
-                            wsText = `批发价：${ws.map(w => `${w.qty}个起${w.price}元/1个`).join('，')}`;
+                            wsText = `批发价：${ws.map(w => `${w.qty}起${w.price}元/1个`).join('，')}`;
                         }
                     } catch(e) { console.error('WS Error', e); }
                 }
@@ -289,6 +307,24 @@
             document.getElementById('p-img').src = targetImg;
 
             renderExtraInfo(selectedVariant);
+
+            // === 修改：更新抽屉里“随机发货”按钮下的批发价文案 ===
+            const randomDesc = document.getElementById('random-mode-desc');
+            if (selectedVariant.wholesale_config) {
+                try {
+                    let ws = selectedVariant.wholesale_config;
+                    if (typeof ws === 'string') ws = JSON.parse(ws);
+                    if (Array.isArray(ws) && ws.length > 0) {
+                        ws.sort((a, b) => a.qty - b.qty);
+                        const wsText = ws.map(w => `${w.qty}起${w.price}元/1个`).join('，');
+                        randomDesc.innerText = `批发价：${wsText}`;
+                    } else {
+                        randomDesc.innerText = '暂无批发价';
+                    }
+                } catch(e) { randomDesc.innerText = '暂无批发价'; }
+            } else {
+                randomDesc.innerText = '暂无批发价';
+            }
 
             const modeContainer = document.getElementById('buy-mode-container');
             if (selectedVariant.custom_markup > 0 && selectedVariant.auto_delivery === 1) {
@@ -353,7 +389,6 @@
             if (buyMode === 'select') {
                 price += (selectedVariant.custom_markup || 0);
             } else {
-                // === 修复：不使用 JSON.parse ===
                 if (selectedVariant.wholesale_config) {
                     try {
                         let ws = selectedVariant.wholesale_config;
