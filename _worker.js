@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker Faka Backend (最终修复版 - 完美隐藏路径)
+ * Cloudflare Worker Faka Backend (最终修复版 - 含主图与手动发货)
  */
 
 // === 工具函数 ===
@@ -214,19 +214,20 @@ async function handleApi(request, env, url) {
                 return jsonRes(products);
             }
             
-            // === 修复：商品保存逻辑 ===
+            // === 修正：商品保存逻辑 (增加了 image_url 支持) ===
             if (path === '/api/admin/product/save' && method === 'POST') {
                 const data = await request.json();
                 let productId = data.id;
 
                 // 1. 保存主商品
                 if (productId) {
-                    await db.prepare("UPDATE products SET name=?, description=?, category_id=?, sort=?, active=? WHERE id=?")
-                        .bind(data.name, data.description, data.category_id, data.sort, data.active, productId).run();
+                    // 修改：增加了 image_url=?
+                    await db.prepare("UPDATE products SET name=?, description=?, category_id=?, sort=?, active=?, image_url=? WHERE id=?")
+                        .bind(data.name, data.description, data.category_id, data.sort, data.active, data.image_url, productId).run();
                 } else {
-                    // 修正了 SQL 语法错误
-                    const res = await db.prepare("INSERT INTO products (category_id, sort, active, created_at, name, description) VALUES (?, ?, ?, ?, ?, ?)")
-                        .bind(data.category_id, data.sort, data.active, time(), data.name, data.description).run();
+                    // 修改：增加了 image_url
+                    const res = await db.prepare("INSERT INTO products (category_id, sort, active, created_at, name, description, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        .bind(data.category_id, data.sort, data.active, time(), data.name, data.description, data.image_url).run();
                     productId = res.meta.last_row_id;
                 }
 
@@ -247,13 +248,12 @@ async function handleApi(request, env, url) {
                     const wholesale_config_json = v.wholesale_config ? JSON.stringify(v.wholesale_config) : null;
                     const auto_delivery = v.auto_delivery !== undefined ? v.auto_delivery : 1;
                     const stock = v.stock !== undefined ? v.stock : 0;
-
-                    // 核心修复：将前端传来的 ID 强制转换为数字，防止类型不匹配导致误删
-                    // 如果 v.id 是空字符串或 null，parseInt 会变成 NaN，这里做个判断
+                    
+                    // ID 处理 (转为数字，防止误删)
                     const variantId = v.id ? parseInt(v.id) : null;
 
                     if (variantId) { // 更新
-                        newVariantIds.push(variantId); // 存入数字类型的 ID
+                        newVariantIds.push(variantId);
                         updateStmts.push(
                             updateStmt.bind(
                                 v.name, v.price, stock, v.color, v.image_url, wholesale_config_json, 
