@@ -161,6 +161,7 @@
             modal.show();
         }
 
+        // === 修改开始：更新 addVariantRow 函数以支持发货模式 ===
         function addVariantRow(v) {
             const vList = document.getElementById('v-list');
             const row = document.createElement('div');
@@ -171,6 +172,10 @@
                 wholesaleString = v.wholesale_config.map(tier => `${tier.qty}=${tier.price}`).join(', ');
             }
             
+            // 判断自动发货状态，默认为1 (自动)
+            const autoDelivery = (v.auto_delivery !== undefined) ? v.auto_delivery : 1;
+            const isAuto = (autoDelivery == 1);
+
             // 强制单行 Flex 布局
             row.innerHTML = `
                 <input type="hidden" class="v-id" value="${v.id || ''}">
@@ -182,10 +187,13 @@
                         <label class="form-label-sm">规格名称</label>
                         <input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="月卡">
                     </div>
-                    
+
                     <div class="variant-field">
-                        <label class="form-label-sm">颜色</label>
-                        <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFFFFF">
+                        <label class="form-label-sm">发货模式</label>
+                        <select class="form-select form-select-sm v-auto_delivery" onchange="toggleStockInput(this)">
+                            <option value="1" ${isAuto ? 'selected' : ''}>自动 (卡密)</option>
+                            <option value="0" ${!isAuto ? 'selected' : ''}>手动 (人工)</option>
+                        </select>
                     </div>
                     
                     <div class="variant-field v-image_url">
@@ -205,7 +213,8 @@
                     
                     <div class="variant-field">
                         <label class="form-label-sm">库存</label>
-                        <input type="text" class="form-control form-control-sm" value="${v.stock || 0}" disabled readonly title="自动计算">
+                        <input type="number" class="form-control form-control-sm v-stock" value="${v.stock || 0}" 
+                            ${isAuto ? 'disabled readonly title="自动从卡密库计算"' : ''}>
                     </div>
                     
                     <div class="variant-field">
@@ -223,6 +232,24 @@
             vList.appendChild(row);
         }
 
+        // 新增：切换发货模式逻辑
+        function toggleStockInput(selectEl) {
+            const row = selectEl.closest('.variant-row');
+            const stockInput = row.querySelector('.v-stock');
+            if (selectEl.value == "1") {
+                // 自动发货
+                stockInput.disabled = true;
+                stockInput.readOnly = true;
+                stockInput.title = "自动从卡密库计算";
+            } else {
+                // 手动发货
+                stockInput.disabled = false;
+                stockInput.readOnly = false;
+                stockInput.title = "";
+            }
+        }
+        // === 修改结束 ===
+
 
         async function saveProduct() {
             const data = {
@@ -237,7 +264,6 @@
             
             try {
                 document.querySelectorAll('#v-list .variant-row').forEach(row => {
-                    // 修正：使用 input.v-wholesale_config 确保选中输入框而不是父级 div
                     const wholesaleInput = row.querySelector('input.v-wholesale_config');
                     const wholesaleValue = wholesaleInput ? wholesaleInput.value.trim() : '';
                     
@@ -264,30 +290,34 @@
                             }
                             if (wholesale_config.length === 0) wholesale_config = null;
                         } catch (e) {
-                            // 修正：获取名称时也需要加 input. 前缀
                             const nameVal = row.querySelector('input.v-name') ? row.querySelector('input.v-name').value : '未知规格';
                             throw new Error(`规格 "${nameVal}" 的批发价配置解析失败: ${e.message}。请使用格式: 5=3, 10=2`);
                         }
                     }
                     
                     const price = parseFloat(row.querySelector('.v-price').value);
-                    // 修正：获取名称时也需要加 input. 前缀
                     const nameInput = row.querySelector('input.v-name');
                     const nameVal = nameInput ? nameInput.value : '默认规格';
 
                     if (isNaN(price) || price < 0) {
                          throw new Error(`规格 "${nameVal}" 的售价必须是大于等于0的数字。`);
                     }
+                    
+                    // 获取发货模式和库存
+                    const autoDelivery = parseInt(row.querySelector('.v-auto_delivery').value);
+                    const stockVal = parseInt(row.querySelector('.v-stock').value) || 0;
 
                     data.variants.push({
                         id: row.querySelector('.v-id').value || null,
                         name: nameVal,
                         price: price,
-                        color: row.querySelector('.v-color').value || null,
-                        // 修正：获取图片链接时也需要加 input. 前缀
+                        color: row.querySelector('.v-color') ? row.querySelector('.v-color').value : null,
                         image_url: row.querySelector('input.v-image_url') ? row.querySelector('input.v-image_url').value : null,
                         custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0,
-                        wholesale_config: wholesale_config
+                        wholesale_config: wholesale_config,
+                        // 传递新字段
+                        auto_delivery: autoDelivery,
+                        stock: stockVal
                     });
                 });
 
