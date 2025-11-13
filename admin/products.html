@@ -26,14 +26,14 @@
             padding-bottom: 10px;
         }
         .variant-field {
-            flex-shrink: 1; /* 允许缩小 */
-            flex-grow: 1;   /* 允许放大 */
-            min-width: 100px; /* 最小宽度 */
+            flex-shrink: 0; /* 防止被压缩 */
+            min-width: 80px; /* 默认最小宽度 */
         }
         /* 为特定字段设置基础宽度 */
         .v-name { min-width: 120px; }
-        .v-wholesale_config { min-width: 150px; }
-        .v-image_url { min-width: 150px; }
+        .v-color-wrap { min-width: 90px; } /* 颜色框宽度 */
+        .v-wholesale_config { min-width: 140px; }
+        .v-image_url { min-width: 140px; }
     </style>
 </head>
 <body>
@@ -161,7 +161,7 @@
             modal.show();
         }
 
-        // === 修改开始：更新 addVariantRow 函数以支持发货模式 ===
+        // === 更新 addVariantRow 函数：加回了颜色输入框 ===
         function addVariantRow(v) {
             const vList = document.getElementById('v-list');
             const row = document.createElement('div');
@@ -186,6 +186,11 @@
                     <div class="variant-field v-name">
                         <label class="form-label-sm">规格名称</label>
                         <input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="月卡">
+                    </div>
+
+                    <div class="variant-field v-color-wrap">
+                        <label class="form-label-sm">颜色</label>
+                        <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFFFFF">
                     </div>
 
                     <div class="variant-field">
@@ -232,7 +237,7 @@
             vList.appendChild(row);
         }
 
-        // 新增：切换发货模式逻辑
+        // 切换发货模式逻辑
         function toggleStockInput(selectEl) {
             const row = selectEl.closest('.variant-row');
             const stockInput = row.querySelector('.v-stock');
@@ -248,8 +253,6 @@
                 stockInput.title = "";
             }
         }
-        // === 修改结束 ===
-
 
         async function saveProduct() {
             const data = {
@@ -311,6 +314,7 @@
                         id: row.querySelector('.v-id').value || null,
                         name: nameVal,
                         price: price,
+                        // 获取颜色值
                         color: row.querySelector('.v-color') ? row.querySelector('.v-color').value : null,
                         image_url: row.querySelector('input.v-image_url') ? row.querySelector('input.v-image_url').value : null,
                         custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0,
