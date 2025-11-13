@@ -107,22 +107,17 @@ export default {
         } catch(e) {}
         
         // 规则 A: 排除不需要重写的系统路径
-        // 如果访问的是 admin 后台、themes 资源目录或 assets 目录，直接放行
         if (path.startsWith('/admin/') || path.startsWith('/themes/') || path.startsWith('/assets/')) {
              return env.ASSETS.fetch(request);
         }
 
         // 规则 B: 根路径处理 -> 请求主题目录
-        // 访问 "/" 或 "/index.html" -> 内部请求 "/themes/default/" (注意末尾斜杠)
-        // Cloudflare 会自动识别目录并返回 index.html，不会产生 301 跳转
         if (path === '/' || path === '/index.html') {
              const newUrl = new URL(`/themes/${theme}/`, url.origin);
              return env.ASSETS.fetch(new Request(newUrl, request));
         }
         
         // 规则 C: 普通 HTML 页面 -> 请求无后缀路径
-        // 访问 "/product.html" -> 内部请求 "/themes/default/product" (去掉 .html)
-        // Cloudflare 会自动匹配 product.html 并返回内容，地址栏保持不变
         if (path.endsWith('.html')) {
             const newPath = path.replace(/\.html$/, ''); // 去掉 .html 后缀
             const newUrl = new URL(`/themes/${theme}${newPath}`, url.origin);
@@ -131,11 +126,9 @@ export default {
             // 尝试抓取
             const response = await env.ASSETS.fetch(newRequest);
             
-            // 如果找到了(不是404)，就直接返回内容
             if (response.status !== 404) {
                 return response;
             }
-            // 如果真的找不到文件，回退去请求原始路径(防止误杀其他文件)
             return env.ASSETS.fetch(request);
         }
 
@@ -202,7 +195,6 @@ async function handleApi(request, env, url) {
             if (path === '/api/admin/category/delete' && method === 'POST') {
                 const { id } = await request.json();
                 if (id === 1) return errRes('默认分类不能删除');
-                // 将该分类下的商品移至默认分类
                 await db.prepare("UPDATE products SET category_id = 1 WHERE category_id = ?").bind(id).run();
                 await db.prepare("DELETE FROM categories WHERE id = ?").bind(id).run();
                 return jsonRes({ success: true });
@@ -222,6 +214,7 @@ async function handleApi(request, env, url) {
                 return jsonRes(products);
             }
             
+            // === 修复：商品保存逻辑 ===
             if (path === '/api/admin/product/save' && method === 'POST') {
                 const data = await request.json();
                 let productId = data.id;
@@ -231,6 +224,7 @@ async function handleApi(request, env, url) {
                     await db.prepare("UPDATE products SET name=?, description=?, category_id=?, sort=?, active=? WHERE id=?")
                         .bind(data.name, data.description, data.category_id, data.sort, data.active, productId).run();
                 } else {
+                    // 修正了 SQL 语法错误
                     const res = await db.prepare("INSERT INTO products (category_id, sort, active, created_at, name, description) VALUES (?, ?, ?, ?, ?, ?)")
                         .bind(data.category_id, data.sort, data.active, time(), data.name, data.description).run();
                     productId = res.meta.last_row_id;
@@ -251,20 +245,23 @@ async function handleApi(request, env, url) {
 
                 for (const v of data.variants) {
                     const wholesale_config_json = v.wholesale_config ? JSON.stringify(v.wholesale_config) : null;
+                    // 确保 auto_delivery 有默认值 1，手动发货可以保存库存
+                    const auto_delivery = v.auto_delivery !== undefined ? v.auto_delivery : 1;
+                    const stock = v.stock !== undefined ? v.stock : 0;
                     
                     if (v.id) { // 更新
                         newVariantIds.push(v.id);
                         updateStmts.push(
                             updateStmt.bind(
-                                v.name, v.price, v.stock || 0, v.color, v.image_url, wholesale_config_json, 
-                                v.custom_markup || 0, v.auto_delivery, v.sales_count || 0, v.id, productId
+                                v.name, v.price, stock, v.color, v.image_url, wholesale_config_json, 
+                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, v.id, productId
                             )
                         );
                     } else { // 插入
                         updateStmts.push(
                             insertStmt.bind(
-                                productId, v.name, v.price, v.stock || 0, v.color, v.image_url, wholesale_config_json,
-                                v.custom_markup || 0, v.auto_delivery, v.sales_count || 0, time()
+                                productId, v.name, v.price, stock, v.color, v.image_url, wholesale_config_json,
+                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, time()
                             )
                         );
                     }
@@ -459,7 +456,16 @@ async function handleApi(request, env, url) {
             const variant = await db.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
             if (!variant) return errRes('规格不存在');
 
-            const stock = (await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(variant_id).first()).c;
+            // === 修复：区分自动和手动库存检查 ===
+            let stock = 0;
+            if (variant.auto_delivery === 1) {
+                // 自动发货：查卡密表
+                stock = (await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(variant_id).first()).c;
+            } else {
+                // 手动发货：查 variants 表的 stock 字段
+                stock = variant.stock;
+            }
+
             if (stock < quantity) return errRes('库存不足');
 
             const product = await db.prepare("SELECT name FROM products WHERE id=?").bind(variant.product_id).first();
@@ -577,26 +583,39 @@ async function handleApi(request, env, url) {
                 const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status=1").bind(out_trade_no).first();
                 
                 if (order) {
-                    const cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?")
-                        .bind(order.variant_id, order.quantity).all();
-                    
-                    if (cards.results.length >= order.quantity) {
-                        const cardIds = cards.results.map(c => c.id);
-                        const cardContents = cards.results.map(c => c.content);
+                    // 获取商品规格信息，查看是否自动发货
+                    const variant = await db.prepare("SELECT auto_delivery FROM variants WHERE id=?").bind(order.variant_id).first();
+
+                    if (variant && variant.auto_delivery === 1) {
+                        // === 自动发货逻辑 ===
+                        const cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?")
+                            .bind(order.variant_id, order.quantity).all();
                         
+                        if (cards.results.length >= order.quantity) {
+                            const cardIds = cards.results.map(c => c.id);
+                            const cardContents = cards.results.map(c => c.content);
+                            
+                            await db.batch([
+                                db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no),
+                                db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(cardContents), out_trade_no),
+                                db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.variant_id),
+                                db.prepare("COMMIT")
+                            ]);
+                            
+                            await db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
+                                    .bind(order.variant_id, order.variant_id).run();
+                                    
+                        } else {
+                            await db.prepare("ROLLBACK").run();
+                            console.error(`Notify Error: Insufficient stock for order ${out_trade_no}`);
+                        }
+                    } else {
+                        // === 手动发货逻辑 ===
+                        // 不发卡密，只扣减 variants 表的库存，订单状态保持为 1 (已支付)
                         await db.batch([
-                            db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no),
-                            db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(cardContents), out_trade_no),
-                            db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.variant_id),
+                            db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.quantity, order.variant_id),
                             db.prepare("COMMIT")
                         ]);
-                        
-                        await db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
-                                .bind(order.variant_id, order.variant_id).run();
-                                
-                    } else {
-                        await db.prepare("ROLLBACK").run();
-                        console.error(`Notify Error: Insufficient stock for order ${out_trade_no}`);
                     }
                 } else {
                     await db.prepare("COMMIT").run();
