@@ -7,35 +7,30 @@
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <style>
-        /* === 淘宝风核心样式 === */
         body { background-color: #f5f5f5; padding-bottom: 60px; }
-
         .nav-back { position: absolute; top: 10px; left: 10px; z-index: 100; width: 32px; height: 32px; background: rgba(0,0,0,0.4); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; }
         .prod-img-wrap { position: relative; width: 100%; padding-bottom: 100%; background: #fff; }
         .prod-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-
         .info-card { background: #fff; padding: 12px 16px; margin-bottom: 10px; }
         .price-row { color: #ff5000; display: flex; align-items: baseline; margin-bottom: 8px; }
         .price-symbol { font-size: 14px; font-weight: bold; }
         .price-num { font-size: 24px; font-weight: bold; }
         .prod-title { font-size: 16px; font-weight: 600; color: #051b28; line-height: 1.4; margin-bottom: 8px; }
-        
         .prod-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-bottom: 5px; }
         
-        /* === 修改：优惠信息模块 (去掉了红色边框) === */
+        /* 优惠信息模块 */
         .extra-info { 
-            background: #fff5f7; /* 浅粉背景 */
-            /* border: 1px solid #ff0036;  <-- 已移除边框 */
+            background: #fff5f7; 
             border-radius: 4px; 
             padding: 8px; 
             font-size: 12px; 
-            color: #ff0036; /* 文字颜色保持红色 */
+            color: #ff0036; 
             margin-top: 10px; 
             line-height: 1.6;
         }
         .extra-tag-solid { 
             display: inline-block; 
-            background: #ff0036; /* 实心红 */
+            background: #ff0036; 
             color: #fff; 
             padding: 1px 5px; 
             border-radius: 2px; 
@@ -44,30 +39,16 @@
             vertical-align: middle;
         }
         
-        /* 首页规格预览标签样式 */
-        .sku-preview-tag {
-            display: inline-block;
-            border: 1px solid #dcdcdc; 
-            background: #fcfcfc;
-            color: #333;
-            padding: 3px 10px;
-            border-radius: 4px;
-            margin-right: 6px;
-            margin-bottom: 4px;
-            font-size: 13px;
-        }
-
+        .sku-preview-tag { display: inline-block; border: 1px solid #dcdcdc; background: #fcfcfc; color: #333; padding: 3px 10px; border-radius: 4px; margin-right: 6px; margin-bottom: 4px; font-size: 13px; }
         .cell-item { background: #fff; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #333; cursor: pointer; }
         .cell-label { color: #999; margin-right: 10px; font-weight: bold; min-width: 30px; }
         .cell-content { flex: 1; font-weight: 500; display: flex; flex-wrap: wrap; }
-
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background: #fff; display: flex; align-items: center; box-shadow: 0 -1px 5px rgba(0,0,0,0.05); z-index: 900; }
         .icon-btn { width: 60px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; text-decoration: none; }
         .icon-btn i { font-size: 18px; margin-bottom: 2px; }
         .btn-buy-wrap { flex: 1; padding: 0 10px; display: flex; }
         .btn-buy { flex: 1; height: 36px; border-radius: 18px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; font-size: 14px; border: none; display: flex; align-items: center; justify-content: center; }
         .btn-buy:active { opacity: 0.9; }
-
         .sku-sheet { border-top-left-radius: 16px; border-top-right-radius: 16px; height: 80vh !important; }
         .sku-header { display: flex; padding: 15px; position: relative; border-bottom: 1px solid #f5f5f5; }
         .sku-thumb { width: 90px; height: 90px; border-radius: 6px; margin-top: -30px; border: 3px solid #fff; background: #fff; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -75,25 +56,20 @@
         .sku-price { color: #ff5000; font-size: 20px; font-weight: bold; }
         .sku-stock { font-size: 12px; color: #999; margin-top: 4px; }
         .sku-selected { font-size: 12px; color: #333; margin-top: 2px; }
-        
         .sku-body { padding: 15px; overflow-y: auto; padding-bottom: 80px; }
         .section-title { font-size: 13px; color: #333; font-weight: bold; margin-bottom: 10px; }
-        
         .spec-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .spec-btn { padding: 6px 15px; background: #f5f5f5; border-radius: 16px; font-size: 13px; color: #333; border: 1px solid transparent; transition: all 0.2s; }
         .spec-btn.active { background: #ffefe7 !important; color: #ff5000 !important; border-color: #ff5000 !important; }
-
         .buy-mode-group { display: flex; gap: 15px; margin-bottom: 15px; }
         .mode-radio { display: none; }
         .mode-label { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: center; font-size: 13px; cursor: pointer; position: relative; }
         .mode-radio:checked + .mode-label { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
         .mode-label small { display: block; font-size: 10px; color: #999; margin-top: 2px; }
         .mode-radio:checked + .mode-label small { color: #ff5000; }
-
         .card-select-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 200px; overflow-y: auto; }
         .card-option { padding: 8px; border: 1px solid #eee; border-radius: 6px; font-size: 12px; text-align: center; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-option.active { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
-
         .stepper { display: flex; align-items: center; background: #f5f5f5; border-radius: 4px; }
         .stepper-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #666; cursor: pointer; }
         .stepper-input { width: 40px; text-align: center; border: none; background: transparent; font-size: 14px; padding: 0; }
@@ -103,11 +79,8 @@
     </style>
 </head>
 <body>
-
     <a href="/" class="nav-back"><i class="fa fa-arrow-left"></i></a>
-
     <div class="prod-img-wrap"><img id="p-img" src="" class="prod-img" alt="Product Image"></div>
-
     <div class="info-card">
         <div class="price-row"><span class="price-symbol">¥</span><span class="price-num" id="p-price">-</span></div>
         <div class="prod-title" id="p-title">加载中...</div>
@@ -118,26 +91,20 @@
         </div>
         <div id="p-extra-info" class="extra-info d-none"></div>
     </div>
-
     <div class="cell-item" onclick="openSkuSheet()">
         <span class="cell-label">选择</span>
-        <div class="cell-content" id="p-select-text">
-            规格加载中...
-        </div>
+        <div class="cell-content" id="p-select-text">规格加载中...</div>
         <i class="fa fa-angle-right text-muted"></i>
     </div>
-
     <div class="info-card" style="min-height: 300px;">
         <div class="section-title border-bottom pb-2 mb-3">商品详情</div>
         <div id="p-desc" style="font-size: 14px; color: #666; line-height: 1.6;"></div>
     </div>
-
     <div class="bottom-bar">
         <a href="/" class="icon-btn"><i class="fa fa-store"></i><span>首页</span></a>
         <a href="#" class="icon-btn"><i class="fa fa-headset"></i><span>客服</span></a>
         <div class="btn-buy-wrap"><button class="btn-buy" onclick="openSkuSheet()">立即购买</button></div>
     </div>
-
     <div class="offcanvas offcanvas-bottom sku-sheet" tabindex="-1" id="skuSheet">
         <div class="sku-header">
             <img id="sku-img" src="" class="sku-thumb">
@@ -148,11 +115,9 @@
             </div>
             <button type="button" class="btn-close ms-auto" data-bs-dismiss="offcanvas"></button>
         </div>
-
         <div class="sku-body">
             <div class="section-title">规格</div>
             <div class="spec-list" id="variant-list"></div>
-
             <div id="buy-mode-container" class="d-none mb-4">
                 <div class="section-title">购买方式 <small class="text-muted fw-normal ms-2">(自选与批发互斥)</small></div>
                 <div class="buy-mode-group">
@@ -169,7 +134,6 @@
                     <div class="card-select-list" id="card-list"></div>
                 </div>
             </div>
-
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div class="section-title mb-0">购买数量</div>
                 <div class="stepper">
@@ -178,12 +142,10 @@
                     <div class="stepper-btn" onclick="changeQty(1)">+</div>
                 </div>
             </div>
-
             <div class="mb-4">
                 <div class="section-title">联系方式 <span class="text-danger">*</span></div>
                 <input type="text" id="contact-info" class="form-control form-control-custom" placeholder="请输入邮箱或QQ (用于接收卡密)">
             </div>
-
             <div class="mb-4">
                 <div class="section-title">支付方式</div>
                 <div class="d-flex align-items-center p-2 border rounded bg-light">
@@ -191,10 +153,8 @@
                 </div>
             </div>
         </div>
-
         <div class="sku-footer"><button class="btn-confirm" onclick="submitOrder()">确定支付</button></div>
     </div>
-
     <div class="modal fade" id="payModal" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-center p-4">
@@ -206,7 +166,6 @@
             </div>
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
     <script>
@@ -215,7 +174,6 @@
         let selectedVariant = null;
         let selectedCardId = null;
         let buyMode = 'random';
-
         const skuSheet = new bootstrap.Offcanvas(document.getElementById('skuSheet'));
         const payModal = new bootstrap.Modal(document.getElementById('payModal'));
 
@@ -234,75 +192,65 @@
 
         function renderPage() {
             const p = currentProduct;
-            
-            // 价格区间
             const prices = p.variants.map(v => v.price);
             const minPrice = Math.min(...prices);
             const maxPrice = Math.max(...prices);
             const priceDisplay = (minPrice === maxPrice) ? minPrice : `${minPrice} - ${maxPrice}`;
-
             document.title = p.name;
             document.getElementById('p-title').innerText = p.name;
             document.getElementById('p-desc').innerText = p.description || '暂无详细介绍';
             document.getElementById('p-price').innerText = priceDisplay;
             document.getElementById('sku-price-text').innerText = priceDisplay;
-
             const totalSales = p.variants.reduce((s,v) => s + (v.sales_count||0), 0);
             const totalStock = p.variants.reduce((s,v) => s + (v.stock||0), 0);
             document.getElementById('p-sales').innerText = `已售: ${totalSales}`;
             document.getElementById('p-stock').innerText = `库存: ${totalStock}`;
-
-            // 默认显示主图
+            
             const defV = p.variants[0];
             const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
             document.getElementById('p-img').src = mainImg;
             document.getElementById('sku-img').src = mainImg;
 
-            // 渲染规格按钮 (抽屉)
             const vList = document.getElementById('variant-list');
             vList.innerHTML = p.variants.map((v) => {
                 const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
                 return `<div class="spec-btn" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
             }).join('');
 
-            // 渲染首页的选择标签 (带浅色边框)
             const skuTags = p.variants.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
             document.getElementById('p-select-text').innerHTML = skuTags;
 
-            // === 渲染优惠信息 (新逻辑) ===
             renderExtraInfo(null);
-            
             document.getElementById('sku-selected-text').innerText = '未选择';
             selectedVariant = null;
         }
         
-        // === 修改：渲染首页的额外信息模块 ===
         function renderExtraInfo(selectedV) {
             const infoDiv = document.getElementById('p-extra-info');
             const variants = currentProduct.variants;
             let html = '';
             
-            // 1. 自选加价标签
-            // 逻辑：如果选中了规格，看该规格；如果没选，看是否任意规格有加价
             const showMarkup = selectedV ? (selectedV.custom_markup > 0) : variants.some(v => v.custom_markup > 0);
-            
             if (showMarkup) {
                 html += `<span class="extra-tag-solid">自选加价</span> `;
             }
 
-            // 2. 批发价文本
             let wsText = '';
             if (selectedV) {
-                // 已选规格：显示具体规则
+                // === 修复：不使用 JSON.parse，因为后端已解析 ===
                 if (selectedV.wholesale_config) {
                     try {
-                        const ws = JSON.parse(selectedV.wholesale_config);
-                        ws.sort((a, b) => a.qty - b.qty);
-                        wsText = `批发价：${ws.map(w => `${w.qty}起${w.price}元/1个`).join('，')}`;
-                    } catch(e) {}
+                        let ws = selectedV.wholesale_config;
+                        // 兼容性判断：虽然正常是对象，但万一是字符串也处理一下
+                        if (typeof ws === 'string') ws = JSON.parse(ws);
+                        
+                        if (Array.isArray(ws)) {
+                            ws.sort((a, b) => a.qty - b.qty);
+                            wsText = `批发价：${ws.map(w => `${w.qty}个起${w.price}元/1个`).join('，')}`;
+                        }
+                    } catch(e) { console.error('WS Error', e); }
                 }
             } else {
-                // 未选规格：如果有任意规格含批发价，提示“请选择”
                 const hasWholesale = variants.some(v => v.wholesale_config);
                 if (hasWholesale) {
                     wsText = `批发价：请选择规格`;
@@ -310,7 +258,6 @@
             }
 
             if (wsText) {
-                // 红色文字，紧接在标签后面
                 html += `<span>${wsText}</span>`;
             }
 
@@ -327,13 +274,11 @@
         function selectVariant(vid) {
             selectedVariant = currentProduct.variants.find(v => v.id == vid);
             document.querySelectorAll('.spec-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.id == vid));
-
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
             document.getElementById('p-price').innerText = selectedVariant.price;
             document.getElementById('p-select-text').innerText = `已选: ${selectedVariant.name}`;
             
-            // 图片切换
             const p = currentProduct;
             const defV = p.variants[0];
             const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
@@ -341,10 +286,8 @@
             document.getElementById('sku-img').src = targetImg;
             document.getElementById('p-img').src = targetImg;
 
-            // === 更新优惠信息栏 ===
             renderExtraInfo(selectedVariant);
 
-            // 购买方式逻辑
             const modeContainer = document.getElementById('buy-mode-container');
             if (selectedVariant.custom_markup > 0 && selectedVariant.auto_delivery === 1) {
                 modeContainer.classList.remove('d-none');
@@ -361,7 +304,6 @@
         function toggleBuyMode() {
             const radios = document.getElementsByName('buy_mode');
             for(let r of radios) if(r.checked) buyMode = r.value;
-            
             const cardSelector = document.getElementById('card-selector');
             if (buyMode === 'select') {
                 cardSelector.classList.remove('d-none');
@@ -406,15 +348,19 @@
             if (!selectedVariant) return;
             let price = selectedVariant.price;
             const qty = parseInt(document.getElementById('buy-qty').value);
-
             if (buyMode === 'select') {
                 price += (selectedVariant.custom_markup || 0);
             } else {
+                // === 修复：不使用 JSON.parse ===
                 if (selectedVariant.wholesale_config) {
                     try {
-                        const ws = JSON.parse(selectedVariant.wholesale_config);
-                        ws.sort((a,b) => b.qty - a.qty);
-                        for(let rule of ws) { if(qty >= rule.qty) { price = rule.price; break; } }
+                        let ws = selectedVariant.wholesale_config;
+                        if (typeof ws === 'string') ws = JSON.parse(ws);
+                        
+                        if (Array.isArray(ws)) {
+                            ws.sort((a,b) => b.qty - a.qty);
+                            for(let rule of ws) { if(qty >= rule.qty) { price = rule.price; break; } }
+                        }
                     } catch(e) {}
                 }
             }
@@ -428,24 +374,19 @@
             if(!contact) return alert('请填写联系方式');
             if (buyMode === 'select' && !selectedCardId) return alert('请选择号码');
             if (buyMode !== 'select' && selectedVariant.stock < quantity) return alert('库存不足');
-
             const btn = document.querySelector('.btn-confirm');
             const oldText = btn.innerText;
             btn.disabled = true; btn.innerText = '正在创建...';
-
             try {
                 const payload = { variant_id: selectedVariant.id, quantity, contact, payment_method: 'alipay_f2f' };
                 if (buyMode === 'select' && selectedCardId) payload.card_id = selectedCardId;
-
                 const res = await fetch('/api/shop/order/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const order = await res.json();
                 if(order.error) throw new Error(order.error);
-
                 btn.innerText = '获取支付码...';
                 const payRes = await fetch('/api/shop/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: order.order_id }) });
                 const payData = await payRes.json();
                 if(payData.error) throw new Error(payData.error);
-
                 if(payData.type === 'qrcode') {
                     skuSheet.hide();
                     document.getElementById('qr-container').innerHTML = '';
