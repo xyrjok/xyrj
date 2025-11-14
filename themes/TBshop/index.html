@@ -66,7 +66,8 @@
         .nav-link-item:hover { color: var(--tb-orange); }
 
         /* 右侧搜索与登录 */
-        .header-right { display: flex; align-items: center; }
+        /* [修改] 移除 gap，改用 margin 兼容旧浏览器 */
+        .header-right { display: flex; align-items: center; /* gap: 15px; 删除 */ }
         
         .tb-search-group {
             display: flex;
@@ -76,7 +77,7 @@
             width: 280px;
             height: 36px;
             background: #fff;
-            margin-right: 15px;
+            margin-right: 15px; /* [新增] 使用 margin 设置间距 */
         }
         .tb-search-input {
             border: none;
@@ -127,9 +128,11 @@
         .module-title a { font-size: 12px; font-weight: normal; color: #999; }
 
         /* === 左侧模块 === */
+        /* [修改] 移除 gap，使用子元素 margin */
         .category-bar { 
             display: flex; 
             flex-wrap: wrap; 
+            /* gap: 8px; 删除 */
         }
         
         .cat-pill {
@@ -142,6 +145,7 @@
             cursor: pointer;
             border: 1px solid transparent;
             transition: all 0.2s;
+            /* [新增] 使用 margin 设置间距，兼容所有浏览器 */
             margin-right: 8px; 
             margin-bottom: 8px;
         }
@@ -166,41 +170,59 @@
         @media (max-width: 992px) { .taobao-grid { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 768px) { .taobao-grid { grid-template-columns: repeat(2, 1fr); } }
 
+        /* [修改] 卡片布局改为 flex */
         .tb-card {
             background: #fff;
             border-radius: 8px;
             transition: all 0.2s;
             border: 1px solid #eee;
             overflow: hidden;
-            display: block;
+            /* display: block; */ /* <- 移除 */
+            display: flex; /* [新增] 改为 flex 布局 */
+            flex-direction: column; /* [新增] 让内部元素(图片, info)纵向排列 */
         }
         .tb-card:hover { border-color: var(--tb-orange); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
 		.tb-img-wrap { width: 100%; padding-bottom: 100%; position: relative; background: #f9f9f9; }
         .tb-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
 
-        /* PC端 (宽屏 >= 992px) 图片改为 80% 大小并居中 */
+        /* [新增] PC端 (宽屏 >= 992px) 图片改为 80% 大小并居中 */
         @media (min-width: 992px) {
             .tb-img {
                 width: 80%;
                 height: 80%;
                 top: 10%;
                 left: 10%;
-                object-fit: contain;
+                object-fit: contain; /* 建议改为 contain 以便完整显示商品，如果想裁切填满请用 cover */
             }
 			.tb-img-wrap {
 				padding-bottom: 80%;
 			}
         }
 
-        .tb-info { padding: 8px; }
+        /* [修改] info 区域改为 flex 并占满剩余空间 */
+        .tb-info { 
+            padding: 8px; 
+            display: flex; /* [新增] 内部也使用 flex 布局 */
+            flex-direction: column; /* [新增] (标题, 标签, 价格) 纵向排列 */
+            flex-grow: 1; /* [新增] 让 .info 区域自动填满卡片中除图片外的所有剩余空间 */
+        }
         .tb-title { font-size: 13px; height: 38px; overflow: hidden; margin-bottom: 0px; line-height: 1.4; color: #333; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-        .tb-price-row { display: flex; justify-content: space-between; align-items: flex-end; }
+        
+        /* [修改] 价格模块推到底部 */
+        .tb-price-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-end; 
+            margin-top: auto; /* [关键新增] 自动顶部外边距, 将其推到 flex 容器的最底部 */
+            padding-top: 5px; /* [可选新增] 增加一点内边距, 避免标签多时贴得太近 */
+        }
         .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 16px; }
         .tb-sales { font-size: 12px; color: #999; }
 
-        /* 动态标签样式 */
+        /* [修改] 标签行增加最小高度 */
         .tb-tags-row {
 			height: auto;
+            min-height: 16px; /* [新增] 增加最小高度，防止没标签时布局错乱 */
 		    overflow: hidden;
 		    margin-bottom: 3px;
 		    display: flex;
@@ -234,15 +256,17 @@
         /* === 右侧模块 === */
         .notice-content { font-size: 13px; line-height: 1.6; color: #666; }
 
+        /* [修改] 移除 gap，使用 margin */
         .top-item { 
             display: flex; 
+            /* gap: 10px; 删除 */ 
             margin-bottom: 12px; 
             align-items: center; 
         }
         .top-img { 
             width: 45px; height: 45px;
             border-radius: 4px; object-fit: cover; border: 1px solid #eee; 
-            margin-right: 10px;
+            margin-right: 10px; /* [新增] 设置右边距 */
         }
         .top-info { flex: 1; overflow: hidden; }
         .top-title { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
@@ -253,9 +277,11 @@
         .art-cat-list a:hover { padding-left: 5px; color: var(--tb-orange); }
 
         /* 标签云样式 */
+        /* [修改] 移除 gap */
         .tag-cloud { 
             display: flex; 
             flex-wrap: wrap; 
+            /* gap: 6px; 删除 */ 
         }
         .tag-cloud-item {
             font-size: 13px;
@@ -266,6 +292,7 @@
             color: #666;
             cursor: pointer;
             transition: all 0.2s;
+            /* [新增] 使用 margin 设置间距 */
             margin-right: 6px;
             margin-bottom: 6px;
         }
@@ -567,7 +594,7 @@
             setTimeout(checkSidebarStatus, 500);
         }
 
-        // 生成单个商品卡片的 HTML
+        // [修改] 包含所有修改 (库存 | 已售)
         function getProductCardHtml(p) {
             const mainVariant = p.variants[0] || {};
             const totalSales = p.variants.reduce((sum, v) => sum + (v.sales_count || 0), 0);
