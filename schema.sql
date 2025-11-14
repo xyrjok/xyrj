@@ -22,7 +22,8 @@ DROP TABLE IF EXISTS categories;
 CREATE TABLE categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    sort INTEGER DEFAULT 0
+    sort INTEGER DEFAULT 0,
+    image_url TEXT
 );
 INSERT INTO categories (name, sort) VALUES ('默认分类', 0);
 
