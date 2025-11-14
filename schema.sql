@@ -35,7 +35,8 @@ CREATE TABLE products (
     sort INTEGER DEFAULT 0,
     active INTEGER DEFAULT 1,
     created_at INTEGER,
-    image_url TEXT
+    image_url TEXT,
+    tags TEXT
 );
 
 DROP TABLE IF EXISTS variants;
