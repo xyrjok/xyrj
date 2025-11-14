@@ -91,6 +91,15 @@
                             <input type="text" class="form-control" id="p-image" placeholder="https://example.com/main.jpg">
                         </div>
 
+                        <div class="mb-3">
+                            <label>商品标签 (格式: b1#边框色 b2#背景色 标签名#文字色, ...)</label>
+                            <input type="text" class="form-control" id="p-tags" placeholder="例如: b1#ff0000 b2#ffecec 热销#ff0000, b1#0000ff b2#e0e0ff 推荐#0000ff">
+                            <div class="form-text text-muted small">
+                                说明: 多个标签用<b>英文逗号</b>分隔。每个标签内用<b>空格</b>分隔属性。<br>
+                                b1=边框颜色, b2=背景颜色, 第三项=标签名#文字颜色。
+                            </div>
+                        </div>
+
                         <div class="mb-3"><label>商品描述</label><textarea class="form-control" id="p-desc" rows="3"></textarea></div>
                         <div class="mb-3 form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="p-active" checked>
@@ -146,13 +155,16 @@
         }
 
         function openModal(id = null) {
-            const p = allProducts.find(x => x.id === id) || { name:'', description:'', sort:0, active:1, category_id: 1, variants:[{}] };
+            const p = allProducts.find(x => x.id === id) || { name:'', description:'', sort:0, active:1, category_id: 1, variants:[{}], tags: '' };
             document.getElementById('p-id').value = p.id || '';
             document.getElementById('p-name').value = p.name;
             document.getElementById('p-desc').value = p.description || '';
             document.getElementById('p-sort').value = p.sort;
             // 加载主图数据
             document.getElementById('p-image').value = p.image_url || '';
+            // [新增] 加载 tags
+            document.getElementById('p-tags').value = p.tags || '';
+
             document.getElementById('p-active').checked = !!p.active;
             
             const catSelect = document.getElementById('p-category');
@@ -247,6 +259,8 @@
                 category_id: document.getElementById('p-category').value,
                 // 保存主图
                 image_url: document.getElementById('p-image').value,
+                // [新增] 保存 tags
+                tags: document.getElementById('p-tags').value,
                 variants: []
             };
             
