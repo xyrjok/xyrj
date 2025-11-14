@@ -106,27 +106,26 @@
         .module-box {
             background: #fff;
             border-radius: 5px;
-            padding: 15px; /* [修改] 减小内边距，原15px */
-            margin-bottom: 15px; /* [修改] 减小下边距，原20px */
+            padding: 15px;
+            margin-bottom: 15px;
         }
         .module-title {
             font-size: 16px;
             font-weight: bold;
             border-left: 4px solid var(--tb-orange);
             padding-left: 10px;
-            margin-bottom: 12px; /* [修改] 稍微减小标题下方间距 */
+            margin-bottom: 12px;
             display: flex; justify-content: space-between; align-items: center;
         }
         .module-title a { font-size: 12px; font-weight: normal; color: #999; }
 
         /* === 左侧模块 === */
-        .category-bar { display: flex; flex-wrap: wrap; gap: 8px; /* [修改] 减小分类按钮间距 */ }
+        .category-bar { display: flex; flex-wrap: wrap; gap: 8px; }
         
-        /* [修改] 分类 Pill 样式：支持图片 */
         .cat-pill {
             display: inline-flex; 
             align-items: center;
-            padding: 4px 12px 4px 8px; /* [修改] 稍微减小内边距 */
+            padding: 4px 12px 4px 8px;
             background: #f5f5f5;
             border-radius: 20px;
             font-size: 13px;
@@ -139,9 +138,8 @@
             color: var(--tb-orange);
             border-color: var(--tb-orange);
         }
-        /* 分类小图标样式 */
         .cat-pill img {
-            width: 18px; /* [修改] 稍微减小图标 */
+            width: 18px;
             height: 18px;
             border-radius: 50%;
             margin-right: 6px;
@@ -151,7 +149,7 @@
         .taobao-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px; /* [修改] 减小商品网格间距，原15px */
+            gap: 10px;
         }
         @media (max-width: 992px) { .taobao-grid { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 768px) { .taobao-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -167,15 +165,15 @@
         .tb-card:hover { border-color: var(--tb-orange); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
         .tb-img-wrap { width: 100%; padding-bottom: 100%; position: relative; background: #f9f9f9; }
         .tb-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        .tb-info { padding: 8px; /* [修改] 减小商品信息内边距 */ }
+        .tb-info { padding: 8px; }
         .tb-title { font-size: 13px; height: 38px; overflow: hidden; margin-bottom: 5px; line-height: 1.4; color: #333; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .tb-price-row { display: flex; justify-content: space-between; align-items: flex-end; }
-        .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 16px; /* [修改] 稍微调整字体大小适配紧凑布局 */ }
+        .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 16px; }
         .tb-sales { font-size: 12px; color: #999; }
 
         /* 动态标签样式 */
         .tb-tags-row {
-            height: 26px; /* [修改] 减小高度 */
+            height: 26px;
             overflow: hidden;
             margin-bottom: 4px;
             display: flex; 
@@ -185,7 +183,7 @@
         .dynamic-tag {
             display: inline-block;
             font-size: 10px;
-            padding: 0px 3px; /* [修改] 减小内边距 */
+            padding: 0px 3px;
             border-radius: 3px;
             margin-right: 4px;
             line-height: normal; 
@@ -194,12 +192,12 @@
         }
 
         .hot-article-item {
-            display: flex; justify-content: space-between; padding: 8px 0; /* [修改] 减小内边距 */
+            display: flex; justify-content: space-between; padding: 8px 0;
             border-bottom: 1px dashed #eee;
         }
         .hot-article-item:last-child { border-bottom: none; }
         .hot-rank {
-            display: inline-block; width: 18px; height: 18px; /* [修改] 减小尺寸 */
+            display: inline-block; width: 18px; height: 18px;
             background: #ccc; color: #fff; 
             text-align: center; line-height: 18px; border-radius: 4px; font-size: 12px; margin-right: 8px;
         }
@@ -208,22 +206,22 @@
         /* === 右侧模块 === */
         .notice-content { font-size: 13px; line-height: 1.6; color: #666; }
 
-        .top-item { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; /* [修改] 减小间距 */ }
-        .top-img { width: 45px; height: 45px; /* [修改] 减小图片尺寸 */
+        .top-item { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
+        .top-img { width: 45px; height: 45px;
             border-radius: 4px; object-fit: cover; border: 1px solid #eee; }
         .top-info { flex: 1; overflow: hidden; }
         .top-title { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
         .top-price { color: var(--tb-orange); font-weight: bold; font-size: 14px; }
 
-        .art-cat-list a { display: block; padding: 6px 0; /* [修改] 减小内边距 */
+        .art-cat-list a { display: block; padding: 6px 0;
             border-bottom: 1px solid #f5f5f5; font-size: 14px; }
         .art-cat-list a:hover { padding-left: 5px; color: var(--tb-orange); }
 
         /* 标签云样式 */
-        .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; /* [修改] 减小标签间距 */ }
+        .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
         .tag-cloud-item {
             font-size: 12px;
-            padding: 3px 8px; /* [修改] 减小内边距 */
+            padding: 3px 8px;
             background: #f8f9fa;
             border: 1px solid #eee;
             border-radius: 15px;
@@ -240,10 +238,9 @@
         /* === 4. Footer === */
         .site-footer {
             background: #fff;
-            /*border-top: 4px solid var(--tb-orange); */
-            padding: 30px 0 20px; /* [修改] 减小Footer留白 */
+            padding: 30px 0 20px;
             text-align: center;
-            margin-top: 30px; /* [修改] 减小顶部留白 */
+            margin-top: 30px;
         }
         .footer-links { margin-bottom: 15px; }
         .footer-links a { margin: 0 10px; font-size: 14px; color: #666; }
@@ -306,35 +303,36 @@
 
             </div>
 
-            <div class="col-lg-3" id="sidebar-wrapper">
-                <div class="sidebar-inner">
+            <div class="col-lg-3">
+                <div id="sidebar-wrapper"> 
+                    <div class="sidebar-inner">
 
-                    <div class="module-box">
-                        <div class="module-title">店铺公告</div>
-                        <div class="notice-content" id="notice-box">
-                            暂无公告
+                        <div class="module-box">
+                            <div class="module-title">店铺公告</div>
+                            <div class="notice-content" id="notice-box">
+                                暂无公告
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="module-box">
-                        <div class="module-title">销量排行</div>
-                        <div id="top-sales-list">
-                            </div>
-                    </div>
+                        <div class="module-box">
+                            <div class="module-title">销量排行</div>
+                            <div id="top-sales-list">
+                                </div>
+                        </div>
 
-                    <div class="module-box">
-                        <div class="module-title">教程分类</div>
-                        <div class="art-cat-list" id="article-cat-list">
-                            </div>
-                    </div>
-                    
-                    <div class="module-box">
-                        <div class="module-title">热门标签</div>
-                        <div class="tag-cloud" id="tag-cloud-list">
-                            </div>
-                    </div>
+                        <div class="module-box">
+                            <div class="module-title">教程分类</div>
+                            <div class="art-cat-list" id="article-cat-list">
+                                </div>
+                        </div>
+                        
+                        <div class="module-box">
+                            <div class="module-title">热门标签</div>
+                            <div class="tag-cloud" id="tag-cloud-list">
+                                </div>
+                        </div>
 
-                </div> </div>
+                    </div> </div> </div>
         </div>
     </div>
 
@@ -355,11 +353,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
     
     <script>
-        // [修改] 初始化 Sticky Sidebar
+        // 定义全局变量以便在数据加载后刷新
+        let sidebar = null;
+
+        // 初始化 Sticky Sidebar
         window.addEventListener('load', function() {
             if (window.innerWidth >= 992) {
-                var sidebar = new StickySidebar('#sidebar-wrapper', {
-                    topSpacing: 80,  // 距离顶部的距离 (Header 高度 + 间隙)
+                sidebar = new StickySidebar('#sidebar-wrapper', {
+                    topSpacing: 80,  // 距离顶部的距离
                     bottomSpacing: 20,
                     containerSelector: '#main-content-row', 
                     innerWrapperSelector: '.sidebar-inner' 
@@ -489,6 +490,12 @@
                     artCatListEl.innerHTML = '<div class="text-muted small">暂无分类</div>';
                 }
             } catch (e) {}
+
+            // 【修改】所有数据加载和渲染完毕后，更新 Sticky Sidebar
+            // 稍微延时一下确保图片和 DOM 渲染完成
+            setTimeout(() => {
+                if(sidebar) sidebar.updateSticky();
+            }, 500);
         }
 
         // 生成单个商品卡片的 HTML
@@ -551,6 +558,11 @@
             if (!hasAnyProduct) {
                 area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100 text-muted">暂无商品</div></div>`;
             }
+
+            // 【修改】每次重新渲染商品列表后，都要更新 sidebar 高度
+            if(sidebar) {
+                setTimeout(() => sidebar.updateSticky(), 100);
+            }
         }
 
         // 渲染单一大网格
@@ -569,6 +581,11 @@
                 </div>
             `;
             area.innerHTML = gridHtml;
+            
+            // 【修改】更新 sidebar 高度
+            if(sidebar) {
+                setTimeout(() => sidebar.updateSticky(), 100);
+            }
         }
 
         function parseTags(tagStr) {
