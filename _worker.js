@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker Faka Backend (最终绝对完整版 - 修复版)
- * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、数据库备份恢复(修复权限错误)
+ * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、[新增]分类图片
  */
 
 // === 工具函数 ===
@@ -192,12 +192,13 @@ async function handleApi(request, env, url) {
                 const { results } = await db.prepare("SELECT * FROM categories ORDER BY sort DESC, id DESC").all();
                 return jsonRes(results);
             }
+            // [修改] 保存分类 (增加 image_url)
             if (path === '/api/admin/category/save' && method === 'POST') {
-                const { id, name, sort } = await request.json();
+                const { id, name, sort, image_url } = await request.json();
                 if (id) {
-                    await db.prepare("UPDATE categories SET name=?, sort=? WHERE id=?").bind(name, sort, id).run();
+                    await db.prepare("UPDATE categories SET name=?, sort=?, image_url=? WHERE id=?").bind(name, sort, image_url, id).run();
                 } else {
-                    await db.prepare("INSERT INTO categories (name, sort) VALUES (?, ?)").bind(name, sort).run();
+                    await db.prepare("INSERT INTO categories (name, sort, image_url) VALUES (?, ?, ?)").bind(name, sort, image_url).run();
                 }
                 return jsonRes({ success: true });
             }
