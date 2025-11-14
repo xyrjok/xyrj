@@ -13,12 +13,14 @@
 <body class="bg-light">
     <div class="container py-5">
         <header class="text-center mb-5">
-            <h1 id="site-name">Loading...</h1>
+            <div id="site-header-container" class="d-flex flex-column align-items-center gap-3">
+                <h1 id="site-name" class="d-none">Loading...</h1>
+                <img id="site-logo" class="d-none" style="max-height: 80px; max-width: 100%;" alt="Logo">
+            </div>
             <div id="announce" class="alert alert-primary mt-3 d-none"></div>
         </header>
 
         <div class="row g-4" id="product-list">
-            <!-- 商品列表由 JS 加载 -->
             <div class="text-center text-muted py-5">正在加载商品...</div>
         </div>
     </div>
@@ -28,8 +30,31 @@
             // 1. 加载配置
             const configRes = await fetch('/api/shop/config');
             const config = await configRes.json();
+            
+            // 设置浏览器标题栏
             document.title = config.site_name || '商店首页';
-            document.getElementById('site-name').innerText = config.site_name || 'Cloudflare Store';
+
+            // --- Logo 和 名称 显示逻辑 ---
+            const nameEl = document.getElementById('site-name');
+            const logoEl = document.getElementById('site-logo');
+
+            // 如果两个都没设置，默认显示名称（防止头部空空如也）
+            if (!config.show_site_name && !config.show_site_logo) {
+                 nameEl.innerText = config.site_name || 'Cloudflare Store';
+                 nameEl.classList.remove('d-none');
+            } else {
+                // 显示名称
+                if (config.show_site_name === '1') {
+                    nameEl.innerText = config.site_name || 'Cloudflare Store';
+                    nameEl.classList.remove('d-none');
+                }
+                // 显示 Logo
+                if (config.show_site_logo === '1' && config.site_logo) {
+                    logoEl.src = config.site_logo;
+                    logoEl.classList.remove('d-none');
+                }
+            }
+
             if(config.announce) {
                 const annEl = document.getElementById('announce');
                 annEl.innerHTML = config.announce;
