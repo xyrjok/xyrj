@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker Faka Backend (最终绝对完整版 - 修复版)
- * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、[新增]分类图片
+ * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
  */
 
 // === 工具函数 ===
@@ -487,6 +487,12 @@ async function handleApi(request, env, url) {
             if(notice) config.notice_content = notice.content;
             
             return jsonRes(config);
+        }
+
+        // [新增] 获取所有分类 (公开)
+        if (path === '/api/shop/categories') {
+            const { results } = await db.prepare("SELECT * FROM categories ORDER BY sort DESC, id DESC").all();
+            return jsonRes(results);
         }
 
         if (path === '/api/shop/products') {
