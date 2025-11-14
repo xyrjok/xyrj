@@ -160,22 +160,24 @@
         .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 18px; }
         .tb-sales { font-size: 12px; color: #999; }
 
-        /* [新增] 动态标签样式 */
+        /* [修改] 动态标签样式 - 修复遮挡问题 */
+        .tb-tags-row {
+            height: 28px; /* 增加高度 (原22px -> 28px) */
+            overflow: hidden;
+            margin-bottom: 4px;
+            display: flex; /* 使用 Flex 布局 */
+            align-items: center; /* 垂直居中，防止切底 */
+            flex-wrap: nowrap; /* 防止换行 */
+        }
         .dynamic-tag {
             display: inline-block;
             font-size: 10px;
-            padding: 0 4px;
+            padding: 1px 4px; /* 上下给一点 padding */
             border-radius: 3px;
-            margin-right: 4px;
-            line-height: 16px;
-            height: 18px;
-            border: 1px solid transparent; /* 默认透明边框 */
+            margin-right: 5px;
+            line-height: normal; /* 让文字自然撑开 */
+            border: 1px solid transparent; 
             white-space: nowrap;
-        }
-        .tb-tags-row {
-            height: 22px;
-            overflow: hidden;
-            margin-bottom: 4px;
         }
 
         .hot-article-item {
