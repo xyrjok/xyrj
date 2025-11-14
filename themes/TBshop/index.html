@@ -215,9 +215,10 @@
             align-items: flex-end; 
             margin-top: auto; /* [关键新增] 自动顶部外边距, 将其推到 flex 容器的最底部 */
             padding-top: 5px; /* [可选新增] 增加一点内边距, 避免标签多时贴得太近 */
+			flex-wrap: nowrap;
         }
-        .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 16px; }
-        .tb-sales { font-size: 12px; color: #999; }
+        .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 18px; }
+        .tb-sales { font-size: 12px; color: #999;text-align: right; white-space: nowrap; flex-shrink: 0; margin-bottom: 2px; /* [关键新增] 手动向上微调 2px */ }
 
         /* [修改] 标签行增加最小高度 */
         .tb-tags-row {
