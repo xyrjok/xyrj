@@ -1,6 +1,6 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版)
- * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、[新增]数据库备份恢复
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 修复版)
+ * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、数据库备份恢复(修复权限错误)
  */
 
 // === 工具函数 ===
@@ -407,10 +407,10 @@ async function handleApi(request, env, url) {
             // --- [新增] 数据库管理 API ---
             // ===========================
             
-            // 导出数据库 (Dump)
+            // 导出数据库 (Dump) - [修复] 排除 _cf_ 开头的系统表
             if (path === '/api/admin/db/export') {
-                // 1. 获取所有表名 (排除 sqlite_ 系统表)
-                const tables = await db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
+                // 1. 获取所有表名 (排除 sqlite_ 和 _cf_ 系统表)
+                const tables = await db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
                 
                 let sqlDump = "-- Cloudflare D1 Dump\n";
                 sqlDump += `-- Date: ${new Date().toISOString()}\n\n`;
