@@ -44,7 +44,7 @@
         }
         .site-brand i { margin-right: 8px; font-size: 24px; }
 
-        /* 中间导航链接 - 兼容性修复版 */
+        /* 中间导航链接 */
         .main-nav { 
             display: flex; 
             flex: 1; 
@@ -54,7 +54,7 @@
             font-size: 16px; 
             font-weight: 500; 
             color: #333; 
-            margin-right: 25px; /* 使用 margin 代替 gap */
+            margin-right: 25px;
         }
         .nav-link-item:last-child { margin-right: 0; }
         .nav-link-item:hover { color: var(--tb-orange); }
@@ -62,7 +62,6 @@
         /* 右侧搜索与登录 */
         .header-right { display: flex; align-items: center; gap: 15px; }
         
-        /* 仿淘宝搜索框 */
         .tb-search-group {
             display: flex;
             border: 2px solid var(--tb-red);
@@ -122,18 +121,31 @@
 
         /* === 左侧模块 === */
         .category-bar { display: flex; flex-wrap: wrap; gap: 10px; }
+        
+        /* [修改] 分类 Pill 样式：支持图片 */
         .cat-pill {
-            padding: 6px 15px;
+            display: inline-flex; 
+            align-items: center;
+            padding: 5px 15px 5px 10px; 
             background: #f5f5f5;
             border-radius: 20px;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
             border: 1px solid transparent;
+            transition: all 0.2s;
         }
         .cat-pill.active, .cat-pill:hover {
             background: #fff3eb;
             color: var(--tb-orange);
             border-color: var(--tb-orange);
+        }
+        /* 分类小图标样式 */
+        .cat-pill img {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 6px;
+            object-fit: cover;
         }
 
         .taobao-grid {
@@ -161,7 +173,7 @@
         .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 18px; }
         .tb-sales { font-size: 12px; color: #999; }
 
-        /* 动态标签样式 - 修复遮挡问题 */
+        /* 动态标签样式 */
         .tb-tags-row {
             height: 28px; 
             overflow: hidden;
@@ -203,7 +215,7 @@
         .art-cat-list a { display: block; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
         .art-cat-list a:hover { padding-left: 5px; color: var(--tb-orange); }
 
-        /* [新增] 标签云样式 */
+        /* 标签云样式 */
         .tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
         .tag-cloud-item {
             font-size: 12px;
@@ -240,7 +252,6 @@
         <div class="container header-inner">
             <a href="/" class="site-brand">
                 <img id="site-logo" class="d-none" style="max-height: 45px; width: auto; margin-right: 10px;" alt="Logo">
-                
                 <span id="site-name-wrap" class="d-flex align-items-center d-none">
                     <i class="fa fa-shopping-bag"></i>
                     <span id="header-site-name">TB Shop</span>
@@ -269,8 +280,8 @@
                 
                 <div class="module-box">
                     <div class="category-bar" id="category-container">
-                        <div class="cat-pill active" onclick="filterCategory('all')">全部商品</div>
-                        </div>
+                        <div class="cat-pill active" onclick="filterCategory('all', this)">全部商品</div>
+                    </div>
                 </div>
 
                 <div class="module-box" style="min-height: 400px;">
@@ -351,7 +362,6 @@
                 const config = await configRes.json();
                 document.title = config.site_name || '商店首页';
                 
-                // --- [修改] Logo 与 名称 显示逻辑 ---
                 const logoEl = document.getElementById('site-logo');
                 const nameWrapEl = document.getElementById('site-name-wrap');
                 const nameTextEl = document.getElementById('header-site-name');
@@ -362,7 +372,6 @@
                 const showName = config.show_site_name === '1';
                 const showLogo = config.show_site_logo === '1';
 
-                // 如果两个都没设置，默认显示名称
                 if (!showName && !showLogo) {
                     nameWrapEl.classList.remove('d-none');
                 } else {
@@ -381,14 +390,31 @@
                 }
             } catch (e) { console.error(e); }
 
-            // 2. 加载商品数据
+            // 2. 加载分类 (新增逻辑)
+            try {
+                const catRes = await fetch('/api/shop/categories');
+                const categories = await catRes.json();
+                const catContainer = document.getElementById('category-container');
+                
+                // 构造 HTML：始终保留 "全部商品" 按钮
+                let html = '<div class="cat-pill active" onclick="filterCategory(\'all\', this)">全部商品</div>';
+                
+                categories.forEach(c => {
+                    // 如果有图片则显示图片，没有则只显示文字
+                    const imgTag = c.image_url ? `<img src="${c.image_url}">` : '';
+                    html += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${imgTag}${c.name}</div>`;
+                });
+                catContainer.innerHTML = html;
+            } catch(e) { console.error('Failed to load categories:', e); }
+
+            // 3. 加载商品数据
             try {
                 const prodRes = await fetch('/api/shop/products');
                 allProducts = await prodRes.json(); 
 
                 // 渲染商品
                 renderProducts(allProducts);
-                // 渲染标签云 [新增]
+                // 渲染标签云
                 renderTagCloud(allProducts);
 
                 // 渲染销量排行
@@ -422,7 +448,7 @@
                 document.getElementById('product-grid').innerHTML = '加载失败';
             }
 
-            // 3. 加载文章数据
+            // 4. 加载文章数据
             try {
                 const artRes = await fetch('/api/shop/articles/list');
                 const articles = await artRes.json();
@@ -453,19 +479,15 @@
             } catch (e) {}
         }
 
-        // 解析标签字符串函数
         function parseTags(tagStr) {
             if (!tagStr) return '';
             const tags = tagStr.split(',').map(t => t.trim()).filter(t => t);
-            
             return tags.map(t => {
-                // 解析: b1#color b2#color name#color
                 const parts = t.split(/\s+/); 
                 let borderColor = 'transparent';
                 let bgColor = '#f5f5f5';
                 let text = '';
                 let textColor = '#333';
-
                 parts.forEach(part => {
                     if (part.startsWith('b1')) borderColor = part.split('#')[1] ? '#' + part.split('#')[1] : borderColor;
                     else if (part.startsWith('b2')) bgColor = part.split('#')[1] ? '#' + part.split('#')[1] : bgColor;
@@ -477,13 +499,11 @@
                         text = part; 
                     }
                 });
-
                 if (!text) return '';
                 return `<span class="dynamic-tag" style="border-color:${borderColor}; background-color:${bgColor}; color:${textColor}">${text}</span>`;
             }).join('');
         }
 
-        // [新增] 渲染标签云 (右侧栏)
         function renderTagCloud(products) {
             const tagSet = new Set();
             products.forEach(p => {
@@ -491,7 +511,6 @@
                     p.tags.split(',').forEach(tStr => {
                         const parts = tStr.trim().split(/\s+/);
                         let text = '';
-                        // 提取纯文本作为标签名 (例如 "热销#red" -> "热销")
                         parts.forEach(part => {
                            if(!part.startsWith('b1') && !part.startsWith('b2')) {
                                text = part.split('#')[0]; 
@@ -507,27 +526,21 @@
                 listEl.innerHTML = '<div class="text-muted small w-100 text-center">暂无标签</div>';
                 return;
             }
-
             listEl.innerHTML = Array.from(tagSet).map(tag => 
                 `<span class="tag-cloud-item" onclick="filterByTag('${tag}')">${tag}</span>`
             ).join('');
         }
 
-        // [新增] 标签筛选功能
         function filterByTag(tag) {
-            // 高亮当前标签
             document.querySelectorAll('.tag-cloud-item').forEach(el => {
                 if(el.innerText === tag) el.classList.add('active');
                 else el.classList.remove('active');
             });
-            document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active')); // 清除分类高亮
-
-            // 筛选商品
+            document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active')); 
             const filtered = allProducts.filter(p => p.tags && p.tags.includes(tag));
             renderProducts(filtered);
         }
 
-        // 渲染主商品网格 (含标签)
         function renderProducts(products) {
             const gridEl = document.getElementById('product-grid');
             if (products.length === 0) {
@@ -540,10 +553,7 @@
                 const totalSales = p.variants.reduce((sum, v) => sum + (v.sales_count || 0), 0);
                 const imgUrl = p.image_url || mainVariant.image_url || 'https://via.placeholder.com/300x300/e0e0e0/999999?text=No+Image';
                 const price = mainVariant.price || '0.00';
-                
-                // 生成标签 HTML
                 const tagsHtml = parseTags(p.tags);
-
                 return `
                     <a href="/product.html?id=${p.id}" class="tb-card">
                         <div class="tb-img-wrap">
@@ -551,11 +561,7 @@
                         </div>
                         <div class="tb-info">
                             <div class="tb-title">${p.name}</div>
-                            
-                            <div class="tb-tags-row">
-                                ${tagsHtml}
-                            </div>
-
+                            <div class="tb-tags-row">${tagsHtml}</div>
                             <div class="tb-price-row">
                                 <span class="tb-price"><small>¥</small>${price}</span>
                                 <span class="tb-sales">已售${totalSales}</span>
@@ -577,11 +583,22 @@
             if (e.key === 'Enter') doSearch();
         });
 
-        function filterCategory(type) {
-            document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tag-cloud-item').forEach(el => el.classList.remove('active')); // 清除标签高亮
-            event.target.classList.add('active');
-            if (type === 'all') renderProducts(allProducts);
+        // [修改] 增强的分类过滤功能
+        function filterCategory(id, el) {
+            // 高亮当前分类
+            document.querySelectorAll('.cat-pill').forEach(e => e.classList.remove('active'));
+            if(el) el.classList.add('active');
+
+            // 清除标签高亮
+            document.querySelectorAll('.tag-cloud-item').forEach(e => e.classList.remove('active'));
+            
+            // 筛选逻辑
+            if (id === 'all') {
+                renderProducts(allProducts);
+            } else {
+                const filtered = allProducts.filter(p => p.category_id == id);
+                renderProducts(filtered);
+            }
         }
 
         init();
