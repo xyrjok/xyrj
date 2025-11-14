@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
 	<meta name="renderer" content="webkit">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>商店首页</title>
@@ -355,20 +354,52 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
     
     <script>
-        // 定义全局变量以便在数据加载后刷新
+        // [修改] 全局变量，用于控制 Sticky 实例
         let sidebar = null;
 
-        // 初始化 Sticky Sidebar
-        window.addEventListener('load', function() {
-            if (window.innerWidth >= 992) {
-                sidebar = new StickySidebar('#sidebar-wrapper', {
-                    topSpacing: 80,  // 距离顶部的距离
-                    bottomSpacing: 20,
-                    containerSelector: '#main-content-row', 
-                    innerWrapperSelector: '.sidebar-inner' 
-                });
+        // 配置参数
+        const sidebarOptions = {
+            topSpacing: 80,
+            bottomSpacing: 20,
+            containerSelector: '#main-content-row',
+            innerWrapperSelector: '.sidebar-inner'
+        };
+
+        // [修改] 核心函数：智能判断高度，决定是开启还是销毁滑动
+        function checkSidebarStatus() {
+            const sidebarInner = document.querySelector('.sidebar-inner');
+            const productArea = document.getElementById('products-list-area');
+            
+            if (!sidebarInner || !productArea) return;
+
+            // 1. 确保左侧有一个基础最小高度，避免测量误差
+            productArea.style.minHeight = '400px';
+
+            // 2. 获取实际高度
+            const sbHeight = sidebarInner.offsetHeight;
+            const contentHeight = productArea.offsetHeight;
+            const isWideScreen = window.innerWidth >= 992;
+
+            // 3. 如果左侧内容高度 < 右侧边栏高度，或者不是宽屏
+            if (contentHeight < sbHeight || !isWideScreen) {
+                // 销毁滑动实例（如果存在），让它变回普通静态布局
+                if (sidebar) {
+                    sidebar.destroy();
+                    sidebar = null;
+                }
+            } else {
+                // 左侧够长，可以开启滑动
+                if (!sidebar) {
+                    sidebar = new StickySidebar('#sidebar-wrapper', sidebarOptions);
+                } else {
+                    sidebar.updateSticky(); // 更新位置
+                }
             }
-        });
+        }
+
+        // 页面加载与窗口调整时检查状态
+        window.addEventListener('load', checkSidebarStatus);
+        window.addEventListener('resize', checkSidebarStatus);
 
         document.getElementById('year').innerText = new Date().getFullYear();
         
@@ -493,11 +524,8 @@
                 }
             } catch (e) {}
 
-            // 【修改】所有数据加载和渲染完毕后，更新 Sticky Sidebar
-            // 稍微延时一下确保图片和 DOM 渲染完成
-            setTimeout(() => {
-                if(sidebar) sidebar.updateSticky();
-            }, 500);
+            // [修改] 数据全部加载完成后，再次检查高度状态
+            setTimeout(checkSidebarStatus, 500);
         }
 
         // 生成单个商品卡片的 HTML
@@ -561,10 +589,8 @@
                 area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100 text-muted">暂无商品</div></div>`;
             }
 
-            // 【修改】每次重新渲染商品列表后，都要更新 sidebar 高度
-            if(sidebar) {
-                setTimeout(() => sidebar.updateSticky(), 100);
-            }
+            // [修改] 每次渲染后，检查并调整侧边栏状态
+            setTimeout(checkSidebarStatus, 100);
         }
 
         // 渲染单一大网格
@@ -572,22 +598,19 @@
             const area = document.getElementById('products-list-area');
             if (products.length === 0) {
                 area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100">未找到相关商品</div></div>`;
-                return;
-            }
-            const gridHtml = `
-                <div class="module-box">
-                    <div class="module-title">${title}</div>
-                    <div class="taobao-grid">
-                        ${products.map(p => getProductCardHtml(p)).join('')}
+            } else {
+                const gridHtml = `
+                    <div class="module-box">
+                        <div class="module-title">${title}</div>
+                        <div class="taobao-grid">
+                            ${products.map(p => getProductCardHtml(p)).join('')}
+                        </div>
                     </div>
-                </div>
-            `;
-            area.innerHTML = gridHtml;
-            
-            // 【修改】更新 sidebar 高度
-            if(sidebar) {
-                setTimeout(() => sidebar.updateSticky(), 100);
+                `;
+                area.innerHTML = gridHtml;
             }
+            // [修改] 每次渲染后，检查并调整侧边栏状态
+            setTimeout(checkSidebarStatus, 100);
         }
 
         function parseTags(tagStr) {
