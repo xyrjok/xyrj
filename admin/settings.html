@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>系统设置 - Faka Admin</title>
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <style>
         body { padding-top: 56px; }
         .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; z-index: 100; padding: 48px 0 0; box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1); }
@@ -40,7 +41,7 @@
                 <h2 class="border-bottom pb-3 mb-4">系统设置</h2>
                 <div class="row">
                     <div class="col-lg-8">
-                        <div class="card shadow-sm">
+                        <div class="card shadow-sm mb-4">
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label class="form-label">网站名称</label>
@@ -61,6 +62,32 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="col-lg-4">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="card-title mb-0">数据库管理</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-4 border-bottom pb-3">
+                                    <label class="form-label fw-bold">导出备份</label>
+                                    <p class="small text-muted">将所有数据导出为 .sql 文件下载到本地。</p>
+                                    <button class="btn btn-outline-dark w-100" onclick="exportDb()">
+                                        <i class="fa fa-download"></i> 导出数据库 (.sql)
+                                    </button>
+                                </div>
+                                
+                                <div>
+                                    <label class="form-label fw-bold text-danger">导入恢复 (慎用)</label>
+                                    <p class="small text-muted">从 .sql 文件恢复数据。<strong>警告：这将覆盖现有数据！</strong></p>
+                                    <input type="file" id="import-file" class="form-control mb-2" accept=".sql">
+                                    <button class="btn btn-danger w-100" onclick="importDb()">
+                                        <i class="fa fa-upload"></i> 开始导入
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>
@@ -78,10 +105,15 @@
         }
 
         async function init() {
-            const config = await fetch('/api/shop/config').then(r => r.json());
-            document.getElementById('site_name').value = config.site_name || '';
-            document.getElementById('theme_select').value = config.theme || 'default';
-            document.getElementById('announce').value = config.announce || '';
+            try {
+                const config = await fetch('/api/shop/config').then(r => r.json());
+                document.getElementById('site_name').value = config.site_name || '';
+                document.getElementById('theme_select').value = config.theme || 'default';
+                document.getElementById('announce').value = config.announce || '';
+            } catch (e) {
+                // 忽略空数据库报错，允许用户看到导入界面
+                console.warn("Initial load failed (likely empty DB):", e);
+            }
         }
 
         async function saveSettings() {
@@ -97,6 +129,69 @@
                 alert('保存失败: ' + (res.error || '未知错误'));
             }
         }
+
+        // [新增] 导出数据库
+        function exportDb() {
+            const token = localStorage.getItem('ADMIN_TOKEN');
+            // 直接下载
+            fetch('/api/admin/db/export', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => {
+                if(res.status === 401) return logout();
+                return res.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_${new Date().toISOString().slice(0,10)}.sql`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(e => alert('导出失败: ' + e.message));
+        }
+
+        // [新增] 导入数据库
+        async function importDb() {
+            const fileInput = document.getElementById('import-file');
+            const file = fileInput.files[0];
+            if (!file) return alert('请先选择一个 .sql 文件');
+
+            if (!confirm('警告：导入操作将执行 SQL 脚本，可能会清空或覆盖现有数据！\n\n确定要继续吗？')) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const sqlContent = e.target.result;
+                const btn = document.querySelector('button[onclick="importDb()"]');
+                const oldText = btn.innerHTML;
+                btn.disabled = true; 
+                btn.innerHTML = '正在导入...';
+
+                try {
+                    const res = await api('db/import', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' }, // 发送纯文本
+                        body: sqlContent
+                    });
+
+                    if (res.success) {
+                        alert('数据库导入成功！页面将刷新。');
+                        window.location.reload();
+                    } else {
+                        alert('导入失败: ' + (res.error || '未知错误'));
+                    }
+                } catch (err) {
+                    alert('网络错误: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = oldText;
+                }
+            };
+            reader.readAsText(file);
+        }
+
         init();
     </script>
 </body>
