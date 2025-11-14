@@ -45,8 +45,27 @@
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label class="form-label">网站名称</label>
-                                    <input type="text" class="form-control" id="site_name">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="site_name">
+                                        <div class="input-group-text">
+                                            <input class="form-check-input mt-0" type="checkbox" id="show_site_name">
+                                            <span class="ms-2">前台显示</span>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">网站 Logo (图片 URL)</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="site_logo" placeholder="https://example.com/logo.png">
+                                        <div class="input-group-text">
+                                            <input class="form-check-input mt-0" type="checkbox" id="show_site_logo">
+                                            <span class="ms-2">前台显示</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-text">建议使用透明背景的 PNG 图片，推荐高度 50px 左右。</div>
+                                </div>
+
                                 <div class="mb-3">
                                     <label class="form-label">前端模板风格</label>
                                     <select class="form-select" id="theme_select">
@@ -107,7 +126,16 @@
         async function init() {
             try {
                 const config = await fetch('/api/shop/config').then(r => r.json());
+                
+                // 网站名称
                 document.getElementById('site_name').value = config.site_name || '';
+                // 网站 Logo
+                document.getElementById('site_logo').value = config.site_logo || '';
+                
+                // 开关状态 (数据库存的是字符串 "1" 或 "0")
+                document.getElementById('show_site_name').checked = (config.show_site_name === '1');
+                document.getElementById('show_site_logo').checked = (config.show_site_logo === '1');
+
                 document.getElementById('theme_select').value = config.theme || 'default';
                 document.getElementById('announce').value = config.announce || '';
             } catch (e) {
@@ -119,6 +147,11 @@
         async function saveSettings() {
             const data = {
                 site_name: document.getElementById('site_name').value,
+                site_logo: document.getElementById('site_logo').value,
+                // 复选框转为 "1" 或 "0"
+                show_site_name: document.getElementById('show_site_name').checked ? '1' : '0',
+                show_site_logo: document.getElementById('show_site_logo').checked ? '1' : '0',
+                
                 theme: document.getElementById('theme_select').value,
                 announce: document.getElementById('announce').value
             };
