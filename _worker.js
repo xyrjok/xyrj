@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker Faka Backend (最终绝对完整版)
- * 包含：文章系统、自选号码、主图设置、手动发货、所有修复 + [新增] 商品标签支持
+ * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、[新增]数据库备份恢复
  */
 
 // === 工具函数 ===
@@ -217,7 +217,7 @@ async function handleApi(request, env, url) {
                 return jsonRes(products);
             }
             
-            // [修改] 商品保存逻辑 (含 tags 支持)
+            // 商品保存逻辑 (含 tags 支持)
             if (path === '/api/admin/product/save' && method === 'POST') {
                 const data = await request.json();
                 let productId = data.id;
@@ -401,6 +401,67 @@ async function handleApi(request, env, url) {
                 );
                 await db.batch(stmts);
                 return jsonRes({ success: true });
+            }
+
+            // ===========================
+            // --- [新增] 数据库管理 API ---
+            // ===========================
+            
+            // 导出数据库 (Dump)
+            if (path === '/api/admin/db/export') {
+                // 1. 获取所有表名 (排除 sqlite_ 系统表)
+                const tables = await db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
+                
+                let sqlDump = "-- Cloudflare D1 Dump\n";
+                sqlDump += `-- Date: ${new Date().toISOString()}\n\n`;
+                sqlDump += "PRAGMA foreign_keys = OFF;\n\n"; // 暂时关闭外键检查
+
+                for (const table of tables.results) {
+                    // 导出表结构 (先删除旧表)
+                    sqlDump += `DROP TABLE IF EXISTS "${table.name}";\n`;
+                    sqlDump += `${table.sql};\n`;
+                    
+                    // 导出表数据
+                    const rows = await db.prepare(`SELECT * FROM "${table.name}"`).all();
+                    if (rows.results.length > 0) {
+                        sqlDump += `\n-- Data for ${table.name}\n`;
+                        for (const row of rows.results) {
+                            const keys = Object.keys(row).map(k => `"${k}"`).join(',');
+                            const values = Object.values(row).map(v => {
+                                if (v === null) return 'NULL';
+                                if (typeof v === 'number') return v;
+                                // 转义单引号
+                                return `'${String(v).replace(/'/g, "''")}'`;
+                            }).join(',');
+                            
+                            sqlDump += `INSERT INTO "${table.name}" (${keys}) VALUES (${values});\n`;
+                        }
+                    }
+                    sqlDump += "\n";
+                }
+                
+                sqlDump += "PRAGMA foreign_keys = ON;\n";
+
+                return new Response(sqlDump, {
+                    headers: {
+                        'Content-Type': 'application/sql',
+                        'Content-Disposition': `attachment; filename="backup_${new Date().toISOString().split('T')[0]}.sql"`
+                    }
+                });
+            }
+
+            // 导入数据库 (Import)
+            if (path === '/api/admin/db/import' && method === 'POST') {
+                const sqlContent = await request.text();
+                if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
+
+                try {
+                    // 使用 db.exec() 执行多条 SQL 语句 (D1 原生支持)
+                    await db.exec(sqlContent);
+                    return jsonRes({ success: true });
+                } catch (e) {
+                    return errRes('导入失败: ' + e.message);
+                }
             }
         }
 
