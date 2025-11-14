@@ -48,7 +48,6 @@
             display: flex; 
             flex: 1; 
             align-items: center;
-            /* gap: 25px;  <-- 已移除，修复搜狗浏览器兼容性 */
         }
         .nav-link-item { 
             font-size: 16px; 
@@ -56,9 +55,7 @@
             color: #333; 
             margin-right: 25px; /* 使用 margin 代替 gap */
         }
-        .nav-link-item:last-child {
-            margin-right: 0;
-        }
+        .nav-link-item:last-child { margin-right: 0; }
         .nav-link-item:hover { color: var(--tb-orange); }
 
         /* 右侧搜索与登录 */
@@ -89,9 +86,9 @@
             font-weight: bold;
             font-size: 14px;
             cursor: pointer;
-            border-radius: 18px; /* 内部圆角 */
+            border-radius: 18px;
             margin: 2px;
-            height: 28px; /* 比外框小一点 */
+            height: 28px;
         }
         .tb-search-btn:hover { background: #d6002a; }
 
@@ -123,8 +120,6 @@
         .module-title a { font-size: 12px; font-weight: normal; color: #999; }
 
         /* === 左侧模块 === */
-        
-        /* 左2: 商品分类菜单 (横向胶囊) */
         .category-bar { display: flex; flex-wrap: wrap; gap: 10px; }
         .cat-pill {
             padding: 6px 15px;
@@ -140,7 +135,6 @@
             border-color: var(--tb-orange);
         }
 
-        /* 左3: 商品展示 (网格) */
         .taobao-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -166,7 +160,24 @@
         .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 18px; }
         .tb-sales { font-size: 12px; color: #999; }
 
-        /* 左4: 热门文章列表 */
+        /* [新增] 动态标签样式 */
+        .dynamic-tag {
+            display: inline-block;
+            font-size: 10px;
+            padding: 0 4px;
+            border-radius: 3px;
+            margin-right: 4px;
+            line-height: 16px;
+            height: 18px;
+            border: 1px solid transparent; /* 默认透明边框 */
+            white-space: nowrap;
+        }
+        .tb-tags-row {
+            height: 22px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
         .hot-article-item {
             display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #eee;
         }
@@ -178,18 +189,14 @@
         .hot-rank.top-3 { background: var(--tb-orange); }
 
         /* === 右侧模块 === */
-
-        /* 右1: 公告 */
         .notice-content { font-size: 13px; line-height: 1.6; color: #666; }
 
-        /* 右2: 销量排行 (图文) */
         .top-item { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
         .top-img { width: 50px; height: 50px; border-radius: 4px; object-fit: cover; border: 1px solid #eee; }
         .top-info { flex: 1; overflow: hidden; }
         .top-title { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
         .top-price { color: var(--tb-orange); font-weight: bold; font-size: 14px; }
 
-        /* 右3: 文章分类 */
         .art-cat-list a { display: block; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
         .art-cat-list a:hover { padding-left: 5px; color: var(--tb-orange); }
 
@@ -307,7 +314,7 @@
         let allProducts = []; // 存储所有商品以供筛选
 
         async function init() {
-            // 1. 加载配置与公告 (右1)
+            // 1. 加载配置与公告
             try {
                 const configRes = await fetch('/api/shop/config');
                 const config = await configRes.json();
@@ -321,15 +328,15 @@
                 }
             } catch (e) {}
 
-            // 2. 加载商品数据 (核心数据源)
+            // 2. 加载商品数据
             try {
                 const prodRes = await fetch('/api/shop/products');
-                allProducts = await prodRes.json(); // 保存到全局变量
+                allProducts = await prodRes.json(); 
 
-                // 渲染商品 (左3)
+                // 渲染商品
                 renderProducts(allProducts);
 
-                // 2.1 渲染销量排行 (右2) - 按总销量排序
+                // 渲染销量排行
                 const topProducts = [...allProducts].sort((a, b) => {
                     const salesA = a.variants.reduce((s, v) => s + (v.sales_count||0), 0);
                     const salesB = b.variants.reduce((s, v) => s + (v.sales_count||0), 0);
@@ -365,7 +372,7 @@
                 const artRes = await fetch('/api/shop/articles/list');
                 const articles = await artRes.json();
 
-                // 3.1 渲染热门文章 (左4) - 假定前8个
+                // 渲染热门文章
                 const hotListEl = document.getElementById('hot-articles-list');
                 if (articles.length > 0) {
                     hotListEl.innerHTML = articles.slice(0, 8).map((a, index) => `
@@ -379,7 +386,7 @@
                     `).join('');
                 }
 
-                // 3.2 提取文章分类 (右3)
+                // 提取文章分类
                 const artCats = [...new Set(articles.map(a => a.category_name))].filter(Boolean);
                 const artCatListEl = document.getElementById('article-cat-list');
                 if (artCats.length > 0) {
@@ -391,7 +398,37 @@
             } catch (e) {}
         }
 
-        // 渲染主商品网格
+        // [新增] 解析标签字符串函数
+        function parseTags(tagStr) {
+            if (!tagStr) return '';
+            const tags = tagStr.split(',').map(t => t.trim()).filter(t => t);
+            
+            return tags.map(t => {
+                // 解析: b1#color b2#color name#color
+                const parts = t.split(/\s+/); 
+                let borderColor = 'transparent';
+                let bgColor = '#f5f5f5';
+                let text = '';
+                let textColor = '#333';
+
+                parts.forEach(part => {
+                    if (part.startsWith('b1')) borderColor = part.split('#')[1] ? '#' + part.split('#')[1] : borderColor;
+                    else if (part.startsWith('b2')) bgColor = part.split('#')[1] ? '#' + part.split('#')[1] : bgColor;
+                    else if (part.includes('#')) {
+                        const txtParts = part.split('#');
+                        text = txtParts[0];
+                        textColor = '#' + txtParts[1];
+                    } else {
+                        text = part; 
+                    }
+                });
+
+                if (!text) return '';
+                return `<span class="dynamic-tag" style="border-color:${borderColor}; background-color:${bgColor}; color:${textColor}">${text}</span>`;
+            }).join('');
+        }
+
+        // 渲染主商品网格 (含标签)
         function renderProducts(products) {
             const gridEl = document.getElementById('product-grid');
             if (products.length === 0) {
@@ -404,6 +441,9 @@
                 const totalSales = p.variants.reduce((sum, v) => sum + (v.sales_count || 0), 0);
                 const imgUrl = p.image_url || mainVariant.image_url || 'https://via.placeholder.com/300x300/e0e0e0/999999?text=No+Image';
                 const price = mainVariant.price || '0.00';
+                
+                // 生成标签 HTML
+                const tagsHtml = parseTags(p.tags);
 
                 return `
                     <a href="/product.html?id=${p.id}" class="tb-card">
@@ -412,6 +452,11 @@
                         </div>
                         <div class="tb-info">
                             <div class="tb-title">${p.name}</div>
+                            
+                            <div class="tb-tags-row">
+                                ${tagsHtml}
+                            </div>
+
                             <div class="tb-price-row">
                                 <span class="tb-price"><small>¥</small>${price}</span>
                                 <span class="tb-sales">已售${totalSales}</span>
@@ -422,29 +467,21 @@
             }).join('');
         }
 
-        // 简单的搜索功能
         function doSearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase().trim();
-            if (!keyword) {
-                renderProducts(allProducts);
-                return;
-            }
+            if (!keyword) { renderProducts(allProducts); return; }
             const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword) || (p.description && p.description.toLowerCase().includes(keyword)));
             renderProducts(filtered);
         }
         
-        // 绑定回车搜索
         document.getElementById('search-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') doSearch();
         });
 
-        // 简单的分类筛选 (占位，后续可对接真实分类ID)
         function filterCategory(type) {
             document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
             event.target.classList.add('active');
-            if (type === 'all') {
-                renderProducts(allProducts);
-            }
+            if (type === 'all') renderProducts(allProducts);
         }
 
         init();
