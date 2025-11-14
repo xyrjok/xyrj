@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-	<meta name="renderer" content="webkit">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>商店首页</title>
@@ -16,7 +16,11 @@
             --tb-red: #ff0036;
             --bg-gray: #f4f4f4;
         }
-        body { background-color: var(--bg-gray); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { 
+            background-color: #f4f4f4; 
+            background-color: var(--bg-gray); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+        }
         a { text-decoration: none; color: #333; transition: color 0.2s; }
         a:hover { color: var(--tb-orange); }
 
@@ -62,7 +66,8 @@
         .nav-link-item:hover { color: var(--tb-orange); }
 
         /* 右侧搜索与登录 */
-        .header-right { display: flex; align-items: center; gap: 15px; }
+        /* [修改] 移除 gap，改用 margin 兼容旧浏览器 */
+        .header-right { display: flex; align-items: center; /* gap: 15px; 删除 */ }
         
         .tb-search-group {
             display: flex;
@@ -72,6 +77,7 @@
             width: 280px;
             height: 36px;
             background: #fff;
+            margin-right: 15px; /* [新增] 使用 margin 设置间距 */
         }
         .tb-search-input {
             border: none;
@@ -122,7 +128,12 @@
         .module-title a { font-size: 12px; font-weight: normal; color: #999; }
 
         /* === 左侧模块 === */
-        .category-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+        /* [修改] 移除 gap，使用子元素 margin */
+        .category-bar { 
+            display: flex; 
+            flex-wrap: wrap; 
+            /* gap: 8px; 删除 */
+        }
         
         .cat-pill {
             display: inline-flex; 
@@ -134,6 +145,9 @@
             cursor: pointer;
             border: 1px solid transparent;
             transition: all 0.2s;
+            /* [新增] 使用 margin 设置间距，兼容所有浏览器 */
+            margin-right: 8px; 
+            margin-bottom: 8px;
         }
         .cat-pill.active, .cat-pill:hover {
             background: #fff3eb;
@@ -184,10 +198,10 @@
         }
         .dynamic-tag {
             display: inline-block;
-            font-size: 11px;
-            padding: 0px 2px;
+            font-size: 10px;
+            padding: 0px 3px;
             border-radius: 3px;
-            margin-right: 3px;
+            margin-right: 4px;
             line-height: normal; 
             border: 1px solid transparent; 
             white-space: nowrap;
@@ -208,11 +222,20 @@
         /* === 右侧模块 === */
         .notice-content { font-size: 13px; line-height: 1.6; color: #666; }
 
-        .top-item { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
-        .top-img { width: 45px; height: 45px;
-            border-radius: 4px; object-fit: cover; border: 1px solid #eee; }
+        /* [修改] 移除 gap，使用 margin */
+        .top-item { 
+            display: flex; 
+            /* gap: 10px; 删除 */ 
+            margin-bottom: 12px; 
+            align-items: center; 
+        }
+        .top-img { 
+            width: 45px; height: 45px;
+            border-radius: 4px; object-fit: cover; border: 1px solid #eee; 
+            margin-right: 10px; /* [新增] 设置右边距 */
+        }
         .top-info { flex: 1; overflow: hidden; }
-        .top-title { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+        .top-title { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
         .top-price { color: var(--tb-orange); font-weight: bold; font-size: 14px; }
 
         .art-cat-list a { display: block; padding: 6px 0;
@@ -220,9 +243,14 @@
         .art-cat-list a:hover { padding-left: 5px; color: var(--tb-orange); }
 
         /* 标签云样式 */
-        .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+        /* [修改] 移除 gap */
+        .tag-cloud { 
+            display: flex; 
+            flex-wrap: wrap; 
+            /* gap: 6px; 删除 */ 
+        }
         .tag-cloud-item {
-            font-size: 13px;
+            font-size: 12px;
             padding: 3px 8px;
             background: #f8f9fa;
             border: 1px solid #eee;
@@ -230,6 +258,9 @@
             color: #666;
             cursor: pointer;
             transition: all 0.2s;
+            /* [新增] 使用 margin 设置间距 */
+            margin-right: 6px;
+            margin-bottom: 6px;
         }
         .tag-cloud-item:hover, .tag-cloud-item.active {
             background: #fff3eb;
@@ -355,7 +386,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
     
     <script>
-        // [修改] 全局变量，用于控制 Sticky 实例
+        // 全局变量，用于控制 Sticky 实例
         let sidebar = null;
 
         // 配置参数
@@ -366,7 +397,7 @@
             innerWrapperSelector: '.sidebar-inner'
         };
 
-        // [修改] 核心函数：智能判断高度，决定是开启还是销毁滑动
+        // 核心函数：智能判断高度，决定是开启还是销毁滑动
         function checkSidebarStatus() {
             const sidebarInner = document.querySelector('.sidebar-inner');
             const productArea = document.getElementById('products-list-area');
@@ -525,7 +556,7 @@
                 }
             } catch (e) {}
 
-            // [修改] 数据全部加载完成后，再次检查高度状态
+            // 数据全部加载完成后，再次检查高度状态
             setTimeout(checkSidebarStatus, 500);
         }
 
@@ -590,7 +621,7 @@
                 area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100 text-muted">暂无商品</div></div>`;
             }
 
-            // [修改] 每次渲染后，检查并调整侧边栏状态
+            // 每次渲染后，检查并调整侧边栏状态
             setTimeout(checkSidebarStatus, 100);
         }
 
@@ -610,7 +641,7 @@
                 `;
                 area.innerHTML = gridHtml;
             }
-            // [修改] 每次渲染后，检查并调整侧边栏状态
+            // 每次渲染后，检查并调整侧边栏状态
             setTimeout(checkSidebarStatus, 100);
         }
 
