@@ -394,7 +394,7 @@ async function handleApi(request, env, url) {
                 return jsonRes({ success: true });
             }
             
-            // --- 系统设置 API ---
+            // --- 系统设置 API (已修改: 支持 UPSERT) ---
             if (path === '/api/admin/settings/get') {
                 const res = await db.prepare("SELECT * FROM site_config").all();
                 const config = {}; res.results.forEach(r => config[r.key] = r.value);
@@ -402,8 +402,12 @@ async function handleApi(request, env, url) {
             }
             if (path === '/api/admin/settings/save' && method === 'POST') {
                 const settings = await request.json();
+                // [关键修改] 使用 UPSERT 语法：如果键不存在则插入，存在则更新
                 const stmts = Object.keys(settings).map(key => 
-                    db.prepare("UPDATE site_config SET value = ? WHERE key = ?").bind(settings[key], key)
+                    db.prepare(`
+                        INSERT INTO site_config (key, value) VALUES (?, ?) 
+                        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                    `).bind(key, settings[key])
                 );
                 await db.batch(stmts);
                 return jsonRes({ success: true });
