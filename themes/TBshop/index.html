@@ -351,7 +351,7 @@
         document.getElementById('year').innerText = new Date().getFullYear();
         
         let allProducts = []; // 存储所有商品
-        let allCategories = []; // [新增] 存储所有分类
+        let allCategories = []; // [新增] 存储所有分类，用于按顺序展示板块
 
         async function init() {
             // 1. 加载配置与公告
@@ -395,6 +395,7 @@
                 
                 const catContainer = document.getElementById('category-container');
                 
+                // 顶部筛选栏保留
                 let html = '<div class="cat-pill active" onclick="filterCategory(\'all\', this)">全部商品</div>';
                 
                 allCategories.forEach(c => {
@@ -409,7 +410,7 @@
                 const prodRes = await fetch('/api/shop/products');
                 allProducts = await prodRes.json(); 
 
-                // [修改] 初始渲染：按分类展示
+                // [修改] 初始渲染：直接调用分类视图渲染
                 renderCategorizedView('all');
 
                 // 渲染标签云
@@ -446,7 +447,7 @@
                 document.getElementById('products-list-area').innerHTML = '加载失败';
             }
 
-            // 4. 加载文章数据 (保持不变)
+            // 4. 加载文章数据
             try {
                 const artRes = await fetch('/api/shop/articles/list');
                 const articles = await artRes.json();
@@ -472,7 +473,7 @@
             } catch (e) {}
         }
 
-        // [新增] 生成单个商品卡片的 HTML
+        // [新增] 辅助函数：生成单个商品卡片的 HTML
         function getProductCardHtml(p) {
             const mainVariant = p.variants[0] || {};
             const totalSales = p.variants.reduce((sum, v) => sum + (v.sales_count || 0), 0);
@@ -496,8 +497,8 @@
             `;
         }
 
-        // [新增] 渲染分类视图
-        // filterId: 'all' 或具体的 categoryId
+        // [核心逻辑] 渲染分类视图
+        // filterId: 'all' 表示显示所有分类（分组展示）；如果是具体ID，则只显示该分类
         function renderCategorizedView(filterId) {
             const area = document.getElementById('products-list-area');
             area.innerHTML = ''; // 清空当前显示
@@ -534,12 +535,13 @@
                 }
             });
 
+            // 如果没有找到任何商品（比如该分类下为空）
             if (!hasAnyProduct) {
-                area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100 text-muted">当前分类暂无商品</div></div>`;
+                area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100 text-muted">暂无商品</div></div>`;
             }
         }
 
-        // [新增] 渲染简单的商品列表（用于搜索结果或标签筛选）
+        // [新增] 渲染单一大网格（用于搜索结果或标签筛选）
         function renderSingleGrid(products, title) {
             const area = document.getElementById('products-list-area');
             if (products.length === 0) {
@@ -616,8 +618,8 @@
             });
             document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active')); 
             
+            // 标签筛选使用单网格渲染
             const filtered = allProducts.filter(p => p.tags && p.tags.includes(tag));
-            // [修改] 标签筛选使用单网格渲染
             renderSingleGrid(filtered, `标签: ${tag}`);
         }
 
@@ -628,8 +630,8 @@
                 renderCategorizedView('all'); 
                 return; 
             }
+            // 搜索结果使用单网格渲染
             const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword) || (p.description && p.description.toLowerCase().includes(keyword)));
-            // [修改] 搜索结果使用单网格渲染
             renderSingleGrid(filtered, `"${keyword}" 的搜索结果`);
         }
         
@@ -646,7 +648,7 @@
             // 清除标签高亮
             document.querySelectorAll('.tag-cloud-item').forEach(e => e.classList.remove('active'));
             
-            // [修改] 调用新的渲染逻辑
+            // 调用新的渲染逻辑
             renderCategorizedView(id);
         }
 
