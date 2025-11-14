@@ -43,9 +43,22 @@
         }
         .site-brand i { margin-right: 8px; font-size: 24px; }
 
-        /* 中间导航链接 */
-        .main-nav { display: flex; gap: 25px; flex: 1; }
-        .nav-link-item { font-size: 16px; font-weight: 500; color: #333; }
+        /* 中间导航链接 - 兼容性修复版 */
+        .main-nav { 
+            display: flex; 
+            flex: 1; 
+            align-items: center;
+            /* gap: 25px;  <-- 已移除，修复搜狗浏览器兼容性 */
+        }
+        .nav-link-item { 
+            font-size: 16px; 
+            font-weight: 500; 
+            color: #333; 
+            margin-right: 25px; /* 使用 margin 代替 gap */
+        }
+        .nav-link-item:last-child {
+            margin-right: 0;
+        }
         .nav-link-item:hover { color: var(--tb-orange); }
 
         /* 右侧搜索与登录 */
@@ -205,7 +218,8 @@
             <nav class="main-nav d-none d-md-flex">
                 <a href="/" class="nav-link-item">首页</a>
                 <a href="/articles.html" class="nav-link-item">教程文章</a>
-                <a href="/admin/orders.html" target="_blank" class="nav-link-item">查询订单</a> </nav>
+                <a href="/admin/orders.html" target="_blank" class="nav-link-item">查询订单</a>
+            </nav>
 
             <div class="header-right">
                 <div class="tb-search-group">
@@ -312,16 +326,10 @@
                 const prodRes = await fetch('/api/shop/products');
                 allProducts = await prodRes.json(); // 保存到全局变量
 
-                // 2.1 提取商品分类 (左2) - 既然没有公开的分类API，我们从商品中提取 unique category_id
-                // 注意：这里仅能按 ID 聚合，如果需要分类名称，最好让API返回分类名，或者这里先简单处理
-                // 改进：假设 product 对象里没有 category_name，我们只能按 ID 分组。
-                // 为了演示效果，这里直接渲染所有商品。如果API返回了分类名更好。
-                // 如果 _worker.js 没有返回 category_name，我们这里简单模拟或通过 id 过滤
-                
                 // 渲染商品 (左3)
                 renderProducts(allProducts);
 
-                // 2.2 渲染销量排行 (右2) - 按总销量排序
+                // 2.1 渲染销量排行 (右2) - 按总销量排序
                 const topProducts = [...allProducts].sort((a, b) => {
                     const salesA = a.variants.reduce((s, v) => s + (v.sales_count||0), 0);
                     const salesB = b.variants.reduce((s, v) => s + (v.sales_count||0), 0);
@@ -357,7 +365,7 @@
                 const artRes = await fetch('/api/shop/articles/list');
                 const articles = await artRes.json();
 
-                // 3.1 渲染热门文章 (左4) - 假定前5个是最新的/热门的
+                // 3.1 渲染热门文章 (左4) - 假定前8个
                 const hotListEl = document.getElementById('hot-articles-list');
                 if (articles.length > 0) {
                     hotListEl.innerHTML = articles.slice(0, 8).map((a, index) => `
@@ -430,14 +438,13 @@
             if (e.key === 'Enter') doSearch();
         });
 
-        // 简单的分类筛选 (目前只是占位，因为没有从API获取分类ID对应的名称，实际可通过扩展API实现)
+        // 简单的分类筛选 (占位，后续可对接真实分类ID)
         function filterCategory(type) {
             document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
             event.target.classList.add('active');
             if (type === 'all') {
                 renderProducts(allProducts);
             }
-            // 如果后续有分类ID，可以在这里 filter
         }
 
         init();
