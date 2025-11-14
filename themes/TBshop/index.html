@@ -284,12 +284,9 @@
                     </div>
                 </div>
 
-                <div class="module-box" style="min-height: 400px;">
-                    <div class="module-title">精选商品</div>
-                    <div id="product-grid" class="taobao-grid">
-                        <div class="text-center w-100 py-5 text-muted" style="grid-column: 1/-1;">
-                            <i class="fa fa-spinner fa-spin fa-2x"></i><br>加载商品中...
-                        </div>
+                <div id="products-list-area" style="min-height: 400px;">
+                    <div class="text-center w-100 py-5 text-muted">
+                        <i class="fa fa-spinner fa-spin fa-2x"></i><br>加载商品中...
                     </div>
                 </div>
 
@@ -353,7 +350,8 @@
     <script>
         document.getElementById('year').innerText = new Date().getFullYear();
         
-        let allProducts = []; // 存储所有商品以供筛选
+        let allProducts = []; // 存储所有商品
+        let allCategories = []; // [新增] 存储所有分类
 
         async function init() {
             // 1. 加载配置与公告
@@ -390,17 +388,16 @@
                 }
             } catch (e) { console.error(e); }
 
-            // 2. 加载分类 (新增逻辑)
+            // 2. 加载分类
             try {
                 const catRes = await fetch('/api/shop/categories');
-                const categories = await catRes.json();
+                allCategories = await catRes.json(); // [修改] 赋值给全局变量
+                
                 const catContainer = document.getElementById('category-container');
                 
-                // 构造 HTML：始终保留 "全部商品" 按钮
                 let html = '<div class="cat-pill active" onclick="filterCategory(\'all\', this)">全部商品</div>';
                 
-                categories.forEach(c => {
-                    // 如果有图片则显示图片，没有则只显示文字
+                allCategories.forEach(c => {
                     const imgTag = c.image_url ? `<img src="${c.image_url}">` : '';
                     html += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${imgTag}${c.name}</div>`;
                 });
@@ -412,8 +409,9 @@
                 const prodRes = await fetch('/api/shop/products');
                 allProducts = await prodRes.json(); 
 
-                // 渲染商品
-                renderProducts(allProducts);
+                // [修改] 初始渲染：按分类展示
+                renderCategorizedView('all');
+
                 // 渲染标签云
                 renderTagCloud(allProducts);
 
@@ -445,15 +443,13 @@
 
             } catch (e) {
                 console.error(e);
-                document.getElementById('product-grid').innerHTML = '加载失败';
+                document.getElementById('products-list-area').innerHTML = '加载失败';
             }
 
-            // 4. 加载文章数据
+            // 4. 加载文章数据 (保持不变)
             try {
                 const artRes = await fetch('/api/shop/articles/list');
                 const articles = await artRes.json();
-
-                // 渲染热门文章
                 const hotListEl = document.getElementById('hot-articles-list');
                 if (articles.length > 0) {
                     hotListEl.innerHTML = articles.slice(0, 8).map((a, index) => `
@@ -466,8 +462,6 @@
                         </div>
                     `).join('');
                 }
-
-                // 提取文章分类
                 const artCats = [...new Set(articles.map(a => a.category_name))].filter(Boolean);
                 const artCatListEl = document.getElementById('article-cat-list');
                 if (artCats.length > 0) {
@@ -475,8 +469,92 @@
                 } else {
                     artCatListEl.innerHTML = '<div class="text-muted small">暂无分类</div>';
                 }
-
             } catch (e) {}
+        }
+
+        // [新增] 生成单个商品卡片的 HTML
+        function getProductCardHtml(p) {
+            const mainVariant = p.variants[0] || {};
+            const totalSales = p.variants.reduce((sum, v) => sum + (v.sales_count || 0), 0);
+            const imgUrl = p.image_url || mainVariant.image_url || 'https://via.placeholder.com/300x300/e0e0e0/999999?text=No+Image';
+            const price = mainVariant.price || '0.00';
+            const tagsHtml = parseTags(p.tags);
+            return `
+                <a href="/product.html?id=${p.id}" class="tb-card">
+                    <div class="tb-img-wrap">
+                        <img src="${imgUrl}" alt="${p.name}" class="tb-img" loading="lazy">
+                    </div>
+                    <div class="tb-info">
+                        <div class="tb-title">${p.name}</div>
+                        <div class="tb-tags-row">${tagsHtml}</div>
+                        <div class="tb-price-row">
+                            <span class="tb-price"><small>¥</small>${price}</span>
+                            <span class="tb-sales">已售${totalSales}</span>
+                        </div>
+                    </div>
+                </a>
+            `;
+        }
+
+        // [新增] 渲染分类视图
+        // filterId: 'all' 或具体的 categoryId
+        function renderCategorizedView(filterId) {
+            const area = document.getElementById('products-list-area');
+            area.innerHTML = ''; // 清空当前显示
+
+            let categoriesToShow = [];
+            
+            if (filterId === 'all') {
+                categoriesToShow = allCategories;
+            } else {
+                // 找到选中的分类
+                const targetCat = allCategories.find(c => c.id == filterId);
+                if (targetCat) categoriesToShow = [targetCat];
+            }
+
+            let hasAnyProduct = false;
+
+            categoriesToShow.forEach(cat => {
+                // 筛选该分类下的商品
+                const catProducts = allProducts.filter(p => p.category_id == cat.id);
+                
+                if (catProducts.length > 0) {
+                    hasAnyProduct = true;
+                    
+                    // 构建该分类的 HTML 块
+                    const sectionHtml = `
+                        <div class="module-box">
+                            <div class="module-title">${cat.name}</div>
+                            <div class="taobao-grid">
+                                ${catProducts.map(p => getProductCardHtml(p)).join('')}
+                            </div>
+                        </div>
+                    `;
+                    area.innerHTML += sectionHtml;
+                }
+            });
+
+            if (!hasAnyProduct) {
+                area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100 text-muted">当前分类暂无商品</div></div>`;
+            }
+        }
+
+        // [新增] 渲染简单的商品列表（用于搜索结果或标签筛选）
+        function renderSingleGrid(products, title) {
+            const area = document.getElementById('products-list-area');
+            if (products.length === 0) {
+                area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100">未找到相关商品</div></div>`;
+                return;
+            }
+            const gridHtml = `
+                <div class="module-box">
+                    <div class="module-title">${title}</div>
+                    <div class="taobao-grid">
+                        ${products.map(p => getProductCardHtml(p)).join('')}
+                    </div>
+                </div>
+            `;
+            area.innerHTML = gridHtml;
         }
 
         function parseTags(tagStr) {
@@ -537,53 +615,29 @@
                 else el.classList.remove('active');
             });
             document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active')); 
+            
             const filtered = allProducts.filter(p => p.tags && p.tags.includes(tag));
-            renderProducts(filtered);
-        }
-
-        function renderProducts(products) {
-            const gridEl = document.getElementById('product-grid');
-            if (products.length === 0) {
-                gridEl.innerHTML = '<div class="text-center py-5 w-100" style="grid-column: 1/-1;">未找到相关商品</div>';
-                return;
-            }
-
-            gridEl.innerHTML = products.map(p => {
-                const mainVariant = p.variants[0] || {};
-                const totalSales = p.variants.reduce((sum, v) => sum + (v.sales_count || 0), 0);
-                const imgUrl = p.image_url || mainVariant.image_url || 'https://via.placeholder.com/300x300/e0e0e0/999999?text=No+Image';
-                const price = mainVariant.price || '0.00';
-                const tagsHtml = parseTags(p.tags);
-                return `
-                    <a href="/product.html?id=${p.id}" class="tb-card">
-                        <div class="tb-img-wrap">
-                            <img src="${imgUrl}" alt="${p.name}" class="tb-img" loading="lazy">
-                        </div>
-                        <div class="tb-info">
-                            <div class="tb-title">${p.name}</div>
-                            <div class="tb-tags-row">${tagsHtml}</div>
-                            <div class="tb-price-row">
-                                <span class="tb-price"><small>¥</small>${price}</span>
-                                <span class="tb-sales">已售${totalSales}</span>
-                            </div>
-                        </div>
-                    </a>
-                `;
-            }).join('');
+            // [修改] 标签筛选使用单网格渲染
+            renderSingleGrid(filtered, `标签: ${tag}`);
         }
 
         function doSearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase().trim();
-            if (!keyword) { renderProducts(allProducts); return; }
+            if (!keyword) { 
+                // 搜索为空，恢复默认分类视图
+                renderCategorizedView('all'); 
+                return; 
+            }
             const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword) || (p.description && p.description.toLowerCase().includes(keyword)));
-            renderProducts(filtered);
+            // [修改] 搜索结果使用单网格渲染
+            renderSingleGrid(filtered, `"${keyword}" 的搜索结果`);
         }
         
         document.getElementById('search-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') doSearch();
         });
 
-        // [修改] 增强的分类过滤功能
+        // [修改] 分类过滤功能适配新逻辑
         function filterCategory(id, el) {
             // 高亮当前分类
             document.querySelectorAll('.cat-pill').forEach(e => e.classList.remove('active'));
@@ -592,13 +646,8 @@
             // 清除标签高亮
             document.querySelectorAll('.tag-cloud-item').forEach(e => e.classList.remove('active'));
             
-            // 筛选逻辑
-            if (id === 'all') {
-                renderProducts(allProducts);
-            } else {
-                const filtered = allProducts.filter(p => p.category_id == id);
-                renderProducts(filtered);
-            }
+            // [修改] 调用新的渲染逻辑
+            renderCategorizedView(id);
         }
 
         init();
