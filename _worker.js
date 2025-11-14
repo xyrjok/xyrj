@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker Faka Backend (最终绝对完整版)
- * 包含：文章系统、自选号码、主图设置、手动发货、所有修复
+ * 包含：文章系统、自选号码、主图设置、手动发货、所有修复 + [新增] 商品标签支持
  */
 
 // === 工具函数 ===
@@ -217,18 +217,19 @@ async function handleApi(request, env, url) {
                 return jsonRes(products);
             }
             
-            // [修改] 商品保存逻辑 (含主图 image_url + SQL修复 + 自动发货默认值 + ID类型修复)
+            // [修改] 商品保存逻辑 (含 tags 支持)
             if (path === '/api/admin/product/save' && method === 'POST') {
                 const data = await request.json();
                 let productId = data.id;
+                const now = time();
 
-                // 1. 保存主商品
+                // 1. 保存主商品 (增加 tags 字段)
                 if (productId) {
-                    await db.prepare("UPDATE products SET name=?, description=?, category_id=?, sort=?, active=?, image_url=? WHERE id=?")
-                        .bind(data.name, data.description, data.category_id, data.sort, data.active, data.image_url, productId).run();
+                    await db.prepare("UPDATE products SET name=?, description=?, category_id=?, sort=?, active=?, image_url=?, tags=? WHERE id=?")
+                        .bind(data.name, data.description, data.category_id, data.sort, data.active, data.image_url, data.tags, productId).run();
                 } else {
-                    const res = await db.prepare("INSERT INTO products (category_id, sort, active, created_at, name, description, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                        .bind(data.category_id, data.sort, data.active, time(), data.name, data.description, data.image_url).run();
+                    const res = await db.prepare("INSERT INTO products (category_id, sort, active, created_at, name, description, image_url, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+                        .bind(data.category_id, data.sort, data.active, now, data.name, data.description, data.image_url, data.tags).run();
                     productId = res.meta.last_row_id;
                 }
 
@@ -263,7 +264,7 @@ async function handleApi(request, env, url) {
                         updateStmts.push(
                             insertStmt.bind(
                                 productId, v.name, v.price, stock, v.color, v.image_url, wholesale_config_json,
-                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, time()
+                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, now
                             )
                         );
                     }
