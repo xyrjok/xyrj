@@ -106,6 +106,12 @@ export default {
             const t = await db.prepare("SELECT value FROM site_config WHERE key='theme'").first();
             if(t && t.value) theme = t.value;
         } catch(e) {}
+
+        // [新增] 将 /files/ 路径映射到 /themes/当前主题/files/
+        if (path.startsWith('/files/')) {
+             const newUrl = new URL(`/themes/${theme}${path}`, url.origin);
+             return env.ASSETS.fetch(new Request(newUrl, request));
+        }
         
         // 规则 A: 排除不需要重写的系统路径
         if (path.startsWith('/admin/') || path.startsWith('/themes/') || path.startsWith('/assets/')) {
