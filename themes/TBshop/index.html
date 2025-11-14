@@ -279,7 +279,7 @@
     </header>
 
     <div class="container mt-4">
-        <div class="row gx-3">
+        <div class="row gx-3" id="main-content-row">
             <div class="col-lg-9">
                 
                 <div class="module-box">
@@ -306,34 +306,35 @@
 
             </div>
 
-            <div class="col-lg-3">
+            <div class="col-lg-3" id="sidebar-wrapper">
+                <div class="sidebar-inner">
 
-                <div class="module-box">
-                    <div class="module-title">店铺公告</div>
-                    <div class="notice-content" id="notice-box">
-                        暂无公告
+                    <div class="module-box">
+                        <div class="module-title">店铺公告</div>
+                        <div class="notice-content" id="notice-box">
+                            暂无公告
+                        </div>
                     </div>
-                </div>
 
-                <div class="module-box">
-                    <div class="module-title">销量排行</div>
-                    <div id="top-sales-list">
-                        </div>
-                </div>
+                    <div class="module-box">
+                        <div class="module-title">销量排行</div>
+                        <div id="top-sales-list">
+                            </div>
+                    </div>
 
-                <div class="module-box">
-                    <div class="module-title">教程分类</div>
-                    <div class="art-cat-list" id="article-cat-list">
-                        </div>
-                </div>
-				
-                <div class="module-box">
-                    <div class="module-title">热门标签</div>
-                    <div class="tag-cloud" id="tag-cloud-list">
-                        </div>
-                </div>
+                    <div class="module-box">
+                        <div class="module-title">教程分类</div>
+                        <div class="art-cat-list" id="article-cat-list">
+                            </div>
+                    </div>
+                    
+                    <div class="module-box">
+                        <div class="module-title">热门标签</div>
+                        <div class="tag-cloud" id="tag-cloud-list">
+                            </div>
+                    </div>
 
-            </div>
+                </div> </div>
         </div>
     </div>
 
@@ -351,7 +352,21 @@
         </div>
     </footer>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
+    
     <script>
+        // [修改] 初始化 Sticky Sidebar
+        window.addEventListener('load', function() {
+            if (window.innerWidth >= 992) {
+                var sidebar = new StickySidebar('#sidebar-wrapper', {
+                    topSpacing: 80,  // 距离顶部的距离 (Header 高度 + 间隙)
+                    bottomSpacing: 20,
+                    containerSelector: '#main-content-row', 
+                    innerWrapperSelector: '.sidebar-inner' 
+                });
+            }
+        });
+
         document.getElementById('year').innerText = new Date().getFullYear();
         
         let allProducts = []; // 存储所有商品
