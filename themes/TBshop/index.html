@@ -309,8 +309,8 @@
             background: #fff;
             position: fixed; /* [修改] 改为 fixed 修复顶部间距 */
             top: 0;
-            left: 0;         /* [新增] 配合 fixed */
-            width: 100%;     /* [新增] 配合 fixed */
+            left: 0;
+            width: 100%;
             z-index: 1001;
             display: flex;
             align-items: center;
@@ -372,6 +372,7 @@
         }
         .mobile-search-dropdown .tb-search-input {
             height: 38px;
+            line-height: 38px; /* [新增] 垂直居中文本 */
         }
         .mobile-search-dropdown .tb-search-btn {
             height: 34px;
@@ -399,26 +400,23 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 280px;
-            height: 100%;
+            width: 240px; /* [修改] 调窄侧滑菜单 */
+            height: calc(100% - 50px); /* [修改] 避免遮挡底部导航 */
             background: #fff;
             z-index: 1003;
             transform: translateX(-100%);
             transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
             display: flex;
             flex-direction: column;
         }
         .mobile-sidebar.show {
             transform: translateX(0);
         }
-        /* [修改] 侧滑菜单头部 */
         .mobile-sidebar-header {
             padding: 15px;
             border-bottom: 1px solid #f0f0f0;
             text-align: center;
         }
-        /* [新增] 侧滑菜单标题 */
         .mobile-sidebar-title {
             font-size: 18px;
             font-weight: bold;
@@ -427,11 +425,9 @@
         }
         .mobile-sidebar-content {
             padding: 15px;
-            flex: 1; /* 占据剩余空间 */
-            overflow-y: auto; /* 内容多时可滚动 */
+            flex: 1; 
+            overflow-y: auto; 
         }
-        /* [删除] .mobile-sidebar-content h5 (已移入HTML) */
-
         #mobile-category-list a {
             display: block;
             padding: 10px 5px;
@@ -443,8 +439,6 @@
             color: var(--tb-orange);
             background: #fcfcfc;
         }
-
-        /* [新增] 侧滑菜单底部 (用于登录) */
         .mobile-sidebar-footer {
             padding: 15px;
             border-top: 1px solid #f0f0f0;
@@ -510,7 +504,7 @@
 
             /* 1. 隐藏PC元素 */
             .tb-header {
-                display: none !important; /* [修改] 确保PC头部被隐藏 */
+                display: none !important; 
             }
             .col-lg-3 {
                 display: none; 
