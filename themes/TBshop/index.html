@@ -630,6 +630,7 @@
             padding: 15px;
             overflow-y: auto;
             line-height: 1.6;
+			font-size: 13px;
         }
         
         /* 移动端媒体查询总开关 */
@@ -667,17 +668,14 @@
                 margin-bottom: 10px;
                 border-radius: 8px;
             }
-            /* [删除] 移除有问题的 first-child 规则 */
-            /* .module-box:first-child { padding-top: 0; } */
 
             .module-title {
-                font-size: 13px;
+                font-size: 15px;
                 margin-bottom: 10px;
             }
 
             /* 3. 调整商品卡片 (改为左图右文列表) */
             
-            /* [修改 1.1] 移除商品间距 */
             .taobao-grid {
                 grid-template-columns: 1fr; /* 1. 强制单列 */
                 gap: 0; /* 修改 */
@@ -955,7 +953,7 @@
             <i class="fa fa-book-open"></i>
             <span>教程文章</span>
         </a>
-        <a href="#" class="mbn-item" onclick="event.preventDefault(); toggleMobileContact(true);">
+		<a href="#" class="mbn-item" onclick="event.preventDefault(); toggleMobileContact();">
             <i class="fa fa-headset"></i>
             <span>客服</span>
         </a>
@@ -1422,10 +1420,16 @@
         }
 
         // --- [新增] 移动端联系方式交互 ---
-        function toggleMobileContact(show) {
+		function toggleMobileContact(show) {
             const sheet = document.getElementById('mobile-contact-sheet');
-            const overlay = document.getElementById('mobile-contact-overlay');
-            if (show) {
+            const overlay = document.getElementById('mobile-contact-overlay'); 
+            let shouldShow;
+            if (typeof show === 'boolean') {
+                shouldShow = show;
+            } else {
+                shouldShow = !sheet.classList.contains('show');
+            }
+            if (shouldShow) {
                 sheet.classList.add('show');
                 overlay.classList.add('show');
             } else {
