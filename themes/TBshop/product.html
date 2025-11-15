@@ -59,7 +59,7 @@
         .sku-body { padding: 15px; overflow-y: auto; padding-bottom: 80px; }
         .section-title { font-size: 13px; color: #333; font-weight: bold; margin-bottom: 10px; }
         
-        /* *** 修改点 (CSS): 恢复 .spec-list 原始样式 (移除了 max-height, overflow, transition) *** */
+        /* *** 按行分页：恢复 .spec-list 原始样式 *** */
         .spec-list { 
             display: flex; 
             flex-wrap: wrap; 
@@ -95,7 +95,7 @@
         .sku-footer { position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px; background: #fff; border-top: 1px solid #f5f5f5; }
         .btn-confirm { width: 100%; height: 40px; border-radius: 20px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; border: none; }
         
-        /* *** 修改点 (CSS): 为分页链接添加指针 *** */
+        /* *** 按行分页：为分页链接添加指针 *** */
         .page-item .page-link { cursor: pointer; }
     </style>
 </head>
@@ -211,31 +211,92 @@
         const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
         const payModal = new bootstrap.Modal(document.getElementById('payModal'));
 
-        // --- *** 修改点 (JS): 移除 'show.bs.offcanvas' 监听 *** ---
-        // --- *** 修改点 (JS): 移除 'specListExpanded' 等变量 *** ---
-
-        // --- *** 修改点 (JS): 新增分页变量 *** ---
+        // --- *** 按行分页：全局变量 *** ---
+        let specPages = []; // 存储分页后的规格 [[v1,v2...], [v36,v37...]]
         let specCurrentPage = 1;
-        const specsPerPage = 24; // 每页显示24个规格
-        let totalSpecPages = 1;
+        const specListMaxRows = 10; // 每页10行
+        let hasCalculatedPages = false; // 标记是否已计算过分页
 
-        // --- *** 修改点 (JS): 移除 'toggleSpecList' 和 'checkSpecListHeight' 函数 *** ---
+        // --- *** 监听SKU模块，在显示时才计算分页 *** ---
+        skuSheetEl.addEventListener('show.bs.offcanvas', () => {
+            if (!hasCalculatedPages && currentProduct) {
+                calculateSpecPages();
+                hasCalculatedPages = true;
+            }
+        });
 
-        // --- *** 修改点 (JS): 新增分页功能函数 *** ---
+        // --- *** 核心：计算规格分页的函数 *** ---
+        function calculateSpecPages() {
+            const vList = document.getElementById('variant-list');
+            if (!currentProduct || !vList) return;
 
-        // 新函数：渲染分页按钮
+            // 1. 临时渲染所有规格，用于测量
+            vList.innerHTML = currentProduct.variants.map((v) => {
+                const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
+                return `<div class="spec-btn" ${style} data-id="${v.id}">${v.name}</div>`;
+            }).join('');
+            
+            const buttons = vList.querySelectorAll('.spec-btn');
+            if (buttons.length === 0) return; // 没有规格
+
+            // 2. 测量10行的高度
+            const specRowHeight = buttons[0].offsetHeight;
+            const listStyle = window.getComputedStyle(vList);
+            const rowGap = parseFloat(listStyle.gap) || 10;
+            // 10行的高度 = (10 * 按钮高度) + (9 * 间隙)
+            const pageMaxHeight = (specListMaxRows * specRowHeight) + ((specListMaxRows - 1) * rowGap);
+            const listTop = vList.offsetTop; // 容器的顶部偏移
+
+            // 3. 遍历所有按钮，根据高度分组
+            specPages = [];
+            let currentPageItems = [];
+            let currentPageStartOffset = listTop;
+
+            for (let i = 0; i < buttons.length; i++) {
+                const button = buttons[i];
+                const variant = currentProduct.variants[i];
+                const buttonTop = button.offsetTop; // 按钮的绝对顶部偏移
+                
+                // 检查此按钮是否超出了当前页的10行高度
+                // (buttonTop >= (页面开始的偏移 + 10行的高度)) - (用半行高度作为容差)
+                if (buttonTop >= (currentPageStartOffset + pageMaxHeight - (specRowHeight / 2))) {
+                    // 10行已满，保存上一页
+                    if (currentPageItems.length > 0) {
+                        specPages.push(currentPageItems);
+                    }
+                    // 开始新的一页
+                    currentPageItems = [variant];
+                    currentPageStartOffset = buttonTop; // 新页的起始偏移是此按钮的偏移
+                } else {
+                    // 10行未满，添加到当前页
+                    currentPageItems.push(variant);
+                }
+            }
+            
+            // 4. 添加最后一页
+            if (currentPageItems.length > 0) {
+                specPages.push(currentPageItems);
+            }
+
+            // 5. 如果只有1页或没有，清空分页按钮
+            if (specPages.length <= 1) {
+                document.getElementById('spec-pagination-container').innerHTML = '';
+            }
+
+            // 6. 渲染计算后的第1页
+            renderSpecListPage(1);
+        }
+
+        // --- *** 渲染分页按钮 *** ---
         function renderSpecPagination() {
-            const p = currentProduct;
-            if (!p) return;
-            totalSpecPages = Math.ceil(p.variants.length / specsPerPage);
+            const totalPages = specPages.length;
             const container = document.getElementById('spec-pagination-container');
             
-            if (totalSpecPages <= 1) {
-                container.innerHTML = ''; // 1页或更少，不显示分页
+            if (totalPages <= 1) {
+                container.innerHTML = ''; // 1页或更少，不显示
                 return;
             }
 
-            // 使用Bootstrap的分页组件
             let pagesHtml = `
                 <ul class="pagination pagination-sm justify-content-center">
                     <li class="page-item ${specCurrentPage === 1 ? 'disabled' : ''}">
@@ -245,48 +306,44 @@
                         <a class="page-link" onclick="changeSpecPage(${specCurrentPage - 1})">上一页</a>
                     </li>
                     <li class="page-item disabled">
-                        <span class="page-link">${specCurrentPage} / ${totalSpecPages}</span>
+                        <span class="page-link">${specCurrentPage} / ${totalPages}</span>
                     </li>
-                    <li class="page-item ${specCurrentPage === totalSpecPages ? 'disabled' : ''}">
+                    <li class="page-item ${specCurrentPage === totalPages ? 'disabled' : ''}">
                         <a class="page-link" onclick="changeSpecPage(${specCurrentPage + 1})">下一页</a>
                     </li>
-                    <li class="page-item ${specCurrentPage === totalSpecPages ? 'disabled' : ''}">
-                        <a class="page-link" onclick="changeSpecPage(${totalSpecPages})">尾页</a>
+                    <li class="page-item ${specCurrentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(${totalPages})">尾页</a>
                     </li>
                 </ul>`;
             container.innerHTML = pagesHtml;
         }
 
-        // 新函数：根据页码渲染规格列表
+        // --- *** 渲染指定页码的规格 *** ---
         function renderSpecListPage(page) {
-            if (!currentProduct) return;
-            totalSpecPages = Math.ceil(currentProduct.variants.length / specsPerPage);
-            specCurrentPage = Math.max(1, Math.min(page, totalSpecPages)); // 钳制页码
-            
-            const p = currentProduct;
             const vList = document.getElementById('variant-list');
-            vList.innerHTML = ''; // 清空
+            if (!specPages || specPages.length === 0) {
+                vList.innerHTML = '<div class="text-muted">暂无规格</div>';
+                return;
+            }
+            specCurrentPage = Math.max(1, Math.min(page, specPages.length));
             
-            const start = (specCurrentPage - 1) * specsPerPage;
-            const end = start + specsPerPage;
-            const variantsToShow = p.variants.slice(start, end);
+            const variantsToShow = specPages[specCurrentPage - 1] || [];
 
             vList.innerHTML = variantsToShow.map((v) => {
                 const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
-                // 检查当前是否已选中
                 const isActive = selectedVariant && selectedVariant.id === v.id;
                 return `<div class="spec-btn ${isActive ? 'active' : ''}" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
             }).join('');
 
-            renderSpecPagination(); // 每次渲染页面后，都重绘分页按钮
+            renderSpecPagination(); // 重绘分页按钮
         }
         
-        // 新函数：处理页面变更
+        // --- *** 切换页面 *** ---
         function changeSpecPage(page) {
-            if (page < 1 || page > totalSpecPages || page === specCurrentPage) return;
+            const totalPages = specPages.length;
+            if (page < 1 || page > totalPages || page === specCurrentPage) return;
             renderSpecListPage(page);
         }
-        // --- *** 分页函数结束 *** ---
 
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -322,13 +379,13 @@
             document.getElementById('p-img').src = mainImg;
             document.getElementById('sku-img').src = mainImg;
 
-            // --- *** 修改点 (JS): 替换旧的 vList.innerHTML 逻辑 *** ---
-            // (旧的 vList.innerHTML... 代码块被删除)
-            
-            // --- *** 新增：初始化规格列表的第一页 *** ---
-            specCurrentPage = 1; // 重置为第一页
-            renderSpecListPage(1); // 渲染第一页
-            // --- *** 新增结束 *** ---
+            // --- *** 按行分页：重置分页状态 *** ---
+            hasCalculatedPages = false;
+            specPages = [];
+            specCurrentPage = 1;
+            // 初始显示加载中，等待SHeet打开时再计算和渲染
+            document.getElementById('variant-list').innerHTML = '<div class="text-muted small">规格加载中...</div>';
+            document.getElementById('spec-pagination-container').innerHTML = ''; // 清空分页
 
             // (规格总数)
             document.getElementById('sku-spec-title-container').innerHTML = `规格 <span style="font-size: 12px; color: #999; font-weight: normal;">（共${p.variants.length}个）</span>`;
@@ -353,12 +410,8 @@
             const infoDiv = document.getElementById('p-extra-info');
             const variants = currentProduct.variants;
             let html = '';
-            
             const showMarkup = selectedV ? (selectedV.custom_markup > 0) : variants.some(v => v.custom_markup > 0);
-            if (showMarkup) {
-                html += `<span class="extra-tag-solid">自选加价</span> `;
-            }
-
+            if (showMarkup) { html += `<span class="extra-tag-solid">自选加价</span> `; }
             let wsText = '';
             if (selectedV) {
                 if (selectedV.wholesale_config) {
@@ -373,15 +426,9 @@
                 }
             } else {
                 const hasWholesale = variants.some(v => v.wholesale_config);
-                if (hasWholesale) {
-                    wsText = `批发价：请选择规格`;
-                }
+                if (hasWholesale) { wsText = `批发价：请选择规格`; }
             }
-
-            if (wsText) {
-                html += `<span>${wsText}</span>`;
-            }
-
+            if (wsText) { html += `<span>${wsText}</span>`; }
             if (html) {
                 infoDiv.innerHTML = html;
                 infoDiv.classList.remove('d-none');
@@ -395,9 +442,8 @@
         function selectVariant(vid) {
             selectedVariant = currentProduct.variants.find(v => v.id == vid);
             
-            // --- *** 修改点 (JS): 不再手动toggle class，而是重绘当前页 *** ---
+            // --- *** 按行分页：重绘当前页以更新 'active' 状态 *** ---
             renderSpecListPage(specCurrentPage); 
-            // --- *** 修改结束 *** ---
 
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
