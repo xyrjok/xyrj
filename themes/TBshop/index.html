@@ -570,6 +570,66 @@
         .mbn-item.active, .mbn-item:hover {
             color: var(--tb-orange);
         }
+
+        /* === [新增] 移动端上滑联系方式 === */
+        .mobile-contact-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1004; /* 高于 sidebar */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+        .mobile-contact-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .mobile-contact-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            z-index: 1005;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+            max-height: 60vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .mobile-contact-sheet.show {
+            transform: translateY(0);
+        }
+        .mcs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            flex-shrink: 0;
+        }
+        .mcs-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .mcs-close {
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+        }
+        .mcs-content {
+            padding: 15px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
         
         /* 移动端媒体查询总开关 */
         @media (max-width: 991.98px) {
@@ -833,6 +893,12 @@
                             </div>
                         </div>
 
+                        <div class="module-box" id="contact-module-box">
+                            <div class="module-title">联系客服</div>
+                            <div class="notice-content" id="contact-box">
+                                暂无联系方式
+                            </div>
+                        </div>
                         <div class="module-box">
                             <div class="module-title">销量排行</div>
                             <div id="top-sales-list">
@@ -888,13 +954,22 @@
             <i class="fa fa-book-open"></i>
             <span>教程文章</span>
         </a>
-        <a href="#" class="mbn-item">
+        <a href="#" class="mbn-item" onclick="event.preventDefault(); toggleMobileContact(true);">
             <i class="fa fa-headset"></i>
             <span>客服</span>
         </a>
     </nav>
 
-
+    <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
+    <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
+        <div class="mcs-header">
+            <span class="mcs-title">联系客服</span>
+            <i class="fa fa-times mcs-close" id="mobile-contact-close-btn"></i>
+        </div>
+        <div class="mcs-content" id="mobile-contact-content">
+            <p>加载中...</p>
+        </div>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
     
     <script>
@@ -1004,6 +1079,23 @@
                 const notice = config.notice_content || config.announce;
                 if (notice) {
                     document.getElementById('notice-box').innerHTML = notice;
+                }
+
+                // --- [修改] 联系方式 ---
+                const contactInfo = config.contact_info;
+                const contactModulePC = document.getElementById('contact-module-box');
+                const contactContentMobile = document.getElementById('mobile-contact-content');
+
+                if (contactInfo) {
+                    // 填充PC端
+                    document.getElementById('contact-box').innerHTML = contactInfo;
+                    // 填充移动端
+                    contactContentMobile.innerHTML = contactInfo;
+                } else {
+                    // 如果没有设置，就隐藏PC端的这个模块
+                    if(contactModulePC) contactModulePC.style.display = 'none';
+                    // 移动端显示提示
+                    contactContentMobile.innerHTML = '<p>暂无联系方式</p>';
                 }
 
                 // --- 移动端内容重排：移动公告到顶部 ---
@@ -1328,6 +1420,19 @@
             }
         }
 
+        // --- [新增] 移动端联系方式交互 ---
+        function toggleMobileContact(show) {
+            const sheet = document.getElementById('mobile-contact-sheet');
+            const overlay = document.getElementById('mobile-contact-overlay');
+            if (show) {
+                sheet.classList.add('show');
+                overlay.classList.add('show');
+            } else {
+                sheet.classList.remove('show');
+                overlay.classList.remove('show');
+            }
+        }
+
         function filterCategoryMobile(id) {
             const pills = document.querySelectorAll('.cat-pill');
             let targetPill = null;
@@ -1352,9 +1457,18 @@
         document.getElementById('mobile-search-btn').addEventListener('click', () => toggleMobileSearch());
         document.getElementById('mobile-search-overlay').addEventListener('click', () => toggleMobileSearch(false));
         
+        // [新增] 联系方式面板事件
+        document.getElementById('mobile-contact-close-btn').addEventListener('click', () => toggleMobileContact(false));
+        document.getElementById('mobile-contact-overlay').addEventListener('click', () => toggleMobileContact(false));
+
+
         window.addEventListener('scroll', () => {
             if (document.querySelector('.mobile-search-dropdown').classList.contains('show')) {
                 toggleMobileSearch(false);
+            }
+            // [修改] 滚动时关闭联系方式面板
+            if (document.getElementById('mobile-contact-sheet').classList.contains('show')) {
+                toggleMobileContact(false);
             }
         }, { passive: true });
 
