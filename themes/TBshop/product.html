@@ -52,7 +52,7 @@
         .sku-sheet { border-top-left-radius: 16px; border-top-right-radius: 16px; height: 80vh !important; }
         .sku-header { display: flex; padding: 15px; position: relative; border-bottom: 1px solid #f5f5f5; }
         .sku-thumb { width: 90px; height: 90px; border-radius: 6px; margin-top: -30px; border: 3px solid #fff; background: #fff; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .sku-info { margin-left: 12px; padding-top: 5px; }
+        .sku-info { margin-left: 12px; padding-top: 5px; flex: 1; min-width: 0; } /* 增加 flex: 1 和 min-width: 0 确保长标题能换行 */
         .sku-price { color: #ff5000; font-size: 20px; font-weight: bold; }
         .sku-stock { font-size: 12px; color: #999; margin-top: 4px; }
         .sku-selected { font-size: 12px; color: #333; margin-top: 2px; }
@@ -85,7 +85,6 @@
         
         .mode-radio:checked + .mode-label small { color: #ff5000; }
         
-        /* *** 修改点 (CSS): 自选号码改为flex流式布局 + 加背景 *** */
         .card-select-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; background-color: #f5f5f5; padding: 8px; border-radius: 4px; }
 
         .card-option { padding: 8px; border: 1px solid #eee; border-radius: 6px; font-size: 12px; text-align: center; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -99,16 +98,12 @@
         
         .page-item .page-link { cursor: pointer; }
         
-        /* --- 1. 修改规格分页字体颜色 --- */
-        /* 将可点击的链接(原蓝色)改为 #212529bf */
         #spec-pagination-container .page-link {
             color: #212529bf; 
         }
-        /* 将禁用的链接(原灰色 #212529bf)改为 #dc3545 */
         #spec-pagination-container .page-item.disabled .page-link {
             color: #dc3545; 
         }
-        /* --- 修改结束 --- */
     </style>
 </head>
 <body>
@@ -225,7 +220,6 @@
         const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
         const payModal = new bootstrap.Modal(document.getElementById('payModal'));
 
-        // --- *** 按行分页：全局变量 *** ---
         let specPages = []; 
         let specCurrentPage = 1;
         const specListMaxRows = 5; // 每页5行
@@ -413,8 +407,9 @@
             const tagsToShow = p.variants.slice(0, maxTagsToShow);
             let skuTagsHtml = tagsToShow.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
             
+            // *** 修改点 (JS): 增加 (共xxx个) ***
             if (p.variants.length > maxTagsToShow) {
-                skuTagsHtml += ' <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多</span>';
+                skuTagsHtml += ` <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
             }
             document.getElementById('p-select-text').innerHTML = skuTagsHtml;
 
@@ -465,9 +460,18 @@
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
             document.getElementById('p-price').innerText = selectedVariant.price;
-            document.getElementById('p-select-text').innerText = `已选: ${selectedVariant.name}`;
             
+            // --- *** 修改点 (JS): 构造 "已选" + "更多" 的HTML *** ---
             const p = currentProduct;
+            const maxTagsToShow = 10; 
+            let selectedHtml = `<div>已选: ${selectedVariant.name}</div>`;
+            
+            if (p.variants.length > maxTagsToShow) {
+                selectedHtml += ` <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
+            }
+            document.getElementById('p-select-text').innerHTML = selectedHtml;
+            // --- *** 修改结束 *** ---
+            
             const defV = p.variants[0];
             const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
             const targetImg = selectedVariant.image_url || mainImg;
