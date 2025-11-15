@@ -236,8 +236,17 @@
                 return `<div class="spec-btn" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
             }).join('');
 
-            const skuTags = p.variants.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
-            document.getElementById('p-select-text').innerHTML = skuTags;
+            // --- 修改：限制最多显示10个规格标签 ---
+            const maxTagsToShow = 10;
+            const tagsToShow = p.variants.slice(0, maxTagsToShow);
+            let skuTagsHtml = tagsToShow.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
+            
+            if (p.variants.length > maxTagsToShow) {
+                // 如果规格总数超过10，则添加红色提示
+                skuTagsHtml += ' <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多</span>';
+            }
+            document.getElementById('p-select-text').innerHTML = skuTagsHtml;
+            // --- 修改结束 ---
 
             renderExtraInfo(null);
             document.getElementById('sku-selected-text').innerText = '未选择';
