@@ -15,7 +15,7 @@
             --tb-orange: #ff5000;
             --tb-red: #ff0036;
             --bg-gray: #f4f4f4;
-            --tb-grad: linear-gradient(135deg, #ff9000, #ff5000); /* [新增] 淘宝橙色渐变 */
+            --tb-grad: linear-gradient(135deg, #ff9000, #ff5000); /* 淘宝橙色渐变 */
         }
         body { 
             background-color: #f4f4f4; 
@@ -162,13 +162,16 @@
             object-fit: cover;
         }
 
+        /* [修改] 移除移动端 grid-template-columns 规则 */
         .taobao-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
         }
+        /* [删除] 
         @media (max-width: 992px) { .taobao-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 768px) { .taobao-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
+        @media (max-width: 768px) { .taobao-grid { grid-template-columns: repeat(2, 1fr); } }
+        */
 
         .tb-card {
             background: #fff;
@@ -373,29 +376,27 @@
         .mobile-search-dropdown .tb-search-group {
             width: 100%;
             margin: 0;
-            height: 40px; /* [修改] 增大搜索框高度 */
+            height: 40px; 
             align-items: center;
         }
         .mobile-search-dropdown .tb-search-input {
-            height: 100%; /* [修改] 移除固定 height 和 line-height */
+            height: 100%; 
             flex: 1;
             padding: 0 15px;
         }
         .mobile-search-dropdown .tb-search-btn {
-            height: 36px; /* [修改] 按钮新高度 */
+            height: 36px; 
             margin: 2px;
         }
         
-        /* [新增] 搜索框遮罩层 */
         .mobile-search-overlay {
             position: fixed;
-            top: 50px; /* 头部高度 */
+            top: 50px;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 999; /* 位于搜索框之下，内容之上 */
+            z-index: 999;
             display: none;
-            /* 透明，只为捕获点击和滚动 */
         }
         .mobile-search-overlay.show {
             display: block;
@@ -424,7 +425,7 @@
             left: 0;
             width: 240px; 
             height: calc(100% - 50px); 
-            background: var(--tb-grad); /* [修改] 淘宝渐变背景 */
+            background: var(--tb-grad); /* 淘宝渐变背景 */
             color: #fff; 
             z-index: 1003;
             transform: translateX(-100%);
@@ -439,7 +440,7 @@
             padding: 15px;
             border-bottom: 1px solid rgba(255,255,255,0.2); 
             text-align: center;
-            position: relative; /* [新增] 为关闭按钮定位 */
+            position: relative; 
         }
         .mobile-sidebar-title {
             font-size: 18px;
@@ -447,7 +448,6 @@
             color: #fff; 
             margin: 0;
         }
-        /* [新增] 侧滑菜单关闭按钮 */
         .mobile-sidebar-close {
             position: absolute;
             top: 50%;
@@ -499,11 +499,11 @@
             color: #fff; 
             border: 1px solid rgba(255,255,255,0.5); 
             border-radius: 18px; 
-            background: var(--tb-grad); /* [修改] 淘宝渐变背景 */
+            background: var(--tb-grad); 
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .mobile-sidebar-login-link:hover {
-            background: linear-gradient(135deg, #ffa020, #ff6a1a); /* [修改] 悬停渐变 */
+            background: linear-gradient(135deg, #ffa020, #ff6a1a);
             color: #fff;
             border-color: #fff;
         }
@@ -579,22 +579,68 @@
                 margin-bottom: 10px;
                 border-radius: 8px;
             }
+            .module-box:first-child {
+                padding-top: 0; /* 第一个分类菜单模块不需要上边距 */
+            }
             .module-title {
                 font-size: 15px;
                 margin-bottom: 10px;
             }
 
-            /* 3. 调整商品卡片 */
-            .tb-title {
-                font-size: 12px;
-                height: 34px; 
+            /* 3. 调整商品卡片 (改为左图右文列表) */
+            .taobao-grid {
+                grid-template-columns: 1fr; /* 1. 强制单列 */
+                gap: 8px;
             }
+
+            .tb-card {
+                flex-direction: row; /* 2. 卡片改为水平布局 */
+                height: 125px; /* 3. 设定一个固定高度 */
+                border-radius: 5px;
+            }
+
+            .tb-img-wrap {
+                flex: 0 0 125px; /* 4. 图片容器固定宽度 */
+                width: 125px;
+                height: 125px;
+                padding-bottom: 0; /* 5. 移除PC端的padding-hack */
+                border-radius: 5px 0 0 5px;
+            }
+
+            .tb-img {
+                /* 6. 确保图片在移动端是 cover 且 100% 填充 */
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                object-fit: cover;
+                border-radius: 5px 0 0 5px;
+            }
+
+            .tb-info {
+                padding: 10px 12px; /* 7. 调整文字区内边距 */
+                flex: 1; /* 8. 文字区占满剩余空间 */
+            }
+
+            .tb-title {
+                font-size: 14px;
+                height: 40px; /* 约2行 */
+                -webkit-line-clamp: 2;
+                line-height: 1.4;
+                margin-bottom: 5px;
+            }
+            
+            .tb-tags-row {
+                margin-bottom: 5px;
+            }
+
             .tb-price {
-                font-size: 16px;
+                font-size: 18px;
             }
             .tb-sales {
-                font-size: 11px;
+                font-size: 12px;
             }
+
 
             /* 4. 调整分类药丸 */
             .cat-pill {
@@ -630,7 +676,7 @@
             <i class="fa fa-bars"></i>
         </div>
         <div class="mh-center">
-            <a href="/" class="d-flex align-items: center justify-content-center h-100">
+            <a href="/" class="d-flex align-items-center justify-content-center h-100">
                 <img id="mobile-logo-img" class="d-none" alt="Logo">
                 <span id="mobile-site-name-wrap" class="d-none">
                     <i class="fa fa-shopping-bag"></i>
@@ -935,10 +981,10 @@
                 
                 allCategories.forEach(c => {
                     const pcImgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : '';
-                    const mobileImgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : ''; // [修改]
+                    const mobileImgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : '';
                     
                     pc_html += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${pcImgTag}${c.name}</div>`;
-                    mobile_html += `<a href="#" onclick="filterCategoryMobile(${c.id})">${mobileImgTag}${c.name}</a>`; // [修改]
+                    mobile_html += `<a href="#" onclick="filterCategoryMobile(${c.id})">${mobileImgTag}${c.name}</a>`;
                 });
                 catContainer.innerHTML = pc_html;
                 mobileCatContainer.innerHTML = mobile_html;
@@ -1215,7 +1261,7 @@
         // [修改] 切换搜索框时，同时切换透明遮罩层
         function toggleMobileSearch(forceShow = null) {
             const searchDropdown = document.querySelector('.mobile-search-dropdown');
-            const searchOverlay = document.getElementById('mobile-search-overlay'); // [新增]
+            const searchOverlay = document.getElementById('mobile-search-overlay');
             
             let show;
             if (forceShow === null) {
@@ -1226,10 +1272,10 @@
 
             if (show) {
                 searchDropdown.classList.add('show');
-                searchOverlay.classList.add('show'); // [新增]
+                searchOverlay.classList.add('show');
             } else {
                 searchDropdown.classList.remove('show');
-                searchOverlay.classList.remove('show'); // [新增]
+                searchOverlay.classList.remove('show');
             }
         }
 
@@ -1237,7 +1283,7 @@
             const pills = document.querySelectorAll('.cat-pill');
             let targetPill = null;
             
-            let targetOnclick = (id === 'all') ? `filterCategory('all', this)` : `filterCategory(${id}, this)`;
+            let targetOnclick = (id === 'all') ? `filterCategory('all\', this)` : `filterCategory(${id}, this)`;
             
             for (let pill of pills) {
                 if (pill.getAttribute('onclick') === targetOnclick) {
@@ -1253,14 +1299,13 @@
         // [修改] 绑定所有移动端事件
         document.getElementById('mobile-menu-btn').addEventListener('click', () => toggleMobileMenu(true));
         document.getElementById('mobile-overlay').addEventListener('click', () => toggleMobileMenu(false));
-        document.getElementById('mobile-sidebar-close-btn').addEventListener('click', () => toggleMobileMenu(false)); // [新增]
+        document.getElementById('mobile-sidebar-close-btn').addEventListener('click', () => toggleMobileMenu(false));
         
         document.getElementById('mobile-search-btn').addEventListener('click', () => toggleMobileSearch());
-        document.getElementById('mobile-search-overlay').addEventListener('click', () => toggleMobileSearch(false)); // [新增]
+        document.getElementById('mobile-search-overlay').addEventListener('click', () => toggleMobileSearch(false));
         
         // [新增] 页面滚动时关闭搜索框
         window.addEventListener('scroll', () => {
-            // 只在搜索框打开时执行关闭操作，避免不必要的重绘
             if (document.querySelector('.mobile-search-dropdown').classList.contains('show')) {
                 toggleMobileSearch(false);
             }
