@@ -59,14 +59,13 @@
         .sku-body { padding: 15px; overflow-y: auto; padding-bottom: 80px; }
         .section-title { font-size: 13px; color: #333; font-weight: bold; margin-bottom: 10px; }
         
-        /* *** 修改点 (CSS): 增加 overflow 和 transition *** */
         .spec-list { 
             display: flex; 
             flex-wrap: wrap; 
             gap: 10px; 
             margin-bottom: 20px; 
-            overflow: hidden; /* <-- 新增 */
-            transition: max-height 0.3s ease-in-out; /* <-- 新增 */
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
         }
         
         .spec-btn { padding: 6px 15px; background: #f5f5f5; border-radius: 16px; font-size: 13px; color: #333; border: 1px solid transparent; transition: all 0.2s; }
@@ -76,7 +75,6 @@
         .mode-label { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: center; font-size: 13px; cursor: pointer; position: relative; }
         .mode-radio:checked + .mode-label { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
         
-        /* 修改 small 标签样式，防止长文本撑破 */
         .mode-label small { 
             display: block; 
             font-size: 10px; 
@@ -144,6 +142,7 @@
                 <span id="spec-toggle-text" class="text-primary small" style="cursor: pointer;">展开</span>
                 <i id="spec-toggle-icon" class="fa fa-angle-down text-primary small ms-1" style="transition: transform 0.3s;"></i>
             </div>
+            
             <div id="buy-mode-container" class="d-none mb-4">
                 <div class="section-title">购买方式 <small class="text-muted fw-normal ms-2">(自选与批发互斥)</small></div>
                 <div class="buy-mode-group">
@@ -208,17 +207,20 @@
         let selectedVariant = null;
         let selectedCardId = null;
         let buyMode = 'random';
-        const skuSheet = new bootstrap.Offcanvas(document.getElementById('skuSheet'));
+        
+        // --- *** 修改点 1: 获取SKU DOM元素并创建Offcanvas实例 *** ---
+        const skuSheetEl = document.getElementById('skuSheet');
+        const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
         const payModal = new bootstrap.Modal(document.getElementById('payModal'));
 
-        // *** ↓↓↓ 修改点 (JS): 新增变量 ↓↓↓ ***
+        // --- *** 修改点 2: 监听SKU模块 *即将显示* 的事件 *** ---
+        skuSheetEl.addEventListener('show.bs.offcanvas', checkSpecListHeight);
+
         let specListExpanded = false;
         const specListMaxRows = 10;
         let specRowHeight = 0;
         let specListMaxHeight = 0;
-        // *** ↑↑↑ 新增结束 ↑↑↑ ***
 
-        // *** ↓↓↓ 修改点 (JS): 新增函数 ↓↓↓ ***
         function toggleSpecList() {
             const list = document.getElementById('variant-list');
             const text = document.getElementById('spec-toggle-text');
@@ -240,7 +242,41 @@
                 icon.style.transform = 'rotate(0deg)';
             }
         }
-        // *** ↑↑↑ 新增结束 ↑↑↑ ***
+
+        // --- *** 修改点 3: 检查规格列表高度的函数 (从renderPage中移出) *** ---
+        function checkSpecListHeight() {
+            const vList = document.getElementById('variant-list');
+            if (!vList) return;
+            
+            vList.style.maxHeight = 'none'; // 先重置，以便计算总高度
+            specListExpanded = false; // 重置展开状态
+            const toggleContainer = document.getElementById('spec-toggle-container');
+            toggleContainer.classList.add('d-none'); // 默认隐藏按钮
+
+            const firstButton = vList.querySelector('.spec-btn');
+            if (!firstButton) return; 
+
+            specRowHeight = firstButton.offsetHeight; 
+            if (specRowHeight === 0) return; // 如果元素不可见，高度为0，退出
+
+            const listStyle = window.getComputedStyle(vList);
+            const rowGap = parseFloat(listStyle.gap) || 10; 
+            
+            specListMaxHeight = (specListMaxRows * specRowHeight) + ((specListMaxRows - 1) * rowGap);
+            const fullHeight = vList.scrollHeight; 
+
+            if (fullHeight > specListMaxHeight + (specRowHeight / 2)) { // 加一点容差
+                toggleContainer.classList.remove('d-none');
+                vList.style.maxHeight = specListMaxHeight + 'px';
+                document.getElementById('spec-toggle-text').innerText = '展开';
+                const icon = document.getElementById('spec-toggle-icon');
+                icon.classList.remove('fa-angle-up');
+                icon.classList.add('fa-angle-down');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                vList.style.maxHeight = 'none';
+            }
+        }
 
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -282,71 +318,25 @@
                 return `<div class="spec-btn" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
             }).join('');
 
-            // --- *** 修改点 (JS): 插入了此段JS (规格总数) *** ---
+            // (规格总数)
             document.getElementById('sku-spec-title-container').innerHTML = `规格 <span style="font-size: 12px; color: #999; font-weight: normal;">（共${p.variants.length}个）</span>`;
-            // --- 新增结束 ---
 
-            // --- *** ↓↓↓ 修改点 (JS): 检查规格列表高度并显示/隐藏“展开”按钮 ↓↓↓ *** ---
-            vList.style.maxHeight = 'none'; // 先重置，以便计算总高度
-            specListExpanded = false; // 重置展开状态
-            const toggleContainer = document.getElementById('spec-toggle-container');
-            toggleContainer.classList.add('d-none'); // 默认隐藏按钮
+            // --- *** 修改点 4: 移除此处的 setTimeout 高度计算逻辑 *** ---
+            // (原 setTimeout 代码块已被删除)
 
-            // 确保DOM渲染后再计算高度
-            setTimeout(() => {
-                const firstButton = vList.querySelector('.spec-btn');
-                if (!firstButton) return; // 如果没有规格按钮，就退出
-
-                // 1. 计算一行的高度（按钮高度 + gap）
-                const buttonStyle = window.getComputedStyle(firstButton);
-                specRowHeight = firstButton.offsetHeight; // 按钮的实际高度
-                
-                const listStyle = window.getComputedStyle(vList);
-                const rowGap = parseFloat(listStyle.gap) || 10; // 获取 gap 值
-                
-                // 2. 计算10行的最大高度
-                specListMaxHeight = (specListMaxRows * specRowHeight) + ((specListMaxRows - 1) * rowGap);
-
-                const fullHeight = vList.scrollHeight; // 容器的完整高度
-
-                // 3. 检查总高度是否超过10行的高度
-                if (fullHeight > specListMaxHeight + (specRowHeight / 2)) { // 加一点容差
-                    // 需要显示“展开”按钮
-                    toggleContainer.classList.remove('d-none');
-                    // 默认收起
-                    vList.style.maxHeight = specListMaxHeight + 'px';
-                    // 重置按钮文字和图标
-                    document.getElementById('spec-toggle-text').innerText = '展开';
-                    const icon = document.getElementById('spec-toggle-icon');
-                    icon.classList.remove('fa-angle-up');
-                    icon.classList.add('fa-angle-down');
-                    icon.style.transform = 'rotate(0deg)';
-                } else {
-                    // 不需要，保持展开
-                    vList.style.maxHeight = 'none';
-                }
-            }, 0); // 用 setTimeout 确保计算准确
-            // --- *** ↑↑↑ 全新代码结束 ↑↑↑ *** ---
-
-
-            // --- *** 修改点 (JS): 限制最多显示10个规格标签 *** ---
+            // (10个标签限制)
             const maxTagsToShow = 10;
             const tagsToShow = p.variants.slice(0, maxTagsToShow);
             let skuTagsHtml = tagsToShow.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
             
             if (p.variants.length > maxTagsToShow) {
-                // 如果规格总数超过10，则添加红色提示
                 skuTagsHtml += ' <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多</span>';
             }
             document.getElementById('p-select-text').innerHTML = skuTagsHtml;
-            // --- 修改结束 ---
 
             renderExtraInfo(null);
             document.getElementById('sku-selected-text').innerText = '未选择';
-            
-            // 重置抽屉里的批发价文本
             document.getElementById('random-mode-desc').innerText = '享受批发优惠';
-            
             selectedVariant = null;
         }
         
@@ -410,7 +400,6 @@
 
             renderExtraInfo(selectedVariant);
 
-            // === 修改：更新抽屉里“随机发货”按钮下的批发价文案 ===
             const randomDesc = document.getElementById('random-mode-desc');
             if (selectedVariant.wholesale_config) {
                 try {
