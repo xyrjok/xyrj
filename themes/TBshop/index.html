@@ -547,10 +547,11 @@
             height: 50px; 
             background: #fff;
             border-top: 1px solid #eee;
-            z-index: 1000;
+            /* [修改] 提升 z-index，实现遮挡 */
+            z-index: 1010; 
             display: flex;
             justify-content: space-around;
-            /* [修改 3] 移除阴影 */
+            /* [保留] 移除阴影 */
             box-shadow: none;
         }
         .mbn-item {
@@ -580,7 +581,8 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 1004; /* 高于 sidebar */
+            /* z-index 低于弹窗，高于页面 */
+            z-index: 1004; 
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease;
@@ -592,12 +594,13 @@
 
         .mobile-contact-sheet {
             position: fixed;
-            /* [修改 1] 最终位置在 50px (吸底模块) 的上方 */
-            bottom: 50px;
+            /* [修改] z-index 逻辑：滑到 0，被 1010 的吸底栏遮挡 */
+            bottom: 0; 
             left: 0;
             width: 100%;
             background: #fff;
-            z-index: 1005;
+            /* z-index 低于吸底栏，高于遮罩 */
+            z-index: 1005; 
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
             box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
@@ -608,7 +611,7 @@
             flex-direction: column;
         }
         .mobile-contact-sheet.show {
-            transform: translateY(0); /* 显示状态，滑到 50px 的位置 */
+            transform: translateY(0); /* 显示状态，滑到 0 的位置 */
         }
         .mcs-header {
             display: flex;
@@ -631,7 +634,7 @@
             padding: 15px;
             overflow-y: auto;
             line-height: 1.6;
-            /* [修改 2] 修改字体大小 */
+            /* [保留] 修改字体大小 */
             font-size: 13px;
         }
         
@@ -1463,7 +1466,9 @@
         
         // [新增] 联系方式面板事件
         document.getElementById('mobile-contact-close-btn').addEventListener('click', () => toggleMobileContact(false));
-        document.getElementById('mobile-contact-overlay').addEventListener('click', ()E => toggleMobileContact(false));
+        
+        // [BUG 修复] 移除了上一版多余的 'E'
+        document.getElementById('mobile-contact-overlay').addEventListener('click', () => toggleMobileContact(false)); 
 
 
         window.addEventListener('scroll', () => {
