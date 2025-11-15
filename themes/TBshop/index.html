@@ -307,8 +307,10 @@
         .mobile-header {
             height: 50px;
             background: #fff;
-            position: sticky;
+            position: fixed; /* [修改] 改为 fixed 修复顶部间距 */
             top: 0;
+            left: 0;         /* [新增] 配合 fixed */
+            width: 100%;     /* [新增] 配合 fixed */
             z-index: 1001;
             display: flex;
             align-items: center;
@@ -410,25 +412,26 @@
         .mobile-sidebar.show {
             transform: translateX(0);
         }
+        /* [修改] 侧滑菜单头部 */
         .mobile-sidebar-header {
             padding: 15px;
             border-bottom: 1px solid #f0f0f0;
+            text-align: center;
         }
-        .mobile-sidebar-header .btn-login {
-            width: 100%;
-            padding: 8px;
-            font-size: 16px;
+        /* [新增] 侧滑菜单标题 */
+        .mobile-sidebar-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
         }
         .mobile-sidebar-content {
             padding: 15px;
-            flex: 1;
+            flex: 1; /* 占据剩余空间 */
+            overflow-y: auto; /* 内容多时可滚动 */
         }
-        .mobile-sidebar-content h5 {
-            font-size: 16px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-        }
+        /* [删除] .mobile-sidebar-content h5 (已移入HTML) */
+
         #mobile-category-list a {
             display: block;
             padding: 10px 5px;
@@ -440,6 +443,30 @@
             color: var(--tb-orange);
             background: #fcfcfc;
         }
+
+        /* [新增] 侧滑菜单底部 (用于登录) */
+        .mobile-sidebar-footer {
+            padding: 15px;
+            border-top: 1px solid #f0f0f0;
+            background: #fcfcfc;
+        }
+        .mobile-sidebar-login-link {
+            display: block;
+            text-align: center;
+            padding: 8px;
+            font-size: 16px;
+            color: var(--tb-red);
+            border: 1px solid var(--tb-red);
+            border-radius: 6px;
+            background: #fff;
+        }
+        .mobile-sidebar-login-link:hover {
+            background: #fff0f0;
+            color: var(--tb-red);
+        }
+        .mobile-sidebar-login-link i {
+            margin-right: 5px;
+        }
         
         /* 移动端吸底导航栏 */
         .mobile-bottom-nav {
@@ -447,7 +474,7 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 50px; /* 30px太矮，50px是移动端最小点击高度标准 */
+            height: 50px; 
             background: #fff;
             border-top: 1px solid #eee;
             z-index: 1000;
@@ -466,7 +493,7 @@
             padding: 5px 0;
         }
         .mbn-item i {
-            font-size: 18px; /* 图标大小 */
+            font-size: 18px; 
             margin-bottom: 2px;
             line-height: 1;
         }
@@ -483,16 +510,16 @@
 
             /* 1. 隐藏PC元素 */
             .tb-header {
-                display: none; /* 隐藏PC头部 */
+                display: none !important; /* [修改] 确保PC头部被隐藏 */
             }
             .col-lg-3 {
-                display: none; /* 隐藏PC侧边栏 (包含销量排行和热门标签) */
+                display: none; 
             }
             .col-lg-9 {
-                width: 100%; /* 主内容区占满 */
+                width: 100%; 
             }
             .main-nav {
-                display: none; /* 隐藏PC导航 */
+                display: none; 
             }
             
             /* 2. 调整布局 */
@@ -502,7 +529,7 @@
                 padding-right: 10px;
             }
             .row {
-                --bs-gutter-x: 10px; /* 减小列间距 */
+                --bs-gutter-x: 10px; 
             }
             .module-box {
                 padding: 10px;
@@ -517,7 +544,7 @@
             /* 3. 调整商品卡片 */
             .tb-title {
                 font-size: 12px;
-                height: 34px; /* 2行 */
+                height: 34px; 
             }
             .tb-price {
                 font-size: 16px;
@@ -582,13 +609,17 @@
 
     <div class="mobile-sidebar d-lg-none" id="mobile-sidebar">
         <div class="mobile-sidebar-header">
-            <a href="/admin/" class="btn-login">登录 / 注册</a>
+            <h5 class="mobile-sidebar-title">分类菜单</h5>
         </div>
         <div class="mobile-sidebar-content">
-            <h5><i class="fa fa-th-large"></i> 商品分类</h5>
             <div id="mobile-category-list">
                 <a href="#" onclick="filterCategoryMobile('all')">全部商品</a>
                 </div>
+        </div>
+        <div class="mobile-sidebar-footer">
+            <a href="/admin/" class="mobile-sidebar-login-link">
+                <i class="fa fa-user-circle"></i> 登录
+            </a>
         </div>
     </div>
     <div class="mobile-overlay d-lg-none" id="mobile-overlay"></div>
@@ -807,7 +838,7 @@
                     }
                 }
 
-                // --- [新增] 移动端Logo/名称 ---
+                // --- 移动端Logo/名称 ---
                 const mobileLogoEl = document.getElementById('mobile-logo-img');
                 const mobileNameWrapEl = document.getElementById('mobile-site-name-wrap');
                 const mobileNameTextEl = document.getElementById('mobile-header-site-name');
@@ -833,7 +864,7 @@
                     document.getElementById('notice-box').innerHTML = notice;
                 }
 
-                // --- [新增] 移动端内容重排：移动公告到顶部 (Req 3) ---
+                // --- 移动端内容重排：移动公告到顶部 ---
                 if (window.innerWidth < 992) {
                     const noticeModule = document.getElementById('notice-module-box');
                     const mainContent = document.querySelector('.col-lg-9');
@@ -937,7 +968,6 @@
             setTimeout(checkSidebarStatus, 500);
         }
 
-        // [修改] 包含所有修改 (库存 | 已售)
         function getProductCardHtml(p) {
             const mainVariant = p.variants[0] || {};
             const totalSales = p.variants.reduce((sum, v) => sum + (v.sales_count || 0), 0);
@@ -1085,7 +1115,6 @@
             renderSingleGrid(filtered, `标签: ${tag}`);
         }
 
-        // [修改] 搜索函数，接受来源 (pc or mobile)
         function doSearch(source = 'pc') {
             const inputId = (source === 'mobile') ? 'mobile-search-input' : 'search-input';
             const keyword = document.getElementById(inputId).value.toLowerCase().trim();
@@ -1099,16 +1128,14 @@
             renderSingleGrid(filtered, `"${keyword}" 的搜索结果`);
 
             if (source === 'mobile') {
-                toggleMobileSearch(false); // 搜索后关闭移动端搜索框
+                toggleMobileSearch(false); 
             }
         }
         
-        // PC端搜索框回车
         document.getElementById('search-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') doSearch('pc');
         });
 
-        // [新增] 移动端搜索框回车
         document.getElementById('mobile-search-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') doSearch('mobile');
         });
@@ -1123,9 +1150,8 @@
             renderCategorizedView(id);
         }
 
-        // --- [新增] 移动端交互函数 ---
+        // --- 移动端交互函数 ---
 
-        // 切换侧滑菜单
         function toggleMobileMenu(show) {
             const sidebar = document.getElementById('mobile-sidebar');
             const overlay = document.getElementById('mobile-overlay');
@@ -1138,7 +1164,6 @@
             }
         }
 
-        // 切换下滑搜索
         function toggleMobileSearch(forceShow = null) {
             const searchDropdown = document.querySelector('.mobile-search-dropdown');
             if (forceShow === null) {
@@ -1150,9 +1175,7 @@
             }
         }
 
-        // 移动端点击分类
         function filterCategoryMobile(id) {
-            // 模拟点击PC端的药丸，以保持状态一致
             const pills = document.querySelectorAll('.cat-pill');
             let targetPill = null;
             
@@ -1165,11 +1188,10 @@
                 }
             }
             
-            filterCategory(id, targetPill); // targetPill 可能是 null，但 filterCategory 函数能处理
-            toggleMobileMenu(false); // 关闭菜单
+            filterCategory(id, targetPill); 
+            toggleMobileMenu(false); 
         }
 
-        // [新增] 绑定移动端事件
         document.getElementById('mobile-menu-btn').addEventListener('click', () => toggleMobileMenu(true));
         document.getElementById('mobile-overlay').addEventListener('click', () => toggleMobileMenu(false));
         document.getElementById('mobile-search-btn').addEventListener('click', () => toggleMobileSearch());
