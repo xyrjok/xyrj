@@ -13,6 +13,7 @@
         /* === 全局配色 & 基础 === */
         :root {
             --tb-orange: #ff5000;
+            --tb-orange-light: #ff9000; /* [新增] 淘宝亮橙 */
             --tb-red: #ff0036;
             --bg-gray: #f4f4f4;
         }
@@ -70,7 +71,7 @@
         
         .tb-search-group {
             display: flex;
-            align-items: center; /* [修改] 确保内容垂直居中 */
+            align-items: center; 
             border: 2px solid var(--tb-red);
             border-radius: 20px;
             overflow: hidden;
@@ -85,8 +86,8 @@
             padding: 0 15px;
             flex: 1;
             font-size: 13px;
-            width: 100%; /* [新增] 确保flex生效 */
-            background: transparent; /* [新增] 确保背景透明 */
+            width: 100%; 
+            background: transparent; 
         }
         .tb-search-btn {
             background: var(--tb-red);
@@ -314,7 +315,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            z-index: 1001;
+            z-index: 1020; /* [修改] z-index */
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -360,7 +361,7 @@
             width: 100%;
             background: #fff;
             padding: 15px;
-            z-index: 1000;
+            z-index: 1030; /* [修改] z-index */
             box-shadow: 0 4px 8px rgba(0,0,0,0.08);
             transform: translateY(-150%);
             transition: transform 0.3s ease-in-out;
@@ -372,15 +373,19 @@
         .mobile-search-dropdown .tb-search-group {
             width: 100%;
             margin: 0;
-            height: 40px; /* [修改] 增大搜索框高度 */
+            height: 40px; 
+            align-items: center; /* [新增] 垂直居中 */
         }
         .mobile-search-dropdown .tb-search-input {
-            height: 100%; /* [修改] 移除固定 height 和 line-height */
+            height: 100%; /* [修改] 撑满父级 */
             flex: 1;
             padding: 0 15px;
+            border: none;
+            outline: none;
+            font-size: 14px;
         }
         .mobile-search-dropdown .tb-search-btn {
-            height: 36px; /* [修改] 按钮新高度 */
+            height: 36px; 
             margin: 2px;
         }
         
@@ -392,7 +397,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 1002;
+            z-index: 1010; /* [修改] z-index */
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease;
@@ -407,9 +412,9 @@
             left: 0;
             width: 240px; 
             height: calc(100% - 50px); 
-            background: linear-gradient(135deg, var(--tb-orange), var(--tb-red)); /* [修改] 淘宝渐变背景 */
-            color: #fff; /* [修改] 默认白字 */
-            z-index: 1003;
+            background: linear-gradient(135deg, var(--tb-orange-light), var(--tb-orange)); /* [修改] 淘宝橙色渐变 */
+            color: #fff; 
+            z-index: 1040; /* [修改] z-index */
             transform: translateX(-100%);
             transition: transform 0.3s ease-in-out;
             display: flex;
@@ -420,14 +425,33 @@
         }
         .mobile-sidebar-header {
             padding: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.2); /* [修改] 边框颜色 */
+            border-bottom: 1px solid rgba(255,255,255,0.2); 
             text-align: center;
+            position: relative; /* [新增] 为关闭按钮定位 */
+            display: flex; /* [新增] */
+            align-items: center; /* [新增] */
+            justify-content: center; /* [新增] */
         }
         .mobile-sidebar-title {
             font-size: 18px;
             font-weight: bold;
-            color: #fff; /* [修改] 标题白字 */
+            color: #fff; 
             margin: 0;
+        }
+        /* [新增] 侧滑菜单关闭按钮 */
+        .mobile-sidebar-close {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #fff;
+            opacity: 0.7;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .mobile-sidebar-close:hover {
+            opacity: 1;
         }
         .mobile-sidebar-content {
             padding: 15px;
@@ -435,44 +459,43 @@
             overflow-y: auto; 
         }
         #mobile-category-list a {
-            display: flex; /* [修改] 使用flex布局 */
-            align-items: center; /* [修改] 垂直居中 */
+            display: flex; 
+            align-items: center; 
             padding: 10px 5px;
             font-size: 14px;
-            color: #fff; /* [修改] 链接白字 */
-            border-bottom: 1px solid rgba(255,255,255,0.15); /* [修改] 边框颜色 */
+            color: #fff; 
+            border-bottom: 1px solid rgba(255,255,255,0.15); 
         }
-        /* [新增] 侧滑菜单中分类图片样式 */
         #mobile-category-list a img {
             width: 20px;
             height: 20px;
             border-radius: 4px;
             margin-right: 10px;
             object-fit: cover;
-            background: #fff; /* 防止透明图片 */
+            background: #fff; 
         }
         #mobile-category-list a:hover {
-            color: #fff; /* [修改] 悬停白字 */
-            background: rgba(255,255,255,0.1); /* [修改] 悬停背景 */
+            color: #fff; 
+            background: rgba(255,255,255,0.1); 
         }
         .mobile-sidebar-footer {
             padding: 15px;
-            border-top: 1px solid rgba(255,255,255,0.2); /* [修改] 边框颜色 */
-            background: rgba(0,0,0,0.1); /* [修改] 底部背景 */
+            border-top: 1px solid rgba(255,255,255,0.2); 
+            background: rgba(0,0,0,0.1); 
         }
         .mobile-sidebar-login-link {
             display: block;
             text-align: center;
             padding: 8px;
             font-size: 16px;
-            color: #fff; /* [修改] 按钮白字 */
-            border: 1px solid rgba(255,255,255,0.5); /* [修改] 按钮边框 */
-            border-radius: 18px; /* [修改] 更圆的按钮 */
-            background: linear-gradient(135deg, var(--tb-orange), var(--tb-red)); /* [修改] 淘宝渐变背景 */
+            color: #fff; 
+            border: 1px solid rgba(255,255,255,0.5); 
+            border-radius: 18px; 
+            background: linear-gradient(135deg, var(--tb-orange-light), var(--tb-orange)); /* [修改] 淘宝橙色渐变 */
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .mobile-sidebar-login-link:hover {
-            background: linear-gradient(135deg, #ff6a1a, #ff1a4a); /* [修改] 悬停渐变 */
+            background: linear-gradient(135deg, #ffb033, #ff6a1a); /* [修改] 橙色悬停 */
             color: #fff;
             border-color: #fff;
         }
@@ -489,7 +512,7 @@
             height: 50px; 
             background: #fff;
             border-top: 1px solid #eee;
-            z-index: 1000;
+            z-index: 1020; /* [修改] z-index */
             display: flex;
             justify-content: space-around;
             box-shadow: 0 -1px 4px rgba(0,0,0,0.05);
@@ -599,7 +622,7 @@
             <i class="fa fa-bars"></i>
         </div>
         <div class="mh-center">
-            <a href="/" class="d-flex align-items: center justify-content-center h-100">
+            <a href="/" class="d-flex align-items-center justify-content-center h-100">
                 <img id="mobile-logo-img" class="d-none" alt="Logo">
                 <span id="mobile-site-name-wrap" class="d-none">
                     <i class="fa fa-shopping-bag"></i>
@@ -622,6 +645,9 @@
     <div class="mobile-sidebar d-lg-none" id="mobile-sidebar">
         <div class="mobile-sidebar-header">
             <h5 class="mobile-sidebar-title">分类菜单</h5>
+            <div class="mobile-sidebar-close" id="mobile-sidebar-close-btn">
+                <i class="fa fa-times"></i>
+            </div>
         </div>
         <div class="mobile-sidebar-content">
             <div id="mobile-category-list">
@@ -900,9 +926,9 @@
                 let mobile_html = '<a href="#" onclick="filterCategoryMobile(\'all\')">全部商品</a>';
                 
                 allCategories.forEach(c => {
-                    const imgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : ''; // [修改]
+                    const imgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : ''; 
                     pc_html += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${imgTag}${c.name}</div>`;
-                    mobile_html += `<a href="#" onclick="filterCategoryMobile(${c.id})">${imgTag}${c.name}</a>`; // [修改]
+                    mobile_html += `<a href="#" onclick="filterCategoryMobile(${c.id})">${imgTag}${c.name}</a>`; 
                 });
                 catContainer.innerHTML = pc_html;
                 mobileCatContainer.innerHTML = mobile_html;
@@ -1133,14 +1159,13 @@
             
             if (!keyword) { 
                 renderCategorizedView('all'); 
-                return; 
+            } else {
+                const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword) || (p.description && p.description.toLowerCase().includes(keyword)));
+                renderSingleGrid(filtered, `"${keyword}" 的搜索结果`);
             }
             
-            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword) || (p.description && p.description.toLowerCase().includes(keyword)));
-            renderSingleGrid(filtered, `"${keyword}" 的搜索结果`);
-
             if (source === 'mobile') {
-                toggleMobileSearch(false); 
+                toggleMobileSearch(false); // [修改] 搜索后关闭移动端搜索框 (并触发遮罩关闭)
             }
         }
         
@@ -1162,28 +1187,47 @@
             renderCategorizedView(id);
         }
 
-        // --- 移动端交互函数 ---
+        // --- [新增] 移动端交互函数 ---
 
-        function toggleMobileMenu(show) {
-            const sidebar = document.getElementById('mobile-sidebar');
+        // [新增] 统一控制遮罩层
+        function toggleOverlay(show) {
             const overlay = document.getElementById('mobile-overlay');
             if (show) {
-                sidebar.classList.add('show');
                 overlay.classList.add('show');
             } else {
-                sidebar.classList.remove('show');
                 overlay.classList.remove('show');
             }
         }
 
+        // [修改] 切换侧滑菜单
+        function toggleMobileMenu(show) {
+            const sidebar = document.getElementById('mobile-sidebar');
+            if (show) {
+                sidebar.classList.add('show');
+                toggleOverlay(true);
+            } else {
+                sidebar.classList.remove('show');
+                toggleOverlay(false);
+            }
+        }
+
+        // [修改] 切换下滑搜索
         function toggleMobileSearch(forceShow = null) {
             const searchDropdown = document.querySelector('.mobile-search-dropdown');
+            let shouldShow;
+
             if (forceShow === null) {
-                searchDropdown.classList.toggle('show');
-            } else if (forceShow === true) {
+                shouldShow = !searchDropdown.classList.contains('show');
+            } else {
+                shouldShow = forceShow;
+            }
+
+            if (shouldShow) {
                 searchDropdown.classList.add('show');
+                toggleOverlay(true); // [修改] 打开搜索时也打开遮罩
             } else {
                 searchDropdown.classList.remove('show');
+                toggleOverlay(false); // [修改] 关闭搜索时也关闭遮罩
             }
         }
 
@@ -1204,9 +1248,16 @@
             toggleMobileMenu(false); 
         }
 
+        // [修改] 绑定移动端事件
         document.getElementById('mobile-menu-btn').addEventListener('click', () => toggleMobileMenu(true));
-        document.getElementById('mobile-overlay').addEventListener('click', () => toggleMobileMenu(false));
+        document.getElementById('mobile-sidebar-close-btn').addEventListener('click', () => toggleMobileMenu(false));
         document.getElementById('mobile-search-btn').addEventListener('click', () => toggleMobileSearch());
+        
+        // [修改] 遮罩层现在可以关闭菜单和搜索
+        document.getElementById('mobile-overlay').addEventListener('click', () => {
+            toggleMobileMenu(false);
+            toggleMobileSearch(false);
+        });
 
 
         init();
