@@ -120,33 +120,32 @@
             padding: 15px;
             margin-bottom: 15px;
         }
+        
+        /* [修改 2.1] 模块标题 - 移除border，为伪元素做准备 */
         .module-title {
             font-size: 16px;
             font-weight: bold;
-            /* border-left: 4px solid var(--tb-orange); */ /* [修改] 移除 */
-            border-left: none;
-            /* padding-left: 10px; */ /* [修改] 移除 */
-            padding-left: 0;
+            /* border-left: 4px solid var(--tb-orange); */ /* 移除 */
+            border-left: none; /* 修改 */
+            /* padding-left: 10px; */ /* 移除 */
+            padding-left: 14px; /* 修改：4px竖条宽度 + 10px间距 */
             margin-bottom: 12px;
             display: flex; justify-content: space-between; align-items: center;
-            
-            /* [新增] 请求 2：替换为水平线 */
-            padding-bottom: 8px; /* 增加线和文字的间距 */
-            border-bottom: 1px solid #eee; /* 添加一条浅灰色(全宽)的底线 */
-            position: relative; /* 为装饰线条定位 */
+            position: relative; /* 添加 */
         }
         
-        /* [新增] 请求 2：添加一个::before伪元素作为橙色装饰线 */
+        /* [修改 2.2] 模块标题 - 添加伪元素竖条 */
         .module-title::before {
-            content: '';
+            content: "";
             position: absolute;
             left: 0;
-            bottom: -1px; /* 压在 border-bottom 上方 */
-            width: 60px; /* 模拟标题长度的短线条 */
-            height: 3px; /* 稍粗的线条 */
-            background: var(--tb-orange);
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 1em; /* 关键：高度关联字体大小 (font-size: 16px) */
+            background-color: var(--tb-orange);
         }
-
+        
         .module-title a { font-size: 12px; font-weight: normal; color: #999; }
 
         /* === 左侧模块 === */
@@ -219,6 +218,8 @@
             flex-direction: column; 
             flex-grow: 1; 
         }
+        
+        /* [修改 3] 商品标题 - 强制换行 */
         .tb-title { 
             font-size: 13px; 
             height: 38px; 
@@ -229,8 +230,7 @@
             display: -webkit-box; 
             -webkit-line-clamp: 2; 
             -webkit-box-orient: vertical; 
-            /* [新增] 请求 3：强制单词换行 */
-            word-break: break-all;
+            word-break: break-all; /* <-- 添加此行 */
         }
         
         .tb-price-row { 
@@ -614,17 +614,25 @@
             }
 
             /* 3. 调整商品卡片 (改为左图右文列表) */
+            
+            /* [修改 1.1] 移除商品间距 */
             .taobao-grid {
                 grid-template-columns: 1fr; /* 1. 强制单列 */
-                gap: 0; /* [修改] 请求 1：移除间距，用边框分隔 */
+                gap: 0; /* 修改 */
             }
 
+            /* [修改 1.2] 移除边框和圆角，添加底部浅灰色线条 */
             .tb-card {
                 flex-direction: row; /* 2. 卡片改为水平布局 */
                 min-height: 125px; /* [修改] 改为 min-height 允许内容溢出时撑开 */
-                border-radius: 0; /* [修改] 请求 1：移除圆角 */
-                border: none; /* [修改] 请求 1：移除边框 */
-                border-bottom: 1px solid #f0f0f0; /* [修改] 请求 1：添加浅灰色分隔线 */
+                border-radius: 0; /* 修改：移除圆角 */
+                border: none; /* 添加：移除所有边框 */
+                border-bottom: 1px solid #f0f0f0; /* 添加：浅灰色分割线 */
+            }
+            
+            /* [修改 1.3] 移除最后一个商品的分割线 */
+            .tb-card:last-child {
+                border-bottom: none;
             }
 
             .tb-img-wrap {
@@ -674,10 +682,6 @@
                 font-size: 11px; /* [修改] 减小字号 */
             }
 
-            /* [新增] 请求 1：移除最后一个商品的底部分隔线 */
-            .taobao-grid .tb-card:last-child {
-                border-bottom: none;
-            }
 
             /* 4. 调整分类药丸 */
             .cat-pill {
