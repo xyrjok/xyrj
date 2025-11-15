@@ -550,7 +550,8 @@
             z-index: 1000;
             display: flex;
             justify-content: space-around;
-            box-shadow: 0 -1px 4px rgba(0,0,0,0.05);
+            /* [修改 3] 移除阴影 */
+            box-shadow: none;
         }
         .mbn-item {
             flex: 1;
@@ -591,7 +592,8 @@
 
         .mobile-contact-sheet {
             position: fixed;
-            bottom: 0;
+            /* [修改 1] 最终位置在 50px (吸底模块) 的上方 */
+            bottom: 50px;
             left: 0;
             width: 100%;
             background: #fff;
@@ -599,14 +601,14 @@
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
             box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            transform: translateY(100%);
+            transform: translateY(100%); /* 初始状态在屏幕外 */
             transition: transform 0.3s ease-in-out;
             max-height: 60vh;
             display: flex;
             flex-direction: column;
         }
         .mobile-contact-sheet.show {
-            transform: translateY(0);
+            transform: translateY(0); /* 显示状态，滑到 50px 的位置 */
         }
         .mcs-header {
             display: flex;
@@ -629,6 +631,8 @@
             padding: 15px;
             overflow-y: auto;
             line-height: 1.6;
+            /* [修改 2] 修改字体大小 */
+            font-size: 13px;
         }
         
         /* 移动端媒体查询总开关 */
@@ -1459,7 +1463,7 @@
         
         // [新增] 联系方式面板事件
         document.getElementById('mobile-contact-close-btn').addEventListener('click', () => toggleMobileContact(false));
-        document.getElementById('mobile-contact-overlay').addEventListener('click', () => toggleMobileContact(false));
+        document.getElementById('mobile-contact-overlay').addEventListener('click', ()E => toggleMobileContact(false));
 
 
         window.addEventListener('scroll', () => {
