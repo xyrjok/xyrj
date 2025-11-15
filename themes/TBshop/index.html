@@ -625,8 +625,7 @@
             /* [修改 1.2] 移除边框和圆角，添加底部浅灰色线条 */
             .tb-card {
                 flex-direction: row; /* 2. 卡片改为水平布局 */
-				align-items: center;
-                min-height: 90px; /* [修改] 改为 min-height 允许内容溢出时撑开 */ /* <-- 修改：从 100px 改为 90px */
+                min-height: 90px; /* [修改] 改为 min-height 允许内容溢出时撑开 */ /* <-- 最终修改：90px */
                 border-radius: 0; /* 修改：移除圆角 */
                 border: none; /* 添加：移除所有边框 */
                 border-bottom: 1px solid #f0f0f0; /* 添加：浅灰色分割线 */
@@ -638,24 +637,25 @@
             }
 
             .tb-img-wrap {
-                flex: 0 0 90px; /* 4. 图片容器固定宽度 */ /* <-- 修改：从 100px 改为 90px */
-                width: 90px; /* <-- 修改：从 100px 改为 90px */
-                height: 90px; /* <-- 修改：从 100px 改为 90px */
+                flex: 0 0 90px; /* 4. 图片容器固定宽度 */ /* <-- 最终修改：90px */
+                width: 90px; /* <-- 最终修改：90px */
+                height: 90px; /* <-- 最终修改：90px */
                 padding-bottom: 0; /* 5. 移除PC端的padding-hack */
-                border-radius: 5px;
+                border-radius: 5px 0 0 5px;
             }
 
             .tb-img {
+                /* 6. 确保图片在移动端是 cover 且 100% 填充 */
                 width: 100%;
                 height: 100%;
                 top: 0;
                 left: 0;
-                object-fit: contain;
-                border-radius: 5px;
+                object-fit: cover;
+                border-radius: 5px 0 0 5px;
             }
 
             .tb-info {
-                padding: 8px 0 8px 10px;
+                padding: 8px 10px; /* [修改] 减少内边距 */
                 flex: 1; 
                 min-width: 0; /* [关键修复] 允许 flex item 缩小 */
             }
@@ -706,6 +706,26 @@
             }
             .copyright {
                 font-size: 11px;
+            }
+            
+            /* === 新增：移动端 悬停效果修改 === */
+            .tb-card:hover {
+                /* 需求 2: 变宽 - 使用负边距抵消 .module-box 的 10px padding */
+                position: relative;
+                z-index: 2;
+                margin-left: -10px;
+                margin-right: -10px;
+
+                /* 需求 1: 移除红线 - 覆盖PC端的 border-color: var(--tb-orange) */
+                border-color: transparent; 
+                
+                /* 需求 1: 移除红线 - 确保底部边框还是灰色，而不是hover的橙色 */
+                border-bottom-color: #f0f0f0;
+            }
+            
+            /* 需求 1: 移除红线 - 确保最后一个元素在hover时也没有底部边框 */
+            .tb-card:last-child:hover {
+                border-bottom: none;
             }
         }
 
@@ -943,7 +963,7 @@
         let allCategories = []; // 存储所有分类
 
         async function init() {
-            // 1. 加载配置与公告
+            // 1. 加加载配置与公告
             try {
                 const configRes = await fetch('/api/shop/config');
                 const config = await configRes.json();
@@ -1327,7 +1347,7 @@
             let targetOnclick = (id === 'all') ? `filterCategory('all', this)` : `filterCategory(${id}, this)`;
             
             for (let pill of pills) {
-                if (pill.getAttribute('onclick') === targetOncheck) {
+                if (pill.getAttribute('onclick') === targetOnclick) {
                     targetPill = pill;
                     break;
                 }
