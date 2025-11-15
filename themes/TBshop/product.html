@@ -85,8 +85,8 @@
         
         .mode-radio:checked + .mode-label small { color: #ff5000; }
         
-        /* *** 修改点 (CSS): 自选号码改为flex流式布局 *** */
-        .card-select-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; }
+        /* *** 修改点 (CSS): 自选号码改为flex流式布局 + 加背景 *** */
+        .card-select-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; background-color: #f5f5f5; padding: 8px; border-radius: 4px; }
 
         .card-option { padding: 8px; border: 1px solid #eee; border-radius: 6px; font-size: 12px; text-align: center; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-option.active { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
@@ -98,6 +98,17 @@
         .btn-confirm { width: 100%; height: 40px; border-radius: 20px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; border: none; }
         
         .page-item .page-link { cursor: pointer; }
+        
+        /* --- 1. 修改规格分页字体颜色 --- */
+        /* 将可点击的链接(原蓝色)改为 #212529bf */
+        #spec-pagination-container .page-link {
+            color: #212529bf; 
+        }
+        /* 将禁用的链接(原灰色 #212529bf)改为 #dc3545 */
+        #spec-pagination-container .page-item.disabled .page-link {
+            color: #dc3545; 
+        }
+        /* --- 修改结束 --- */
     </style>
 </head>
 <body>
@@ -132,7 +143,6 @@
             <img id="sku-img" src="" class="sku-thumb">
             <div class="sku-info">
                 <div id="sku-title" style="font-size: 13px; color: #333; font-weight: bold; margin-bottom: 4px; line-height: 1.4; white-space: normal; word-break: break-all;">加载中...</div>
-
                 <div class="sku-price">¥<span id="sku-price-text">-</span></div>
                 <div class="sku-stock">库存: <span id="sku-stock-text">-</span></div>
                 <div class="sku-selected">已选: <span id="sku-selected-text">未选择</span></div>
@@ -209,7 +219,6 @@
         let currentProduct = null;
         let selectedVariant = null;
         let selectedCardId = null;
-        // *** 修改点 (JS): buyMode 默认值改为 null ***
         let buyMode = null;
         
         const skuSheetEl = document.getElementById('skuSheet');
@@ -219,7 +228,6 @@
         // --- *** 按行分页：全局变量 *** ---
         let specPages = []; 
         let specCurrentPage = 1;
-        // *** 修改点 (JS): 行数改为 5 ***
         const specListMaxRows = 5; // 每页5行
         let hasCalculatedPages = false;
 
@@ -334,7 +342,6 @@
             renderSpecListPage(page);
         }
 
-        // --- *** 新增：滚动并高亮目标区域的辅助函数 *** ---
         function highlightAndScroll(elementId) {
             const el = document.getElementById(elementId);
             if (!el) return;
@@ -342,7 +349,7 @@
             const skuBody = el.closest('.sku-body');
             if (skuBody) {
                 skuBody.scrollTo({
-                    top: el.offsetTop - skuBody.offsetTop - 15, // 滚动到元素顶部再-15px间距
+                    top: el.offsetTop - skuBody.offsetTop - 15,
                     behavior: 'smooth'
                 });
             }
@@ -351,7 +358,7 @@
             if (input) input.focus();
 
             el.style.transition = 'none';
-            el.style.backgroundColor = '#fff5f7'; // 闪烁底色
+            el.style.backgroundColor = '#fff5f7';
             setTimeout(() => {
                 el.style.transition = 'background-color 0.5s ease';
                 el.style.backgroundColor = 'transparent';
@@ -380,7 +387,6 @@
             const priceDisplay = (minPrice === maxPrice) ? minPrice : `${minPrice} - ${maxPrice}`;
             document.title = p.name;
             document.getElementById('p-title').innerText = p.name;
-            // *** 修改点 (JS): 填充SKU内商品名称 ***
             document.getElementById('sku-title').innerText = p.name;
             document.getElementById('p-desc').innerText = p.description || '暂无详细介绍';
             document.getElementById('p-price').innerText = priceDisplay;
@@ -492,21 +498,14 @@
                 modeContainer.classList.remove('d-none');
                 document.getElementById('markup-amount').innerText = selectedVariant.custom_markup;
                 
-                // *** 修改点 (JS): 取消自动选中
-                // document.getElementById('mode_random').checked = true; 
-                // toggleBuyMode(); 
-                
-                // *** 新增: 手动清除选中 (如果之前有)
                 const radios = document.getElementsByName('buy_mode');
                 radios.forEach(r => r.checked = false);
                 buyMode = null;
                 document.getElementById('card-selector').classList.add('d-none');
                 selectedCardId = null;
                 updatePrice();
-                // *** 修改结束
             } else {
                 modeContainer.classList.add('d-none');
-                // *** 修改点 (JS): 设为 null (无购买方式) ***
                 buyMode = null; 
                 updatePrice();
             }
@@ -545,26 +544,24 @@
             selectedCardId = id;
         }
 
-        // --- *** 新增：验证手动输入的数量 *** ---
         function validateQty(input) {
             if (buyMode === 'select') {
-                input.value = 1; // 自选模式强行锁定为1
+                input.value = 1;
                 return;
             }
             let val = parseInt(input.value);
-            if (isNaN(val) || val < 1) val = 1; // 最小值
-            if (selectedVariant && val > selectedVariant.stock) val = selectedVariant.stock; // 不超库存
+            if (isNaN(val) || val < 1) val = 1;
+            if (selectedVariant && val > selectedVariant.stock) val = selectedVariant.stock;
             input.value = val;
-            updatePrice(); // 更新价格
+            updatePrice();
         }
         
-        // --- *** 修改：使用 validateQty *** ---
         function changeQty(delta) {
             if (buyMode === 'select') return;
             const input = document.getElementById('buy-qty');
             let val = parseInt(input.value) + delta;
-            input.value = val; // 先设置新值
-            validateQty(input); // 再调用验证函数
+            input.value = val;
+            validateQty(input);
         }
 
         function updatePrice() {
@@ -573,7 +570,6 @@
             const qty = parseInt(document.getElementById('buy-qty').value);
             if (buyMode === 'select') {
                 price += (selectedVariant.custom_markup || 0);
-            // *** 修改点 (JS): 明确为 'random' 才计算批发价 ***
             } else if (buyMode === 'random') {
                 if (selectedVariant.wholesale_config) {
                     try {
@@ -590,9 +586,7 @@
             document.getElementById('sku-price-text').innerText = price.toFixed(2);
         }
 
-        // --- *** 修改点 (JS): 替换为带验证的 submitOrder *** ---
         async function submitOrder() {
-            // --- 验证开始 ---
             if (!selectedVariant) {
                 alert('请选择规格');
                 highlightAndScroll('sku-spec-title-container');
@@ -600,7 +594,6 @@
             }
 
             const modeContainer = document.getElementById('buy-mode-container');
-            // 检查购买方式 (如果可见)
             if (modeContainer.offsetHeight > 0 || modeContainer.offsetWidth > 0) {
                 const buyModeRadio = document.querySelector('input[name="buy_mode"]:checked');
                 if (!buyModeRadio) {
@@ -608,7 +601,6 @@
                     highlightAndScroll('buy-mode-container');
                     return;
                 }
-                // 检查自选号码
                 if (buyMode === 'select' && !selectedCardId) {
                     alert('请选择号码');
                     highlightAndScroll('card-selector');
@@ -616,17 +608,15 @@
                 }
             }
 
-            // 检查购买数量
             const quantity = parseInt(document.getElementById('buy-qty').value);
-            if (buyMode !== 'select') { // 自选模式不检查库存
+            if (buyMode !== 'select') {
                 if (selectedVariant.stock < quantity) {
                     alert('库存不足');
-                    highlightAndScroll(document.getElementById('buy-qty').closest('.d-flex')); // 滚动到数量行
+                    highlightAndScroll(document.getElementById('buy-qty').closest('.d-flex'));
                     return;
                 }
             }
 
-            // 检查联系方式
             const contactInput = document.getElementById('contact-info');
             const contact = contactInput.value;
             if (!contact) {
@@ -636,14 +626,12 @@
                 return;
             }
             
-            // 检查支付方式
             const paymentMethod = document.querySelector('input[name="payment"]:checked');
             if (!paymentMethod) {
                 alert('请选择支付方式');
                 highlightAndScroll('payment-method-container');
                 return;
             }
-            // --- 验证结束 ---
 
             const btn = document.querySelector('.btn-confirm');
             const oldText = btn.innerText;
@@ -653,7 +641,7 @@
                     variant_id: selectedVariant.id, 
                     quantity, 
                     contact, 
-                    payment_method: paymentMethod.value // 使用获取到的值
+                    payment_method: paymentMethod.value
                 };
                 if (buyMode === 'select' && selectedCardId) payload.card_id = selectedCardId;
                 
