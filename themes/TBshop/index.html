@@ -625,7 +625,7 @@
             /* [修改 1.2] 移除边框和圆角，添加底部浅灰色线条 */
             .tb-card {
                 flex-direction: row; /* 2. 卡片改为水平布局 */
-                min-height: 100px; /* [修改] 改为 min-height 允许内容溢出时撑开 */ /* <-- 修改：从 125px 改为 100px */
+                min-height: 90px; /* [修改] 改为 min-height 允许内容溢出时撑开 */ /* <-- 修改：从 100px 改为 90px */
                 border-radius: 0; /* 修改：移除圆角 */
                 border: none; /* 添加：移除所有边框 */
                 border-bottom: 1px solid #f0f0f0; /* 添加：浅灰色分割线 */
@@ -637,9 +637,9 @@
             }
 
             .tb-img-wrap {
-                flex: 0 0 100px; /* 4. 图片容器固定宽度 */ /* <-- 修改：从 125px 改为 100px */
-                width: 100px; /* <-- 修改：从 125px 改为 100px */
-                height: 100px; /* <-- 修改：从 125px 改为 100px */
+                flex: 0 0 90px; /* 4. 图片容器固定宽度 */ /* <-- 修改：从 100px 改为 90px */
+                width: 90px; /* <-- 修改：从 100px 改为 90px */
+                height: 90px; /* <-- 修改：从 100px 改为 90px */
                 padding-bottom: 0; /* 5. 移除PC端的padding-hack */
                 border-radius: 5px 0 0 5px;
             }
@@ -1327,7 +1327,7 @@
             let targetOnclick = (id === 'all') ? `filterCategory('all', this)` : `filterCategory(${id}, this)`;
             
             for (let pill of pills) {
-                if (pill.getAttribute('onclick') === targetOnclick) {
+                if (pill.getAttribute('onclick') === targetOncheck) {
                     targetPill = pill;
                     break;
                 }
