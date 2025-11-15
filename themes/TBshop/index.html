@@ -70,6 +70,7 @@
         
         .tb-search-group {
             display: flex;
+            align-items: center; /* [修改] 确保内容垂直居中 */
             border: 2px solid var(--tb-red);
             border-radius: 20px;
             overflow: hidden;
@@ -84,6 +85,8 @@
             padding: 0 15px;
             flex: 1;
             font-size: 13px;
+            width: 100%; /* [新增] 确保flex生效 */
+            background: transparent; /* [新增] 确保背景透明 */
         }
         .tb-search-btn {
             background: var(--tb-red);
@@ -307,7 +310,7 @@
         .mobile-header {
             height: 50px;
             background: #fff;
-            position: fixed; /* [修改] 改为 fixed 修复顶部间距 */
+            position: fixed; 
             top: 0;
             left: 0;
             width: 100%;
@@ -361,7 +364,7 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.08);
             transform: translateY(-150%);
             transition: transform 0.3s ease-in-out;
-            display: block; /* 保持渲染，用transform隐藏 */
+            display: block; 
         }
         .mobile-search-dropdown.show {
             transform: translateY(0);
@@ -369,13 +372,15 @@
         .mobile-search-dropdown .tb-search-group {
             width: 100%;
             margin: 0;
+            height: 40px; /* [修改] 增大搜索框高度 */
         }
         .mobile-search-dropdown .tb-search-input {
-            height: 38px;
-            line-height: 38px; /* [新增] 垂直居中文本 */
+            height: 100%; /* [修改] 移除固定 height 和 line-height */
+            flex: 1;
+            padding: 0 15px;
         }
         .mobile-search-dropdown .tb-search-btn {
-            height: 34px;
+            height: 36px; /* [修改] 按钮新高度 */
             margin: 2px;
         }
         
@@ -400,9 +405,10 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 240px; /* [修改] 调窄侧滑菜单 */
-            height: calc(100% - 50px); /* [修改] 避免遮挡底部导航 */
-            background: #fff;
+            width: 240px; 
+            height: calc(100% - 50px); 
+            background: linear-gradient(135deg, var(--tb-orange), var(--tb-red)); /* [修改] 淘宝渐变背景 */
+            color: #fff; /* [修改] 默认白字 */
             z-index: 1003;
             transform: translateX(-100%);
             transition: transform 0.3s ease-in-out;
@@ -414,13 +420,13 @@
         }
         .mobile-sidebar-header {
             padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid rgba(255,255,255,0.2); /* [修改] 边框颜色 */
             text-align: center;
         }
         .mobile-sidebar-title {
             font-size: 18px;
             font-weight: bold;
-            color: #333;
+            color: #fff; /* [修改] 标题白字 */
             margin: 0;
         }
         .mobile-sidebar-content {
@@ -429,34 +435,46 @@
             overflow-y: auto; 
         }
         #mobile-category-list a {
-            display: block;
+            display: flex; /* [修改] 使用flex布局 */
+            align-items: center; /* [修改] 垂直居中 */
             padding: 10px 5px;
             font-size: 14px;
-            color: #333;
-            border-bottom: 1px solid #f5f5f5;
+            color: #fff; /* [修改] 链接白字 */
+            border-bottom: 1px solid rgba(255,255,255,0.15); /* [修改] 边框颜色 */
+        }
+        /* [新增] 侧滑菜单中分类图片样式 */
+        #mobile-category-list a img {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+            object-fit: cover;
+            background: #fff; /* 防止透明图片 */
         }
         #mobile-category-list a:hover {
-            color: var(--tb-orange);
-            background: #fcfcfc;
+            color: #fff; /* [修改] 悬停白字 */
+            background: rgba(255,255,255,0.1); /* [修改] 悬停背景 */
         }
         .mobile-sidebar-footer {
             padding: 15px;
-            border-top: 1px solid #f0f0f0;
-            background: #fcfcfc;
+            border-top: 1px solid rgba(255,255,255,0.2); /* [修改] 边框颜色 */
+            background: rgba(0,0,0,0.1); /* [修改] 底部背景 */
         }
         .mobile-sidebar-login-link {
             display: block;
             text-align: center;
             padding: 8px;
             font-size: 16px;
-            color: var(--tb-red);
-            border: 1px solid var(--tb-red);
-            border-radius: 6px;
-            background: #fff;
+            color: #fff; /* [修改] 按钮白字 */
+            border: 1px solid rgba(255,255,255,0.5); /* [修改] 按钮边框 */
+            border-radius: 18px; /* [修改] 更圆的按钮 */
+            background: linear-gradient(135deg, var(--tb-orange), var(--tb-red)); /* [修改] 淘宝渐变背景 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .mobile-sidebar-login-link:hover {
-            background: #fff0f0;
-            color: var(--tb-red);
+            background: linear-gradient(135deg, #ff6a1a, #ff1a4a); /* [修改] 悬停渐变 */
+            color: #fff;
+            border-color: #fff;
         }
         .mobile-sidebar-login-link i {
             margin-right: 5px;
@@ -581,7 +599,7 @@
             <i class="fa fa-bars"></i>
         </div>
         <div class="mh-center">
-            <a href="/" class="d-flex align-items-center justify-content-center h-100">
+            <a href="/" class="d-flex align-items: center justify-content-center h-100">
                 <img id="mobile-logo-img" class="d-none" alt="Logo">
                 <span id="mobile-site-name-wrap" class="d-none">
                     <i class="fa fa-shopping-bag"></i>
@@ -882,9 +900,9 @@
                 let mobile_html = '<a href="#" onclick="filterCategoryMobile(\'all\')">全部商品</a>';
                 
                 allCategories.forEach(c => {
-                    const imgTag = c.image_url ? `<img src="${c.image_url}">` : '';
+                    const imgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : ''; // [修改]
                     pc_html += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${imgTag}${c.name}</div>`;
-                    mobile_html += `<a href="#" onclick="filterCategoryMobile(${c.id})">${c.name}</a>`;
+                    mobile_html += `<a href="#" onclick="filterCategoryMobile(${c.id})">${imgTag}${c.name}</a>`; // [修改]
                 });
                 catContainer.innerHTML = pc_html;
                 mobileCatContainer.innerHTML = mobile_html;
