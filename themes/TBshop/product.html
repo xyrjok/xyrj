@@ -59,13 +59,12 @@
         .sku-body { padding: 15px; overflow-y: auto; padding-bottom: 80px; }
         .section-title { font-size: 13px; color: #333; font-weight: bold; margin-bottom: 10px; }
         
+        /* *** 修改点 (CSS): 恢复 .spec-list 原始样式 (移除了 max-height, overflow, transition) *** */
         .spec-list { 
             display: flex; 
             flex-wrap: wrap; 
             gap: 10px; 
             margin-bottom: 20px; 
-            overflow: hidden;
-            transition: max-height 0.3s ease-in-out;
         }
         
         .spec-btn { padding: 6px 15px; background: #f5f5f5; border-radius: 16px; font-size: 13px; color: #333; border: 1px solid transparent; transition: all 0.2s; }
@@ -95,6 +94,9 @@
         .form-control-custom { background: #f5f5f5; border: none; border-radius: 8px; padding: 10px; font-size: 14px; }
         .sku-footer { position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px; background: #fff; border-top: 1px solid #f5f5f5; }
         .btn-confirm { width: 100%; height: 40px; border-radius: 20px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; border: none; }
+        
+        /* *** 修改点 (CSS): 为分页链接添加指针 *** */
+        .page-item .page-link { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -138,10 +140,7 @@
             <div class="section-title" id="sku-spec-title-container">规格</div>
             <div class="spec-list" id="variant-list"></div>
             
-            <div id="spec-toggle-container" class="text-center mt-2 d-none" onclick="toggleSpecList()">
-                <span id="spec-toggle-text" class="text-primary small" style="cursor: pointer;">展开</span>
-                <i id="spec-toggle-icon" class="fa fa-angle-down text-primary small ms-1" style="transition: transform 0.3s;"></i>
-            </div>
+            <nav id="spec-pagination-container" class="mt-2" aria-label="规格分页"></nav>
             
             <div id="buy-mode-container" class="d-none mb-4">
                 <div class="section-title">购买方式 <small class="text-muted fw-normal ms-2">(自选与批发互斥)</small></div>
@@ -208,75 +207,86 @@
         let selectedCardId = null;
         let buyMode = 'random';
         
-        // --- *** 修改点 1: 获取SKU DOM元素并创建Offcanvas实例 *** ---
         const skuSheetEl = document.getElementById('skuSheet');
         const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
         const payModal = new bootstrap.Modal(document.getElementById('payModal'));
 
-        // --- *** 修改点 2: 监听SKU模块 *即将显示* 的事件 *** ---
-        skuSheetEl.addEventListener('show.bs.offcanvas', checkSpecListHeight);
+        // --- *** 修改点 (JS): 移除 'show.bs.offcanvas' 监听 *** ---
+        // --- *** 修改点 (JS): 移除 'specListExpanded' 等变量 *** ---
 
-        let specListExpanded = false;
-        const specListMaxRows = 10;
-        let specRowHeight = 0;
-        let specListMaxHeight = 0;
+        // --- *** 修改点 (JS): 新增分页变量 *** ---
+        let specCurrentPage = 1;
+        const specsPerPage = 24; // 每页显示24个规格
+        let totalSpecPages = 1;
 
-        function toggleSpecList() {
-            const list = document.getElementById('variant-list');
-            const text = document.getElementById('spec-toggle-text');
-            const icon = document.getElementById('spec-toggle-icon');
+        // --- *** 修改点 (JS): 移除 'toggleSpecList' 和 'checkSpecListHeight' 函数 *** ---
+
+        // --- *** 修改点 (JS): 新增分页功能函数 *** ---
+
+        // 新函数：渲染分页按钮
+        function renderSpecPagination() {
+            const p = currentProduct;
+            if (!p) return;
+            totalSpecPages = Math.ceil(p.variants.length / specsPerPage);
+            const container = document.getElementById('spec-pagination-container');
             
-            specListExpanded = !specListExpanded;
-            
-            if (specListExpanded) {
-                list.style.maxHeight = 'none'; // 展开
-                text.innerText = '收起';
-                icon.classList.remove('fa-angle-down');
-                icon.classList.add('fa-angle-up');
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                list.style.maxHeight = specListMaxHeight + 'px'; // 收起
-                text.innerText = '展开';
-                icon.classList.remove('fa-angle-up');
-                icon.classList.add('fa-angle-down');
-                icon.style.transform = 'rotate(0deg)';
+            if (totalSpecPages <= 1) {
+                container.innerHTML = ''; // 1页或更少，不显示分页
+                return;
             }
+
+            // 使用Bootstrap的分页组件
+            let pagesHtml = `
+                <ul class="pagination pagination-sm justify-content-center">
+                    <li class="page-item ${specCurrentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(1)">首页</a>
+                    </li>
+                    <li class="page-item ${specCurrentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(${specCurrentPage - 1})">上一页</a>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">${specCurrentPage} / ${totalSpecPages}</span>
+                    </li>
+                    <li class="page-item ${specCurrentPage === totalSpecPages ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(${specCurrentPage + 1})">下一页</a>
+                    </li>
+                    <li class="page-item ${specCurrentPage === totalSpecPages ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(${totalSpecPages})">尾页</a>
+                    </li>
+                </ul>`;
+            container.innerHTML = pagesHtml;
         }
 
-        // --- *** 修改点 3: 检查规格列表高度的函数 (从renderPage中移出) *** ---
-        function checkSpecListHeight() {
+        // 新函数：根据页码渲染规格列表
+        function renderSpecListPage(page) {
+            if (!currentProduct) return;
+            totalSpecPages = Math.ceil(currentProduct.variants.length / specsPerPage);
+            specCurrentPage = Math.max(1, Math.min(page, totalSpecPages)); // 钳制页码
+            
+            const p = currentProduct;
             const vList = document.getElementById('variant-list');
-            if (!vList) return;
+            vList.innerHTML = ''; // 清空
             
-            vList.style.maxHeight = 'none'; // 先重置，以便计算总高度
-            specListExpanded = false; // 重置展开状态
-            const toggleContainer = document.getElementById('spec-toggle-container');
-            toggleContainer.classList.add('d-none'); // 默认隐藏按钮
+            const start = (specCurrentPage - 1) * specsPerPage;
+            const end = start + specsPerPage;
+            const variantsToShow = p.variants.slice(start, end);
 
-            const firstButton = vList.querySelector('.spec-btn');
-            if (!firstButton) return; 
+            vList.innerHTML = variantsToShow.map((v) => {
+                const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
+                // 检查当前是否已选中
+                const isActive = selectedVariant && selectedVariant.id === v.id;
+                return `<div class="spec-btn ${isActive ? 'active' : ''}" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
+            }).join('');
 
-            specRowHeight = firstButton.offsetHeight; 
-            if (specRowHeight === 0) return; // 如果元素不可见，高度为0，退出
-
-            const listStyle = window.getComputedStyle(vList);
-            const rowGap = parseFloat(listStyle.gap) || 10; 
-            
-            specListMaxHeight = (specListMaxRows * specRowHeight) + ((specListMaxRows - 1) * rowGap);
-            const fullHeight = vList.scrollHeight; 
-
-            if (fullHeight > specListMaxHeight + (specRowHeight / 2)) { // 加一点容差
-                toggleContainer.classList.remove('d-none');
-                vList.style.maxHeight = specListMaxHeight + 'px';
-                document.getElementById('spec-toggle-text').innerText = '展开';
-                const icon = document.getElementById('spec-toggle-icon');
-                icon.classList.remove('fa-angle-up');
-                icon.classList.add('fa-angle-down');
-                icon.style.transform = 'rotate(0deg)';
-            } else {
-                vList.style.maxHeight = 'none';
-            }
+            renderSpecPagination(); // 每次渲染页面后，都重绘分页按钮
         }
+        
+        // 新函数：处理页面变更
+        function changeSpecPage(page) {
+            if (page < 1 || page > totalSpecPages || page === specCurrentPage) return;
+            renderSpecListPage(page);
+        }
+        // --- *** 分页函数结束 *** ---
 
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -312,17 +322,16 @@
             document.getElementById('p-img').src = mainImg;
             document.getElementById('sku-img').src = mainImg;
 
-            const vList = document.getElementById('variant-list');
-            vList.innerHTML = p.variants.map((v) => {
-                const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
-                return `<div class="spec-btn" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
-            }).join('');
+            // --- *** 修改点 (JS): 替换旧的 vList.innerHTML 逻辑 *** ---
+            // (旧的 vList.innerHTML... 代码块被删除)
+            
+            // --- *** 新增：初始化规格列表的第一页 *** ---
+            specCurrentPage = 1; // 重置为第一页
+            renderSpecListPage(1); // 渲染第一页
+            // --- *** 新增结束 *** ---
 
             // (规格总数)
             document.getElementById('sku-spec-title-container').innerHTML = `规格 <span style="font-size: 12px; color: #999; font-weight: normal;">（共${p.variants.length}个）</span>`;
-
-            // --- *** 修改点 4: 移除此处的 setTimeout 高度计算逻辑 *** ---
-            // (原 setTimeout 代码块已被删除)
 
             // (10个标签限制)
             const maxTagsToShow = 10;
@@ -385,7 +394,11 @@
 
         function selectVariant(vid) {
             selectedVariant = currentProduct.variants.find(v => v.id == vid);
-            document.querySelectorAll('.spec-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.id == vid));
+            
+            // --- *** 修改点 (JS): 不再手动toggle class，而是重绘当前页 *** ---
+            renderSpecListPage(specCurrentPage); 
+            // --- *** 修改结束 *** ---
+
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
             document.getElementById('p-price').innerText = selectedVariant.price;
