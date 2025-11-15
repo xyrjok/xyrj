@@ -539,7 +539,7 @@
         }
         
         /* 移动端吸底导航栏 */
-		.mobile-bottom-nav {
+        .mobile-bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
@@ -547,7 +547,7 @@
             height: 50px; 
             background: #fff;
             border-top: 1px solid #eee;
-            z-index: 9999; /* 修改：提高 z-index (高于 1005) */
+            z-index: 1006; /* 修改：提高 z-index */
             display: flex;
             justify-content: space-around;
             box-shadow: none; /* 修改：移除阴影 */
@@ -572,7 +572,7 @@
         }
 
         /* === [新增] 移动端上滑联系方式 === */
-		.mobile-contact-overlay {
+        .mobile-contact-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -580,7 +580,7 @@
             height: calc(100% - 50px); /* 修改：高度不包括底部 50px */
             bottom: 50px; /* 新增：底部在 50px 之上 */
             background: rgba(0,0,0,0.5);
-            z-index: 1005; /* 高于 sidebar */
+            z-index: 1004; /* 高于 sidebar */
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease;
@@ -590,16 +590,16 @@
             visibility: visible;
         }
 
-		.mobile-contact-sheet {
+        .mobile-contact-sheet {
             position: fixed;
             bottom: 50px; /* 修改：从 50px 处(即导航栏上方)开始 */
             left: 0;
             width: 100%;
             background: #fff;
-            z-index: 1006;
+            z-index: 1005;
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            /*box-shadow: 0 -4px 15px rgba(0,0,0,0.1);*/
             transform: translateY(100%);
             transition: transform 0.3s ease-in-out;
             max-height: 60vh;
@@ -630,7 +630,7 @@
             padding: 15px;
             overflow-y: auto;
             line-height: 1.6;
-			font-size: 13px;
+            font-size: 13px; /* 修改：设置字体大小 */
         }
         
         /* 移动端媒体查询总开关 */
@@ -668,6 +668,8 @@
                 margin-bottom: 10px;
                 border-radius: 8px;
             }
+            /* [删除] 移除有问题的 first-child 规则 */
+            /* .module-box:first-child { padding-top: 0; } */
 
             .module-title {
                 font-size: 15px;
@@ -676,6 +678,7 @@
 
             /* 3. 调整商品卡片 (改为左图右文列表) */
             
+            /* [修改 1.1] 移除商品间距 */
             .taobao-grid {
                 grid-template-columns: 1fr; /* 1. 强制单列 */
                 gap: 0; /* 修改 */
@@ -941,7 +944,7 @@
             <i class="fa fa-home"></i>
             <span>首页</span>
         </a>
-        <a href="#" class="mbn-item" onclick="event.preventDefault(); document.getElementById('mobile-menu-btn').click();">
+        <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-sidebar', 'mobile-overlay');">
             <i class="fa fa-th-large"></i>
             <span>商品分类</span>
         </a>
@@ -953,7 +956,7 @@
             <i class="fa fa-book-open"></i>
             <span>教程文章</span>
         </a>
-		<a href="#" class="mbn-item" onclick="event.preventDefault(); toggleMobileContact();">
+        <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-contact-sheet', 'mobile-contact-overlay');">
             <i class="fa fa-headset"></i>
             <span>客服</span>
         </a>
@@ -1385,19 +1388,35 @@
             renderCategorizedView(id);
         }
 
-        // --- 移动端交互函数 ---
+        // --- [新增] 通用面板开关函数 ---
+        function togglePanel(panelId, overlayId, forceShow = null) {
+            const panel = document.getElementById(panelId);
+            const overlay = document.getElementById(overlayId);
 
-        function toggleMobileMenu(show) {
-            const sidebar = document.getElementById('mobile-sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            if (show) {
-                sidebar.classList.add('show');
+            if (!panel || !overlay) {
+                console.error("Toggle Error: 找不到元素", panelId, overlayId);
+                return;
+            }
+
+            let shouldShow;
+            if (typeof forceShow === 'boolean') {
+                shouldShow = forceShow;
+            } else {
+                // 否则，反转当前状态
+                shouldShow = !panel.classList.contains('show');
+            }
+
+            if (shouldShow) {
+                panel.classList.add('show');
                 overlay.classList.add('show');
             } else {
-                sidebar.classList.remove('show');
+                panel.classList.remove('show');
                 overlay.classList.remove('show');
             }
         }
+
+
+        // --- 移动端交互函数 ---
 
         function toggleMobileSearch(forceShow = null) {
             const searchDropdown = document.querySelector('.mobile-search-dropdown');
@@ -1419,25 +1438,6 @@
             }
         }
 
-        // --- [新增] 移动端联系方式交互 ---
-		function toggleMobileContact(show) {
-            const sheet = document.getElementById('mobile-contact-sheet');
-            const overlay = document.getElementById('mobile-contact-overlay'); 
-            let shouldShow;
-            if (typeof show === 'boolean') {
-                shouldShow = show;
-            } else {
-                shouldShow = !sheet.classList.contains('show');
-            }
-            if (shouldShow) {
-                sheet.classList.add('show');
-                overlay.classList.add('show');
-            } else {
-                sheet.classList.remove('show');
-                overlay.classList.remove('show');
-            }
-        }
-
         function filterCategoryMobile(id) {
             const pills = document.querySelectorAll('.cat-pill');
             let targetPill = null;
@@ -1452,19 +1452,19 @@
             }
             
             filterCategory(id, targetPill); 
-            toggleMobileMenu(false); 
+            togglePanel('mobile-sidebar', 'mobile-overlay', false); 
         }
 
-        document.getElementById('mobile-menu-btn').addEventListener('click', () => toggleMobileMenu(true));
-        document.getElementById('mobile-overlay').addEventListener('click', () => toggleMobileMenu(false));
-        document.getElementById('mobile-sidebar-close-btn').addEventListener('click', () => toggleMobileMenu(false));
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay'));
+        document.getElementById('mobile-overlay').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay', false));
+        document.getElementById('mobile-sidebar-close-btn').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay', false));
         
         document.getElementById('mobile-search-btn').addEventListener('click', () => toggleMobileSearch());
         document.getElementById('mobile-search-overlay').addEventListener('click', () => toggleMobileSearch(false));
         
         // [新增] 联系方式面板事件
-        document.getElementById('mobile-contact-close-btn').addEventListener('click', () => toggleMobileContact(false));
-        document.getElementById('mobile-contact-overlay').addEventListener('click', () => toggleMobileContact(false));
+        document.getElementById('mobile-contact-close-btn').addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false));
+        document.getElementById('mobile-contact-overlay').addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false));
 
 
         window.addEventListener('scroll', () => {
@@ -1473,7 +1473,7 @@
             }
             // [修改] 滚动时关闭联系方式面板
             if (document.getElementById('mobile-contact-sheet').classList.contains('show')) {
-                toggleMobileContact(false);
+                togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false);
             }
         }, { passive: true });
 
