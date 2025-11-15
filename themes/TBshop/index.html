@@ -162,16 +162,11 @@
             object-fit: cover;
         }
 
-        /* [修改] 移除移动端 grid-template-columns 规则 */
         .taobao-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
         }
-        /* [删除] 
-        @media (max-width: 992px) { .taobao-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 768px) { .taobao-grid { grid-template-columns: repeat(2, 1fr); } }
-        */
 
         .tb-card {
             background: #fff;
@@ -579,9 +574,9 @@
                 margin-bottom: 10px;
                 border-radius: 8px;
             }
-            .module-box:first-child {
-                padding-top: 0; /* 第一个分类菜单模块不需要上边距 */
-            }
+            /* [删除] 移除有问题的 first-child 规则 */
+            /* .module-box:first-child { padding-top: 0; } */
+
             .module-title {
                 font-size: 15px;
                 margin-bottom: 10px;
@@ -595,7 +590,7 @@
 
             .tb-card {
                 flex-direction: row; /* 2. 卡片改为水平布局 */
-                height: 125px; /* 3. 设定一个固定高度 */
+                min-height: 125px; /* [修改] 改为 min-height 允许内容溢出时撑开 */
                 border-radius: 5px;
             }
 
@@ -618,27 +613,32 @@
             }
 
             .tb-info {
-                padding: 10px 12px; /* 7. 调整文字区内边距 */
-                flex: 1; /* 8. 文字区占满剩余空间 */
+                padding: 8px 10px; /* [修改] 减少内边距 */
+                flex: 1; 
+                min-width: 0; /* [关键修复] 允许 flex item 缩小 */
             }
 
             .tb-title {
-                font-size: 14px;
-                height: 40px; /* 约2行 */
+                font-size: 13px; /* [修改] 减小字号 */
+                height: 36px; /* [修改] 减小高度 (2行) */
                 -webkit-line-clamp: 2;
                 line-height: 1.4;
-                margin-bottom: 5px;
+                margin-bottom: 4px; /* [修改] 减小间距 */
             }
             
             .tb-tags-row {
-                margin-bottom: 5px;
+                margin-bottom: 4px; /* [修改] 减小间距 */
+            }
+            
+            .tb-price-row {
+                padding-top: 4px; /* [修改] 减小间距 */
             }
 
             .tb-price {
-                font-size: 18px;
+                font-size: 16px; /* [修改] 减小字号 */
             }
             .tb-sales {
-                font-size: 12px;
+                font-size: 11px; /* [修改] 减小字号 */
             }
 
 
@@ -1258,7 +1258,6 @@
             }
         }
 
-        // [修改] 切换搜索框时，同时切换透明遮罩层
         function toggleMobileSearch(forceShow = null) {
             const searchDropdown = document.querySelector('.mobile-search-dropdown');
             const searchOverlay = document.getElementById('mobile-search-overlay');
@@ -1283,7 +1282,7 @@
             const pills = document.querySelectorAll('.cat-pill');
             let targetPill = null;
             
-            let targetOnclick = (id === 'all') ? `filterCategory('all\', this)` : `filterCategory(${id}, this)`;
+            let targetOnclick = (id === 'all') ? `filterCategory('all', this)` : `filterCategory(${id}, this)`;
             
             for (let pill of pills) {
                 if (pill.getAttribute('onclick') === targetOnclick) {
@@ -1296,7 +1295,6 @@
             toggleMobileMenu(false); 
         }
 
-        // [修改] 绑定所有移动端事件
         document.getElementById('mobile-menu-btn').addEventListener('click', () => toggleMobileMenu(true));
         document.getElementById('mobile-overlay').addEventListener('click', () => toggleMobileMenu(false));
         document.getElementById('mobile-sidebar-close-btn').addEventListener('click', () => toggleMobileMenu(false));
@@ -1304,7 +1302,6 @@
         document.getElementById('mobile-search-btn').addEventListener('click', () => toggleMobileSearch());
         document.getElementById('mobile-search-overlay').addEventListener('click', () => toggleMobileSearch(false));
         
-        // [新增] 页面滚动时关闭搜索框
         window.addEventListener('scroll', () => {
             if (document.querySelector('.mobile-search-dropdown').classList.contains('show')) {
                 toggleMobileSearch(false);
