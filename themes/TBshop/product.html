@@ -130,6 +130,8 @@
         <div class="sku-header">
             <img id="sku-img" src="" class="sku-thumb">
             <div class="sku-info">
+                <div id="sku-title" style="font-size: 13px; color: #333; font-weight: bold; margin-bottom: 4px; line-height: 1.4; white-space: normal; word-break: break-all;">加载中...</div>
+                
                 <div class="sku-price">¥<span id="sku-price-text">-</span></div>
                 <div class="sku-stock">库存: <span id="sku-stock-text">-</span></div>
                 <div class="sku-selected">已选: <span id="sku-selected-text">未选择</span></div>
@@ -366,6 +368,7 @@
             const priceDisplay = (minPrice === maxPrice) ? minPrice : `${minPrice} - ${maxPrice}`;
             document.title = p.name;
             document.getElementById('p-title').innerText = p.name;
+            document.getElementById('sku-title').innerText = p.name;
             document.getElementById('p-desc').innerText = p.description || '暂无详细介绍';
             document.getElementById('p-price').innerText = priceDisplay;
             document.getElementById('sku-price-text').innerText = priceDisplay;
