@@ -625,6 +625,7 @@
             /* [修改 1.2] 移除边框和圆角，添加底部浅灰色线条 */
             .tb-card {
                 flex-direction: row; /* 2. 卡片改为水平布局 */
+				align-items: center;
                 min-height: 90px; /* [修改] 改为 min-height 允许内容溢出时撑开 */ /* <-- 修改：从 100px 改为 90px */
                 border-radius: 0; /* 修改：移除圆角 */
                 border: none; /* 添加：移除所有边框 */
@@ -641,21 +642,20 @@
                 width: 90px; /* <-- 修改：从 100px 改为 90px */
                 height: 90px; /* <-- 修改：从 100px 改为 90px */
                 padding-bottom: 0; /* 5. 移除PC端的padding-hack */
-                border-radius: 5px 0 0 5px;
+                border-radius: 5px;
             }
 
             .tb-img {
-                /* 6. 确保图片在移动端是 cover 且 100% 填充 */
                 width: 100%;
                 height: 100%;
                 top: 0;
                 left: 0;
-                object-fit: cover;
-                border-radius: 5px 0 0 5px;
+                object-fit: contain;
+                border-radius: 5px;
             }
 
             .tb-info {
-                padding: 8px 10px; /* [修改] 减少内边距 */
+                padding: 8px 0 8px 10px;
                 flex: 1; 
                 min-width: 0; /* [关键修复] 允许 flex item 缩小 */
             }
