@@ -721,11 +721,14 @@ async function submitOrder() {
 
 async function init() {
     
+    // [!! 修复 !!] 在函数顶部声明 config，以便所有代码块都能访问
+    let config = {};
+
     // --- 1. COMMON INIT (所有页面都执行) ---
     try {
         // 加载配置 (页头/页脚/公告/联系方式)
         const configRes = await fetch('/api/shop/config');
-        const config = await configRes.json();
+        config = await configRes.json(); // [!! 修复 !!] 赋值给外部的 config
         
         // 设置页脚
         if (document.getElementById('footer-name')) {
@@ -832,7 +835,8 @@ async function init() {
     // 如果是 首页 (index.html)
     if (document.getElementById('products-list-area')) {
         try {
-            document.title = config.site_name || '商店首页'; // 设置首页标题
+            // [!! 修复 !!] 现在 config 在这里是可见的
+            document.title = config.site_name || '商店首页';
             
             // 加载分类 (仅首页需要)
             const catRes = await fetch('/api/shop/categories');
