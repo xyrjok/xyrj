@@ -463,14 +463,11 @@
             
             // --- *** 修改点 (JS): 构造 "已选" + "更多" 的HTML *** ---
             const p = currentProduct;
-            const maxTagsToShow = 10; 
             let selectedHtml = `<div>已选: ${selectedVariant.name}</div>`;
-            
-            if (p.variants.length > maxTagsToShow) {
+            if (p.variants.length > 1) { 
                 selectedHtml += ` <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
             }
             document.getElementById('p-select-text').innerHTML = selectedHtml;
-            // --- *** 修改结束 *** ---
             
             const defV = p.variants[0];
             const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
