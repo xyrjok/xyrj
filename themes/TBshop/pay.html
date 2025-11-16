@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单支付</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f5f5f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .pay-card { 
+            background: #fff; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+            text-align: center; 
+            max-width: 360px; 
+            width: 100%; 
+            margin: 20px;
+        }
+        #qr-container { 
+            min-height: 200px; 
+            min-width: 200px; 
+            /* 确保二维码在容器内居中 */
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        }
+        #launch-alipay-btn {
+            background-color: #007BFF; /* 支付宝蓝 */
+            border-color: #007BFF;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="pay-card">
+        <h5 class="mb-3">请使用支付宝扫码</h5>
+        
+        <div id="qr-container" class="mb-3">
+            <p class="text-muted">支付信息加载中...</p>
+        </div>
+        <p class="text-danger fw-bold fs-5">¥<span id="pay-amount">-</span></p>
+        
+        <a href="#" id="launch-alipay-btn" class="btn btn-primary btn-lg d-none w-100 mb-3">
+            <i class="fab fa-alipay me-1"></i> 启动支付宝付款
+        </a>
+        
+        <small class="text-muted d-block mb-3">支付完成后页面将自动跳转</small>
+        <a class="btn btn-outline-secondary btn-sm" href="/">返回首页</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+    <script>
+        const qrContainer = document.getElementById('qr-container');
+        const payAmountEl = document.getElementById('pay-amount');
+        const launchBtn = document.getElementById('launch-alipay-btn');
+        let orderId = null;
+
+        // 简单检测是否为移动设备
+        function isMobileDevice() {
+            // 提供一个更宽泛的检测
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            orderId = new URLSearchParams(window.location.search).get('order_id');
+            if (!orderId) {
+                qrContainer.innerHTML = '<p class="text-danger">订单ID无效</p>';
+                return;
+            }
+
+            try {
+                // 调用后端 /api/shop/pay
+                const payRes = await fetch('/api/shop/pay', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ order_id: orderId }) 
+                });
+                const payData = await payRes.json();
+                
+                if (payData.error) throw new Error(payData.error);
+
+                // --- 关键逻辑：一码两用 ---
+
+                if (payData.qr_code) {
+                    qrContainer.innerHTML = ''; // 清空加载提示
+                    
+                    // 用途1：生成可供扫描的二维码
+                    new QRCode(qrContainer, { 
+                        text: payData.qr_code, 
+                        width: 200, 
+                        height: 200 
+                    }); 
+                    
+                    payAmountEl.innerText = payData.amount; 
+                
+                    // 用途2：如果是移动设备，显示“唤起APP”按钮，并设置其链接
+                    if (isMobileDevice()) {
+                        launchBtn.href = payData.qr_code; // <-- 关键点：使用同一个URL
+                        launchBtn.classList.remove('d-none'); // 显示按钮
+                    }
+
+                } else if (payData.paid) {
+                    qrContainer.innerHTML = '<p class="text-success">订单已支付</p>';
+                } else {
+                    qrContainer.innerHTML = '<p class="text-danger">二维码获取失败</p>';
+                }
+                
+                // 启动订单状态检查
+                checkOrderLoop(orderId);
+
+            } catch (e) {
+                qrContainer.innerHTML = `<p class="text-danger">支付请求失败: ${e.message}</p>`;
+            }
+        });
+
+        // 订单状态轮询函数 (同前)
+        function checkOrderLoop(orderId) {
+            const timer = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/shop/order/status?order_id=${orderId}`);
+                    const data = await res.json();
+                    
+                    if(data.status >= 1) { 
+                        clearInterval(timer); 
+                        qrContainer.innerHTML = '<h5 class="text-success">支付成功！</h5><p>即将自动跳转...</p>';
+                        launchBtn.classList.add('d-none'); // 支付成功后隐藏按钮
+                        
+                        setTimeout(() => {
+                           window.location.href = '/'; // 跳转回首页
+                        }, 3000);
+                    }
+                } catch(e) {}
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
