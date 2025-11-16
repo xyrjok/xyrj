@@ -1,6 +1,7 @@
 /**
  * Cloudflare Worker Faka Backend (最终绝对完整版 - 修复版)
  * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
+ * [已合并] 增加查单密码、订单管理、规格自选标签
  */
 
 // === 工具函数 ===
@@ -135,7 +136,7 @@ export default {
             
             // 如果找到了(不是404)，就直接返回内容
             if (response.status !== 404) {
-                return response;
+                 return response;
             }
             // 如果真的找不到文件，回退去请求原始路径(防止误杀其他文件)
             return env.ASSETS.fetch(request);
@@ -244,14 +245,19 @@ async function handleApi(request, env, url) {
                 const existingVariants = (await db.prepare("SELECT id FROM variants WHERE product_id=?").bind(productId).all()).results;
                 const newVariantIds = [];
                 const updateStmts = [];
+                
+                // --- [已修改] ---
+                // 增加 selection_label 字段
                 const insertStmt = db.prepare(`
-                    INSERT INTO variants (product_id, name, price, stock, color, image_url, wholesale_config, custom_markup, auto_delivery, sales_count, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO variants (product_id, name, price, stock, color, image_url, wholesale_config, custom_markup, auto_delivery, sales_count, created_at, selection_label) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `);
+                // 增加 selection_label 字段
                 const updateStmt = db.prepare(`
-                    UPDATE variants SET name=?, price=?, stock=?, color=?, image_url=?, wholesale_config=?, custom_markup=?, auto_delivery=?, sales_count=?
+                    UPDATE variants SET name=?, price=?, stock=?, color=?, image_url=?, wholesale_config=?, custom_markup=?, auto_delivery=?, sales_count=?, selection_label=?
                     WHERE id=? AND product_id=?
                 `);
+                // --- [修改结束] ---
 
                 for (const v of data.variants) {
                     const wholesale_config_json = v.wholesale_config ? JSON.stringify(v.wholesale_config) : null;
@@ -261,19 +267,28 @@ async function handleApi(request, env, url) {
 
                     if (variantId) { // 更新
                         newVariantIds.push(variantId);
+                        // --- [已修改] ---
+                        // 增加 v.selection_label
                         updateStmts.push(
                             updateStmt.bind(
                                 v.name, v.price, stock, v.color, v.image_url, wholesale_config_json, 
-                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, variantId, productId
+                                v.custom_markup || 0, auto_delivery, v.sales_count || 0,
+                                v.selection_label || null, // <--- 增加
+                                variantId, productId
                             )
                         );
+                        // --- [修改结束] ---
                     } else { // 插入
+                        // --- [已修改] ---
+                        // 增加 v.selection_label
                         updateStmts.push(
                             insertStmt.bind(
                                 productId, v.name, v.price, stock, v.color, v.image_url, wholesale_config_json,
-                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, now
+                                v.custom_markup || 0, auto_delivery, v.sales_count || 0, now,
+                                v.selection_label || null // <--- 增加
                             )
                         );
+                        // --- [修改结束] ---
                     }
                 }
                 
@@ -310,9 +325,6 @@ async function handleApi(request, env, url) {
             if (path === '/api/admin/order/delete' && method === 'POST') {
                 const { id } = await request.json();
                 if (!id) return errRes('未提供订单ID');
-
-                // 注意：这里只是简单删除订单。如果需要，还可以添加逻辑来恢复已售卡密(status=0)或库存(stock+1)
-                // 鉴于系统复杂性，目前只做删除订单记录
                 await db.prepare("DELETE FROM orders WHERE id = ?").bind(id).run();
                 return jsonRes({ success: true });
             }
@@ -369,7 +381,7 @@ async function handleApi(request, env, url) {
                  if (results.length === 0) {
                      const emptyConfig = { app_id: "", private_key: "", alipay_public_key: "" };
                      await db.prepare("INSERT INTO pay_gateways (name, type, config, active) VALUES (?, ?, ?, ?)")
-                        .bind('支付宝当面付', 'alipay_f2f', JSON.stringify(emptyConfig), 0).run();
+                         .bind('支付宝当面付', 'alipay_f2f', JSON.stringify(emptyConfig), 0).run();
                      results = (await db.prepare("SELECT * FROM pay_gateways").all()).results;
                  }
                  results.forEach(g => g.config = JSON.parse(g.config));
@@ -657,49 +669,49 @@ async function handleApi(request, env, url) {
         }
 
         if (path === '/api/shop/pay' && method === 'POST') {
-              const { order_id } = await request.json();
-              const order = await db.prepare("SELECT * FROM orders WHERE id=?").bind(order_id).first();
-              if (!order) return errRes('订单不存在');
-              if (order.status >= 1) return jsonRes({ paid: true });
+             const { order_id } = await request.json();
+             const order = await db.prepare("SELECT * FROM orders WHERE id=?").bind(order_id).first();
+             if (!order) return errRes('订单不存在');
+             if (order.status >= 1) return jsonRes({ paid: true });
 
-              if (order.payment_method === 'alipay_f2f') {
-                  const gateway = await db.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
-                  if(!gateway) return errRes('支付方式未配置');
-                  const config = JSON.parse(gateway.config);
-                  if (!config.app_id || !config.private_key || !config.alipay_public_key) {
-                      return errRes('支付配置不完整');
-                  }
+             if (order.payment_method === 'alipay_f2f') {
+                 const gateway = await db.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
+                 if(!gateway) return errRes('支付方式未配置');
+                 const config = JSON.parse(gateway.config);
+                 if (!config.app_id || !config.private_key || !config.alipay_public_key) {
+                     return errRes('支付配置不完整');
+                 }
 
-                  const params = {
-                      app_id: config.app_id,
-                      method: 'alipay.trade.precreate',
-                      format: 'JSON', charset: 'utf-8', sign_type: 'RSA2', version: '1.0',
-                      timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
-                      notify_url: `${url.origin}/api/notify/alipay`,
-                      biz_content: JSON.stringify({
-                          out_trade_no: order.id,
-                          total_amount: order.total_amount,
-                          subject: `${order.product_name}`
-                      })
-                  };
-                  params.sign = await signAlipay(params, config.private_key);
-                  
-                  const query = Object.keys(params).map(k => `${k}=${encodeURIComponent(params[k])}`).join('&');
-                  const aliRes = await fetch(`https://openapi.alipay.com/gateway.do?${query}`);
-                  const aliData = await aliRes.json();
+                 const params = {
+                     app_id: config.app_id,
+                     method: 'alipay.trade.precreate',
+                     format: 'JSON', charset: 'utf-8', sign_type: 'RSA2', version: '1.0',
+                     timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
+                     notify_url: `${url.origin}/api/notify/alipay`,
+                     biz_content: JSON.stringify({
+                         out_trade_no: order.id,
+                         total_amount: order.total_amount,
+                         subject: `${order.product_name}`
+                     })
+                 };
+                 params.sign = await signAlipay(params, config.private_key);
+                 
+                 const query = Object.keys(params).map(k => `${k}=${encodeURIComponent(params[k])}`).join('&');
+                 const aliRes = await fetch(`https://openapi.alipay.com/gateway.do?${query}`);
+                 const aliData = await aliRes.json();
 
-                  if (aliData.alipay_trade_precreate_response?.code === '10000') {
-                      return jsonRes({
-                          type: 'qrcode',
-                          qr_code: aliData.alipay_trade_precreate_response.qr_code,
-                          order_id: order.id,
-                          amount: order.total_amount
-                      });
-                  } else {
-                      return errRes('支付宝错误: ' + (aliData.alipay_trade_precreate_response?.sub_msg || JSON.stringify(aliData)));
-                  }
-              }
-              return errRes('未知的支付方式');
+                 if (aliData.alipay_trade_precreate_response?.code === '10000') {
+                     return jsonRes({
+                         type: 'qrcode',
+                         qr_code: aliData.alipay_trade_precreate_response.qr_code,
+                         order_id: order.id,
+                         amount: order.total_amount
+                     });
+                 } else {
+                     return errRes('支付宝错误: ' + (aliData.alipay_trade_precreate_response?.sub_msg || JSON.stringify(aliData)));
+                 }
+             }
+             return errRes('未知的支付方式');
         }
 
         if (path === '/api/shop/order/status') {
