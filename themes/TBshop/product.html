@@ -2,175 +2,155 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="renderer" content="webkit">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>商品详情</title>
-    
-    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/assets/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f5f5f5; padding-bottom: 60px; }
+        .nav-back { position: absolute; top: 10px; left: 10px; z-index: 100; width: 32px; height: 32px; background: rgba(0,0,0,0.4); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+        .prod-img-wrap { position: relative; width: 100%; padding-bottom: 100%; background: #fff; }
+        .prod-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .info-card { background: #fff; padding: 12px 16px; margin-bottom: 10px; }
+        .price-row { color: #ff5000; display: flex; align-items: baseline; margin-bottom: 8px; }
+        .price-symbol { font-size: 14px; font-weight: bold; }
+        .price-num { font-size: 24px; font-weight: bold; }
+        .prod-title { font-size: 16px; font-weight: 600; color: #051b28; line-height: 1.4; margin-bottom: 8px; }
+        .prod-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-bottom: 5px; }
+        
+        /* 优惠信息模块 */
+        .extra-info { 
+            background: #fff5f7; 
+            border-radius: 4px; 
+            padding: 8px; 
+            font-size: 12px; 
+            color: #ff0036; 
+            margin-top: 10px; 
+            line-height: 1.6;
+        }
+        .extra-tag-solid { 
+            display: inline-block; 
+            background: #ff0036; 
+            color: #fff; 
+            padding: 1px 5px; 
+            border-radius: 2px; 
+            margin-right: 5px; 
+            font-size: 11px;
+            vertical-align: middle;
+        }
+        
+        .sku-preview-tag { display: inline-block; border: 1px solid #dcdcdc; background: #fcfcfc; color: #333; padding: 3px 10px; border-radius: 4px; margin-right: 6px; margin-bottom: 4px; font-size: 13px; }
+        .cell-item { background: #fff; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #333; cursor: pointer; }
+        .cell-label { color: #999; margin-right: 10px; font-weight: bold; min-width: 30px; }
+        .cell-content { flex: 1; font-weight: 500; display: flex; flex-wrap: wrap; }
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background: #fff; display: flex; align-items: center; box-shadow: 0 -1px 5px rgba(0,0,0,0.05); z-index: 900; }
+        .icon-btn { width: 60px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; text-decoration: none; }
+        .icon-btn i { font-size: 18px; margin-bottom: 2px; }
+        .btn-buy-wrap { flex: 1; padding: 0 10px; display: flex; }
+        .btn-buy { flex: 1; height: 36px; border-radius: 18px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; font-size: 14px; border: none; display: flex; align-items: center; justify-content: center; }
+        .btn-buy:active { opacity: 0.9; }
+        .sku-sheet { border-top-left-radius: 16px; border-top-right-radius: 16px; height: 80vh !important; }
+        .sku-header { display: flex; padding: 15px; position: relative; border-bottom: 1px solid #f5f5f5; }
+        .sku-thumb { width: 90px; height: 90px; border-radius: 6px; margin-top: -30px; border: 3px solid #fff; background: #fff; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .sku-info { margin-left: 12px; padding-top: 5px; flex: 1; min-width: 0; } /* 增加 flex: 1 和 min-width: 0 确保长标题能换行 */
+        .sku-price { color: #ff5000; font-size: 20px; font-weight: bold; }
+        .sku-stock { font-size: 12px; color: #999; margin-top: 4px; }
+        .sku-selected { font-size: 12px; color: #333; margin-top: 2px; }
+        .sku-body { padding: 15px; overflow-y: auto; padding-bottom: 80px; }
+        .section-title { font-size: 13px; color: #333; font-weight: bold; margin-bottom: 10px; }
+        
+        .spec-list { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+        }
+        
+        .spec-btn { padding: 6px 15px; background: #f5f5f5; border-radius: 16px; font-size: 13px; color: #333; border: 1px solid transparent; transition: all 0.2s; }
+        .spec-btn.active { background: #ffefe7 !important; color: #ff5000 !important; border-color: #ff5000 !important; }
+        .buy-mode-group { display: flex; gap: 15px; margin-bottom: 15px; }
+        .mode-radio { display: none; }
+        .mode-label { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: center; font-size: 13px; cursor: pointer; position: relative; }
+        .mode-radio:checked + .mode-label { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
+        
+        .mode-label small { 
+            display: block; 
+            font-size: 10px; 
+            color: #999; 
+            margin-top: 2px; 
+            word-break: break-all; 
+            white-space: normal; 
+            line-height: 1.4;
+        }
+        
+        .mode-radio:checked + .mode-label small { color: #ff5000; }
+        
+        .card-select-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; background-color: #f5f5f5; padding: 8px; border-radius: 4px; }
 
-    <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
-    
-    </head>
+        .card-option { padding: 8px; border: 1px solid #eee; background-color: #fff; border-radius: 6px; font-size: 12px; text-align: center; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-option.active { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
+        .stepper { display: flex; align-items: center; background: #f5f5f5; border-radius: 4px; }
+        .stepper-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #666; cursor: pointer; }
+        .stepper-input { width: 40px; text-align: center; border: none; background: transparent; font-size: 14px; padding: 0; }
+        .form-control-custom { background: #f5f5f5; border: none; border-radius: 8px; padding: 10px; font-size: 14px; }
+        .sku-footer { position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px; background: #fff; border-top: 1px solid #f5f5f5; }
+        .btn-confirm { width: 100%; height: 40px; border-radius: 20px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; border: none; }
+        
+        .page-item .page-link { cursor: pointer; }
+        
+        #spec-pagination-container .page-link {
+            color: #212529bf; 
+        }
+        #spec-pagination-container .page-item.disabled .page-link {
+            color: #ff5000; 
+        }
+        .spec-btn.disabled {
+            color: #bbb !important; /* 强制灰色文字, 覆盖内联颜色 */
+            pointer-events: none; /* 禁止点击 */
+            position: relative; /* 用于角标定位 */
+        }
+        .spec-btn.disabled::after {
+            content: "缺货";
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #918c8d;
+            color: #fff;
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            line-height: 1.2;
+            font-weight: normal;
+        }
+    </style>
+</head>
 <body>
-
-    <div class="mobile-product-view d-lg-none">
-        <a href="/" class="nav-back"><i class="fa fa-arrow-left"></i></a>
-        <div class="prod-img-wrap"><img id="p-img" src="" class="prod-img" alt="Product Image"></div>
-        <div class="info-card">
-            <div class="price-row"><span class="price-symbol">¥</span><span class="price-num" id="p-price">-</span></div>
-            <div class="prod-title" id="p-title">加载中...</div>
-            <div class="prod-meta">
-                <span>自动发货</span>
-                <span id="p-stock">库存: -</span>
-                <span id="p-sales">已售: -</span>
-            </div>
-            <div id="p-extra-info" class="extra-info d-none"></div>
+    <a href="/" class="nav-back"><i class="fa fa-arrow-left"></i></a>
+    <div class="prod-img-wrap"><img id="p-img" src="" class="prod-img" alt="Product Image"></div>
+    <div class="info-card">
+        <div class="price-row"><span class="price-symbol">¥</span><span class="price-num" id="p-price">-</span></div>
+        <div class="prod-title" id="p-title">加载中...</div>
+        <div class="prod-meta">
+            <span>自动发货</span>
+            <span id="p-stock">库存: -</span>
+            <span id="p-sales">已售: -</span>
         </div>
-        <div class="cell-item" onclick="openSkuSheet()">
-            <span class="cell-label">选择</span>
-            <div class="cell-content" id="p-select-text">规格加载中...</div>
-            <i class="fa fa-angle-right text-muted"></i>
-        </div>
-        <div class="info-card" style="min-height: 300px;">
-            <div class="section-title border-bottom pb-2 mb-3">商品详情</div>
-            <div id="p-desc" style="font-size: 14px; color: #666; line-height: 1.6;"></div>
-        </div>
-        <div class="bottom-bar">
-            <a href="/" class="icon-btn"><i class="fa fa-store"></i><span>首页</span></a>
-            <a href="#" class="icon-btn"><i class="fa fa-headset"></i><span>客服</span></a>
-            <div class="btn-buy-wrap"><button class="btn-buy" onclick="openSkuSheet()">立即购买</button></div>
-        </div>
+        <div id="p-extra-info" class="extra-info d-none"></div>
     </div>
-
-    <div class="pc-product-view d-none d-lg-block">
-        <header class="tb-header d-none d-lg-block">
-            <div class="container header-inner">
-                <a href="/" class="site-brand">
-                    <img id="site-logo" class="d-none" style="max-height: 45px; width: auto; margin-right: 10px;" alt="Logo">
-                    <span id="site-name-wrap" class="d-flex align-items-center d-none">
-                        <i class="fa fa-shopping-bag"></i>
-                        <span id="header-site-name">TB Shop</span>
-                    </span>
-                </a>
-                <nav class="main-nav d-none d-md-flex">
-                    <a href="/" class="nav-link-item">首页</a>
-                    <a href="/articles.html" class="nav-link-item">教程文章</a>
-                    <a href="/admin/orders.html" target="_blank" class="nav-link-item">查询订单</a>
-                </nav>
-                <div class="header-right">
-                    <div class="tb-search-group">
-                        <input type="text" id="search-input" class="tb-search-input" placeholder="搜索商品...">
-                        <button class="tb-search-btn" onclick="doSearch('pc')">搜索</button>
-                    </div>
-                    <a href="/admin/" class="btn-login">登录</a>
-                </div>
-            </div>
-        </header>
-
-        <div class="container mt-4">
-            <div class="row gx-3" id="main-content-row-pc">
-                
-                <div class="col-lg-9">
-                    <div class="module-box" style="padding: 24px;">
-                        <div class="row g-4">
-                            <div class="col-md-5">
-                                <img id="p-img-pc" src="" class="img-fluid rounded border" alt="Product Image" style="width: 100%; aspect-ratio: 1 / 1; object-fit: cover;">
-                            </div>
-                            <div class="col-md-7 d-flex flex-column">
-                                <h2 id="p-title-pc" style="font-size: 20px; font-weight: 600; line-height: 1.4;">加载中...</h2>
-                                <div class="prod-meta d-flex justify-content-between text-muted small mt-2">
-                                    <span>自动发货</span>
-                                    <span id="p-stock-pc">库存: -</span>
-                                    <span id="p-sales-pc">已售: -</span>
-                                </div>
-                                <div style="background: #fff5f7; padding: 10px 16px; border-radius: 8px; margin-top: 15px;">
-                                    <div class="price-row align-items-center">
-                                        <span style="color: #999; font-size: 14px; margin-right: 10px;">价格</span>
-                                        <span class="price-symbol">¥</span>
-                                        <span class="price-num" id="p-price-pc">-</span>
-                                    </div>
-                                    <div id="p-extra-info-pc" class="extra-info mt-2" style="background: transparent; padding: 0;"></div>
-                                </div>
-                                
-                                <hr class="my-3">
-                                
-                                <div class="cell-item mt-2" onclick="openSkuSheet()">
-                                    <span class="cell-label">选择</span>
-                                    <div class="cell-content" id="p-select-text-pc">规格加载中...</div>
-                                    <i class="fa fa-angle-right text-muted"></i>
-                                </div>
-
-                                <div class="mt-4 pt-2">
-                                    <button class="btn-buy" onclick="openSkuSheet()">立即购买</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="module-box mt-3">
-                        <div class="module-title">商品详情</div>
-                        <div id="p-desc-pc" style="padding: 15px; font-size: 14px; color: #666; line-height: 1.7; min-height: 300px;">
-                            加载中...
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 d-none d-lg-block">
-                    <div id="sidebar-wrapper"> 
-                        <div class="sidebar-inner">
-                            <div class="module-box" id="notice-module-box">
-                                <div class="module-title">店铺公告</div>
-                                <div class="notice-content" id="notice-box">
-                                    暂无公告
-                                </div>
-                            </div>
-                            <div class="module-box" id="contact-module-box">
-                                <div class="module-title">联系客服</div>
-                                <div class="notice-content" id="contact-box">
-                                    暂无联系方式
-                                </div>
-                            </div>
-                            <div class="module-box">
-                                <div class="module-title">销量排行</div>
-                                <div id="top-sales-list">
-                                    </div>
-                            </div>
-                            <div class="module-box">
-                                <div class="module-title">教程分类</div>
-                                <div class="art-cat-list" id="article-cat-list">
-                                    </div>
-                            </div>
-                            <div class="module-box">
-                                <div class="module-title">热门标签</div>
-                                <div class="tag-cloud" id="tag-cloud-list">
-                                    </div>
-                            </div>
-                        </div> 
-                    </div> 
-                </div>
-
-            </div>
-        </div>
-
-        <footer class="site-footer">
-            <div class="container">
-                <div class="footer-links">
-                    <a href="/">首页</a>
-                    <a href="/articles.html">教程文章</a>
-                    <a href="#">关于我们</a>
-                    <a href="#">联系客服</a>
-                </div>
-                <div class="copyright">
-                    &copy; <span id="year"></span> <span id="footer-name">TB Shop</span>. All Rights Reserved.
-                </div>
-            </div>
-        </footer>
+    <div class="cell-item" onclick="openSkuSheet()">
+        <span class="cell-label">选择</span>
+        <div class="cell-content" id="p-select-text">规格加载中...</div>
+        <i class="fa fa-angle-right text-muted"></i>
     </div>
-
-
+    <div class="info-card" style="min-height: 300px;">
+        <div class="section-title border-bottom pb-2 mb-3">商品详情</div>
+        <div id="p-desc" style="font-size: 14px; color: #666; line-height: 1.6;"></div>
+    </div>
+    <div class="bottom-bar">
+        <a href="/" class="icon-btn"><i class="fa fa-store"></i><span>首页</span></a>
+        <a href="#" class="icon-btn"><i class="fa fa-headset"></i><span>客服</span></a>
+        <div class="btn-buy-wrap"><button class="btn-buy" onclick="openSkuSheet()">立即购买</button></div>
+    </div>
     <div class="offcanvas offcanvas-bottom sku-sheet" tabindex="-1" id="skuSheet">
         <div class="sku-header">
             <img id="sku-img" src="" class="sku-thumb">
@@ -211,7 +191,7 @@
                     <div class="card-select-list" id="card-list"></div>
                 </div>
             </div>
-            <div class="d-flex justify-content-between align-items- center mb-4">
+            <div class="d-flex justify-content-between align-items: center mb-4">
                 <div class="section-title mb-0">购买数量</div>
                 <div class="stepper">
                     <div class="stepper-btn" onclick="changeQty(-1)">-</div>
@@ -240,12 +220,482 @@
         <div class="sku-footer"><button class="btn-confirm" onclick="submitOrder()">确定支付</button></div>
     </div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-    
-    <script src="/themes/TBshop/files/main-index.js"></script>
+    <script>
+        let allProducts = [];
+        let currentProduct = null;
+        let selectedVariant = null;
+        let selectedCardId = null;
+        let buyMode = null;
+        
+        const skuSheetEl = document.getElementById('skuSheet');
+        const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
 
-    </body>
+        // *** payModal 变量定义已被删除 ***
+
+        let specPages = []; 
+        let specCurrentPage = 1;
+        const specListMaxRows = 6; // 每页5行
+        let hasCalculatedPages = false;
+
+        skuSheetEl.addEventListener('show.bs.offcanvas', () => {
+            if (!hasCalculatedPages && currentProduct) {
+                calculateSpecPages();
+                hasCalculatedPages = true;
+            }
+        });
+
+        function calculateSpecPages() {
+            const vList = document.getElementById('variant-list');
+            if (!currentProduct || !vList) return;
+
+            vList.innerHTML = currentProduct.variants.map((v) => {
+            const style = v.color ? `style="color:${v.color}"` : '';
+            const isDisabled = v.stock <= 0;
+            const disabledClass = isDisabled ? 'disabled' : '';
+            return `<div class="spec-btn ${disabledClass}" ${style} data-id="${v.id}">${v.name}</div>`;
+            }).join('');
+            
+            const buttons = vList.querySelectorAll('.spec-btn');
+            if (buttons.length === 0) return;
+
+            const specRowHeight = buttons[0].offsetHeight;
+            const listStyle = window.getComputedStyle(vList);
+            const rowGap = parseFloat(listStyle.gap) || 10;
+            const pageMaxHeight = (specListMaxRows * specRowHeight) + ((specListMaxRows - 1) * rowGap);
+            const listTop = vList.offsetTop;
+
+            specPages = [];
+            let currentPageItems = [];
+            let currentPageStartOffset = listTop;
+
+            for (let i = 0; i < buttons.length; i++) {
+                const button = buttons[i];
+                const variant = currentProduct.variants[i];
+                const buttonTop = button.offsetTop; 
+                
+                if (buttonTop >= (currentPageStartOffset + pageMaxHeight - (specRowHeight / 2))) {
+                    if (currentPageItems.length > 0) {
+                        specPages.push(currentPageItems);
+                    }
+                    currentPageItems = [variant];
+                    currentPageStartOffset = buttonTop;
+                } else {
+                    currentPageItems.push(variant);
+                }
+            }
+            
+            if (currentPageItems.length > 0) {
+                specPages.push(currentPageItems);
+            }
+
+            if (specPages.length <= 1) {
+                document.getElementById('spec-pagination-container').innerHTML = '';
+            }
+
+            renderSpecListPage(1);
+        }
+
+        function renderSpecPagination() {
+            const totalPages = specPages.length;
+            const container = document.getElementById('spec-pagination-container');
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let pagesHtml = `
+                <ul class="pagination pagination-sm justify-content-center">
+                    <li class="page-item ${specCurrentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(1)">首页</a>
+                    </li>
+                    <li class="page-item ${specCurrentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(${specCurrentPage - 1})">上一页</a>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">${specCurrentPage} / ${totalPages}</span>
+                    </li>
+                    <li class="page-item ${specCurrentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(${specCurrentPage + 1})">下一页</a>
+                    </li>
+                    <li class="page-item ${specCurrentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" onclick="changeSpecPage(${totalPages})">尾页</a>
+                    </li>
+                </ul>`;
+            container.innerHTML = pagesHtml;
+        }
+
+        function renderSpecListPage(page) {
+            const vList = document.getElementById('variant-list');
+            if (!specPages || specPages.length === 0) {
+                vList.innerHTML = '<div class="text-muted">暂无规格</div>';
+                return;
+            }
+            specCurrentPage = Math.max(1, Math.min(page, specPages.length));
+            
+            const variantsToShow = specPages[specCurrentPage - 1] || [];
+
+            vList.innerHTML = variantsToShow.map((v) => {
+            const style = v.color ? `style="color:${v.color}"` : '';
+            const isActive = selectedVariant && selectedVariant.id === v.id;
+            const isDisabled = v.stock <= 0;
+            const disabledClass = isDisabled ? 'disabled' : '';
+            const clickHandler = isDisabled ? '' : `onclick="selectVariant(${v.id})"`; // 缺货时移除点击事件
+            return `<div class="spec-btn ${isActive ? 'active' : ''} ${disabledClass}" ${style} ${clickHandler} data-id="${v.id}">${v.name}</div>`;
+            }).join('');
+
+            renderSpecPagination();
+        }
+        
+        function changeSpecPage(page) {
+            const totalPages = specPages.length;
+            if (page < 1 || page > totalPages || page === specCurrentPage) return;
+            renderSpecListPage(page);
+        }
+
+        function highlightAndScroll(elementId) {
+            // 如果传入的是元素ID（字符串），则获取元素；如果传入的是元素对象，则直接使用
+            const el = (typeof elementId === 'string') ? document.getElementById(elementId) : elementId;
+            if (!el) return;
+            
+            const skuBody = el.closest('.sku-body');
+            if (skuBody) {
+                skuBody.scrollTo({
+                    top: el.offsetTop - skuBody.offsetTop - 15,
+                    behavior: 'smooth'
+                });
+            }
+            
+            // 如果元素是输入框，则聚焦
+            const input = el.tagName === 'INPUT' ? el : el.querySelector('input');
+            if (input) input.focus();
+
+            // 闪烁高亮
+            el.style.transition = 'none';
+            el.style.backgroundColor = '#fff5f7';
+            setTimeout(() => {
+                el.style.transition = 'background-color 0.5s ease';
+                el.style.backgroundColor = 'transparent';
+                setTimeout(() => el.style.transition = 'none', 500);
+            }, 100);
+        }
+
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            if(!id) return alert('未指定商品');
+            try {
+                const res = await fetch('/api/shop/products');
+                allProducts = await res.json();
+                currentProduct = allProducts.find(p => p.id == id);
+                if (!currentProduct) return alert('商品不存在或已下架');
+                renderPage();
+            } catch (e) { console.error(e); alert('加载失败'); }
+        }
+
+        function renderPage() {
+            const p = currentProduct;
+            const prices = p.variants.map(v => v.price);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceDisplay = (minPrice === maxPrice) ? minPrice : `${minPrice} - ${maxPrice}`;
+            document.title = p.name;
+            document.getElementById('p-title').innerText = p.name;
+            document.getElementById('sku-title').innerText = p.name;
+            document.getElementById('p-desc').innerText = p.description || '暂无详细介绍';
+            document.getElementById('p-price').innerText = priceDisplay;
+            document.getElementById('sku-price-text').innerText = priceDisplay;
+            const totalSales = p.variants.reduce((s,v) => s + (v.sales_count||0), 0);
+            const totalStock = p.variants.reduce((s,v) => s + (v.stock||0), 0);
+            document.getElementById('p-sales').innerText = `已售: ${totalSales}`;
+            document.getElementById('p-stock').innerText = `库存: ${totalStock}`;
+            
+            const defV = p.variants[0];
+            const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
+            document.getElementById('p-img').src = mainImg;
+            document.getElementById('sku-img').src = mainImg;
+
+            hasCalculatedPages = false;
+            specPages = [];
+            specCurrentPage = 1;
+            document.getElementById('variant-list').innerHTML = '<div class="text-muted small">规格加载中...</div>';
+            document.getElementById('spec-pagination-container').innerHTML = '';
+
+            document.getElementById('sku-spec-title-container').innerHTML = `规格 <span style="font-size: 12px; color: #999; font-weight: normal;">（共${p.variants.length}个）</span>`;
+
+            const maxTagsToShow = 10;
+            const tagsToShow = p.variants.slice(0, maxTagsToShow);
+            let skuTagsHtml = tagsToShow.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
+            
+            // *** 修改点 (JS): 增加 (共xxx个) ***
+            if (p.variants.length > maxTagsToShow) {
+                skuTagsHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
+            }
+            document.getElementById('p-select-text').innerHTML = skuTagsHtml;
+
+            renderExtraInfo(null);
+            document.getElementById('sku-selected-text').innerText = '未选择';
+            document.getElementById('random-mode-desc').innerText = '享受批发优惠';
+            selectedVariant = null;
+        }
+        
+        function renderExtraInfo(selectedV) {
+            const infoDiv = document.getElementById('p-extra-info');
+            const variants = currentProduct.variants;
+            let html = '';
+            const showMarkup = selectedV ? (selectedV.custom_markup > 0) : variants.some(v => v.custom_markup > 0);
+            if (showMarkup) { html += `<span class="extra-tag-solid">自选加价</span> `; }
+            let wsText = '';
+            if (selectedV) {
+                if (selectedV.wholesale_config) {
+                    try {
+                        let ws = selectedV.wholesale_config;
+                        if (typeof ws === 'string') ws = JSON.parse(ws);
+                        if (Array.isArray(ws)) {
+                            ws.sort((a, b) => a.qty - b.qty);
+                            wsText = `批发价：${ws.map(w => `${w.qty}起${w.price}元/1个`).join('，')}`;
+                        }
+                    } catch(e) { console.error('WS Error', e); }
+                }
+            } else {
+                const hasWholesale = variants.some(v => v.wholesale_config);
+                if (hasWholesale) { wsText = `批发价：请选择规格`; }
+            }
+            if (wsText) { html += `<span style="padding-top: 2px;vertical-align: middle;">${wsText}</span>`; }
+            if (html) {
+                infoDiv.innerHTML = html;
+                infoDiv.classList.remove('d-none');
+            } else {
+                infoDiv.classList.add('d-none');
+            }
+        }
+
+        function openSkuSheet() { skuSheet.show(); }
+
+        function selectVariant(vid) {
+            selectedVariant = currentProduct.variants.find(v => v.id == vid);
+            
+            renderSpecListPage(specCurrentPage); 
+
+            document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
+            document.getElementById('sku-selected-text').innerText = selectedVariant.name;
+            document.getElementById('p-price').innerText = selectedVariant.price;
+            const labelText = selectedVariant.selection_label || '自选卡密/号码';
+            document.getElementById('selection-label-text').innerText = labelText;
+            
+            // --- *** 修改点 (JS): 构造 "已选" + "更多" 的HTML *** ---
+            const p = currentProduct;
+            let selectedHtml = `<div style="padding-right: 10px;">已选: ${selectedVariant.name}</div>`;
+            if (p.variants.length > 1) { 
+                selectedHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
+            }
+            document.getElementById('p-select-text').innerHTML = selectedHtml;
+            
+            const defV = p.variants[0];
+            const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
+            const targetImg = selectedVariant.image_url || mainImg;
+            document.getElementById('sku-img').src = targetImg;
+            document.getElementById('p-img').src = targetImg;
+
+            renderExtraInfo(selectedVariant);
+
+            const randomDesc = document.getElementById('random-mode-desc');
+            if (selectedVariant.wholesale_config) {
+                try {
+                    let ws = selectedVariant.wholesale_config;
+                    if (typeof ws === 'string') ws = JSON.parse(ws);
+                    if (Array.isArray(ws) && ws.length > 0) {
+                        ws.sort((a, b) => a.qty - b.qty);
+                        const wsText = ws.map(w => `${w.qty}起${w.price}元/1个`).join('，');
+                        randomDesc.innerText = `批发价：${wsText}`;
+                    } else {
+                        randomDesc.innerText = '暂无批发价';
+                    }
+                } catch(e) { randomDesc.innerText = '暂无批发价'; }
+            } else {
+                randomDesc.innerText = '暂无批发价';
+            }
+
+            const modeContainer = document.getElementById('buy-mode-container');
+            if (selectedVariant.custom_markup > 0 && selectedVariant.auto_delivery === 1) {
+                modeContainer.classList.remove('d-none');
+                document.getElementById('markup-amount').innerText = selectedVariant.custom_markup;
+                
+                const radios = document.getElementsByName('buy_mode');
+                radios.forEach(r => r.checked = false);
+                buyMode = null;
+                document.getElementById('card-selector').classList.add('d-none');
+                selectedCardId = null;
+                updatePrice();
+            } else {
+                modeContainer.classList.add('d-none');
+                buyMode = null; 
+                updatePrice();
+            }
+        }
+
+        function toggleBuyMode() {
+            const radios = document.getElementsByName('buy_mode');
+            for(let r of radios) if(r.checked) buyMode = r.value;
+            const cardSelector = document.getElementById('card-selector');
+            if (buyMode === 'select') {
+                cardSelector.classList.remove('d-none');
+                document.getElementById('buy-qty').value = 1;
+                loadCardNotes();
+            } else {
+                cardSelector.classList.add('d-none');
+                selectedCardId = null;
+            }
+            updatePrice();
+        }
+
+        async function loadCardNotes() {
+            if (!selectedVariant) return;
+            const listEl = document.getElementById('card-list');
+            listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">加载中...</div>';
+            try {
+                const res = await fetch(`/api/shop/cards/notes?variant_id=${selectedVariant.id}`);
+                const notes = await res.json();
+                if (notes.length === 0) { listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">暂无可自选卡密/号码</div>'; return; }
+                listEl.innerHTML = notes.map(n => `<div class="card-option" onclick="selectCard(this, ${n.id})">${n.note}</div>`).join('');
+            } catch(e) { listEl.innerHTML = '<div class="text-danger">加载失败</div>'; }
+        }
+
+        function selectCard(el, id) {
+            document.querySelectorAll('.card-option').forEach(opt => opt.classList.remove('active'));
+            el.classList.add('active');
+            selectedCardId = id;
+        }
+
+        function validateQty(input) {
+            if (buyMode === 'select') {
+                input.value = 1;
+                return;
+            }
+            let val = parseInt(input.value);
+            if (isNaN(val) || val < 1) val = 1;
+            if (selectedVariant && val > selectedVariant.stock) val = selectedVariant.stock;
+            input.value = val;
+            updatePrice();
+        }
+        
+        function changeQty(delta) {
+            if (buyMode === 'select') return;
+            const input = document.getElementById('buy-qty');
+            let val = parseInt(input.value) + delta;
+            input.value = val;
+            validateQty(input);
+        }
+
+        function updatePrice() {
+            if (!selectedVariant) return;
+            let price = selectedVariant.price;
+            const qty = parseInt(document.getElementById('buy-qty').value);
+            if (buyMode === 'select') {
+                price += (selectedVariant.custom_markup || 0);
+            } else if (buyMode === 'random') {
+                if (selectedVariant.wholesale_config) {
+                    try {
+                        let ws = selectedVariant.wholesale_config;
+                        if (typeof ws === 'string') ws = JSON.parse(ws);
+                        
+                        if (Array.isArray(ws)) {
+                            ws.sort((a,b) => b.qty - a.qty);
+                            for(let rule of ws) { if(qty >= rule.qty) { price = rule.price; break; } }
+                        }
+                    } catch(e) {}
+                }
+            }
+            document.getElementById('sku-price-text').innerText = price.toFixed(2);
+        }
+
+        // --- *** 优化后的 submitOrder 函数 (只请求一次) *** ---
+        async function submitOrder() {
+            if (!selectedVariant) {
+                alert('请选择规格');
+                highlightAndScroll('sku-spec-title-container');
+                return;
+            }
+
+            const modeContainer = document.getElementById('buy-mode-container');
+            if (modeContainer.offsetHeight > 0 || modeContainer.offsetWidth > 0) {
+                const buyModeRadio = document.querySelector('input[name="buy_mode"]:checked');
+                if (!buyModeRadio) {
+                    alert('请选择购买方式');
+                    highlightAndScroll('buy-mode-container');
+                    return;
+                }
+                if (buyMode === 'select' && !selectedCardId) {
+                    alert('请选择号码');
+                    highlightAndScroll('card-selector');
+                    return;
+                }
+            }
+
+            const quantity = parseInt(document.getElementById('buy-qty').value);
+            if (buyMode !== 'select') {
+                if (selectedVariant.stock < quantity) {
+                    alert('库存不足');
+                    highlightAndScroll(document.getElementById('buy-qty').closest('.d-flex'));
+                    return;
+                }
+            }
+
+            const contactInput = document.getElementById('contact-info');
+            const contact = contactInput.value;
+            if (!contact) {
+                alert('请填写联系方式');
+                highlightAndScroll('contact-info-container');
+                return;
+            }
+            
+            const passwordInput = document.getElementById('query-password');
+            const password = passwordInput.value;
+            if (!password || password.length < 6) {
+                alert('请设置6位以上的查单密码');
+                highlightAndScroll('query-password-container');
+                return;
+            }
+            
+            const paymentMethod = document.querySelector('input[name="payment"]:checked');
+            if (!paymentMethod) {
+                alert('请选择支付方式');
+                highlightAndScroll('payment-method-container');
+                return;
+            }
+
+            const btn = document.querySelector('.btn-confirm');
+            const oldText = btn.innerText;
+            btn.disabled = true; btn.innerText = '正在创建...';
+            try {
+                const payload = { 
+                    variant_id: selectedVariant.id, 
+                    quantity, 
+                    contact, 
+                    query_password: password, 
+                    payment_method: paymentMethod.value
+                };
+                if (buyMode === 'select' && selectedCardId) payload.card_id = selectedCardId;
+                
+                // 1. 只调用 /api/shop/order/create
+                const res = await fetch('/api/shop/order/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const order = await res.json();
+                if(order.error) throw new Error(order.error);
+
+                // 2. 创建成功后，立刻跳转 (不再调用 /api/shop/pay)
+                skuSheet.hide();
+                window.location.href = `pay.html?order_id=${order.order_id}`;
+                
+            } catch (e) { alert(e.message); } 
+            finally { btn.disabled = false; btn.innerText = oldText; }
+        }
+        // --- *** 修改结束 *** ---
+
+        // *** checkOrderLoop 函数已被删除 ***
+
+        init();
+    </script>
+</body>
 </html>
