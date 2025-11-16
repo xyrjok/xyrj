@@ -200,9 +200,15 @@
                     <div class="stepper-btn" onclick="changeQty(1)">+</div>
                 </div>
             </div>
+
             <div class="mb-4" id="contact-info-container">
                 <div class="section-title">联系方式 <span class="text-danger">*</span></div>
                 <input type="text" id="contact-info" class="form-control form-control-custom" placeholder="请输入邮箱或QQ (用于接收卡密)">
+            </div>
+
+            <div class="mb-4" id="query-password-container">
+                <div class="section-title">查单密码 <span class="text-danger">*</span></div>
+                <input type="password" id="query-password" class="form-control form-control-custom" placeholder="请设置6位以上密码, 用于查询订单">
             </div>
             <div class="mb-4" id="payment-method-container">
                 <div class="section-title">支付方式</div>
@@ -360,7 +366,8 @@
         }
 
         function highlightAndScroll(elementId) {
-            const el = document.getElementById(elementId);
+            // 如果传入的是元素ID（字符串），则获取元素；如果传入的是元素对象，则直接使用
+            const el = (typeof elementId === 'string') ? document.getElementById(elementId) : elementId;
             if (!el) return;
             
             const skuBody = el.closest('.sku-body');
@@ -371,9 +378,11 @@
                 });
             }
             
-            const input = el.querySelector('input');
+            // 如果元素是输入框，则聚焦
+            const input = el.tagName === 'INPUT' ? el : el.querySelector('input');
             if (input) input.focus();
 
+            // 闪烁高亮
             el.style.transition = 'none';
             el.style.backgroundColor = '#fff5f7';
             setTimeout(() => {
@@ -610,6 +619,7 @@
             document.getElementById('sku-price-text').innerText = price.toFixed(2);
         }
 
+        // --- *** 修改后的 submitOrder 函数 *** ---
         async function submitOrder() {
             if (!selectedVariant) {
                 alert('请选择规格');
@@ -646,9 +656,18 @@
             if (!contact) {
                 alert('请填写联系方式');
                 highlightAndScroll('contact-info-container');
-                contactInput.focus();
                 return;
             }
+
+            // --- 新增：密码验证 ---
+            const passwordInput = document.getElementById('query-password');
+            const password = passwordInput.value;
+            if (!password || password.length < 6) {
+                alert('请设置6位以上的查单密码');
+                highlightAndScroll('query-password-container');
+                return;
+            }
+            // --- 验证结束 ---
             
             const paymentMethod = document.querySelector('input[name="payment"]:checked');
             if (!paymentMethod) {
@@ -661,10 +680,12 @@
             const oldText = btn.innerText;
             btn.disabled = true; btn.innerText = '正在创建...';
             try {
+                // --- 新增：payload 中加入密码 ---
                 const payload = { 
                     variant_id: selectedVariant.id, 
                     quantity, 
                     contact, 
+                    query_password: password, // <-- 添加密码字段
                     payment_method: paymentMethod.value
                 };
                 if (buyMode === 'select' && selectedCardId) payload.card_id = selectedCardId;
@@ -687,6 +708,7 @@
             } catch (e) { alert(e.message); } 
             finally { btn.disabled = false; btn.innerText = oldText; }
         }
+        // --- *** 修改结束 *** ---
 
         function checkOrderLoop(orderId) {
             const timer = setInterval(async () => {
