@@ -237,7 +237,7 @@
             if (!currentProduct || !vList) return;
 
             vList.innerHTML = currentProduct.variants.map((v) => {
-                const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
+                const style = v.color ? `style="color:${v.color}"` : '';
                 return `<div class="spec-btn" ${style} data-id="${v.id}">${v.name}</div>`;
             }).join('');
             
@@ -322,7 +322,7 @@
             const variantsToShow = specPages[specCurrentPage - 1] || [];
 
             vList.innerHTML = variantsToShow.map((v) => {
-                const style = v.color ? `style="color:${v.color}; border-color:${v.color}"` : '';
+                const style = v.color ? `style="color:${v.color}"` : '';
                 const isActive = selectedVariant && selectedVariant.id === v.id;
                 return `<div class="spec-btn ${isActive ? 'active' : ''}" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
             }).join('');
