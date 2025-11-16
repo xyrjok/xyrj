@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const router = Router();
 
-// --- 中间件：管理员身份验证 ---
+// --- 中间件：管理员身份验证 (已修正为使用环境变量) ---
 const authMiddleware = async (request, env) => {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -12,16 +12,12 @@ const authMiddleware = async (request, env) => {
     }
     const token = authHeader.split(' ')[1];
     
-    // 从KV获取存储的Token
-    const storedToken = await env.KV.get('adminToken');
+    // 从环境变量获取存储的Token
+    const storedToken = env.ADMIN_TOKEN;
     
-    if (token !== storedToken) {
+    if (!storedToken || token !== storedToken) {
         return new Response(JSON.stringify({ error: '无效的Token' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
-    
-    // 验证通过，继续请求
-    // 可以在 request 对象上附加用户信息（如果需要）
-    // request.user = { id: 'admin' }; 
 };
 
 // --- API 路由 (公开) ---
@@ -32,7 +28,7 @@ router.get('/api/shop/config', async (request, env) => {
         const keys = [
             'site_title', 'site_description', 'site_keywords', 
             'site_logo_url', 'site_footer_text', 'theme',
-            'site_announcement', 'payment_alipay_f2f_enabled' // 示例：添加更多可能需要的配置
+            'site_announcement', 'payment_alipay_f2f_enabled'
         ];
         const placeholders = keys.map(() => '?').join(',');
         
@@ -58,17 +54,10 @@ router.get('/api/shop/config', async (request, env) => {
 // 获取所有商品和分类 (公开)
 router.get('/api/shop/products', async (request, env) => {
     try {
-        // 1. 获取所有可见分类
         const { results: categories } = await env.DB.prepare("SELECT * FROM categories WHERE status = 1 ORDER BY sort_order ASC").all();
-        
-        // 2. 获取所有可见商品
         const { results: products } = await env.DB.prepare("SELECT * FROM products WHERE status = 1 ORDER BY sort_order ASC").all();
-
-        // 3. 获取所有可见规格
         const { results: variants } = await env.DB.prepare("SELECT * FROM variants WHERE status = 1 ORDER BY sort_order ASC").all();
         
-        // 4. 获取所有规格的库存 (未售出卡密) 和总销量 (已售出卡密)
-        // 注意: COUNT(CASE...) 是一种高效的方式，一次查询获取多个状态
         const { results: variantMeta } = await env.DB.prepare(
             `SELECT 
                 variant_id, 
@@ -78,13 +67,11 @@ router.get('/api/shop/products', async (request, env) => {
              GROUP BY variant_id`
         ).all();
         
-        // 5. 将库存和销量数据转换为 Map 方便快速查找
         const variantMetaMap = variantMeta.reduce((acc, item) => {
             acc[item.variant_id] = { stock: item.stock || 0, sales_count: item.sales_count || 0 };
             return acc;
         }, {});
 
-        // 6. 组合数据：将规格附加到商品
         products.forEach(p => {
             p.variants = variants
                 .filter(v => v.product_id === p.id)
@@ -95,7 +82,6 @@ router.get('/api/shop/products', async (request, env) => {
                 }));
         });
 
-        // 7. 组合数据：将商品附加到分类
         categories.forEach(c => {
             c.products = products.filter(p => p.category_id === c.id);
         });
@@ -116,7 +102,6 @@ router.get('/api/shop/cards/notes', async (request, env) => {
         return new Response(JSON.stringify({ error: '缺少 variant_id' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     try {
-        // 限制最多 50 条
         const { results } = await env.DB.prepare(
             "SELECT id, note FROM cards WHERE variant_id = ? AND status = 0 AND note IS NOT NULL LIMIT 50"
         ).bind(variantId).all();
@@ -126,17 +111,15 @@ router.get('/api/shop/cards/notes', async (request, env) => {
     }
 });
 
-// *** 1. 修改点：创建订单 (公开) - 增加 query_password ***
+// 创建订单 (公开) - 已增加 query_password
 router.post('/api/shop/order/create', async (request, env) => {
     try {
-        // 1.1 读取 query_password
         const { variant_id, quantity, contact, payment_method, card_id, query_password } = await request.json();
 
         if (!variant_id || !quantity || !contact || !payment_method) {
             return new Response(JSON.stringify({ error: '缺少必要参数' }), { status: 400 });
         }
         
-        // 1. 获取规格信息
         const variant = await env.DB.prepare("SELECT * FROM variants WHERE id = ?").bind(variant_id).first();
         if (!variant) return new Response(JSON.stringify({ error: '规格不存在' }), { status: 404 });
 
@@ -145,31 +128,27 @@ router.post('/api/shop/order/create', async (request, env) => {
         let price = variant.price;
         let cardToLock = null;
 
-        // 2. 处理价格和库存
-        if (card_id) { // 自选
+        if (card_id) { 
             if (quantity > 1) return new Response(JSON.stringify({ error: '自选商品一次只能购买一个' }), { status: 400 });
             price += variant.custom_markup;
             cardToLock = await env.DB.prepare("SELECT * FROM cards WHERE id = ? AND variant_id = ? AND status = 0").bind(card_id, variant_id).first();
             if (!cardToLock) return new Response(JSON.stringify({ error: '选择的号码不存在或已被购买' }), { status: 400 });
-        } else { // 随机或批发
+        } else {
             const stockCheck = await env.DB.prepare("SELECT COUNT(id) as stock FROM cards WHERE variant_id = ? AND status = 0").bind(variant_id).first();
             if (stockCheck.stock < quantity) return new Response(JSON.stringify({ error: '库存不足' }), { status: 400 });
             
-            // 计算批发价
             if (variant.wholesale_config) {
                 try {
                     let ws = JSON.parse(variant.wholesale_config);
-                    ws.sort((a,b) => b.qty - a.qty); // 从高到低排序
+                    ws.sort((a,b) => b.qty - a.qty);
                     for(let rule of ws) { if(quantity >= rule.qty) { price = rule.price; break; } }
-                } catch(e) { /* 解析失败, 使用原价 */ }
+                } catch(e) {}
             }
         }
 
         const totalAmount = (price * quantity).toFixed(2);
         const orderId = uuidv4();
         
-        // 3. 创建订单
-        // *** 1.2 修改 INSERT 语句 ***
         const orderInsert = env.DB.prepare(
             `INSERT INTO orders (id, product_id, variant_id, product_name, variant_name, quantity, total_amount, status, contact, payment_method, query_password) 
              VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`
@@ -183,15 +162,13 @@ router.post('/api/shop/order/create', async (request, env) => {
             totalAmount, 
             contact, 
             payment_method,
-            query_password || null // *** 1.3 绑定新字段 ***
+            query_password || null
         );
 
         if (cardToLock) {
-            // 事务：创建订单 + 锁定(status=2)自选卡密
             const cardUpdate = env.DB.prepare("UPDATE cards SET status = 2, order_id = ? WHERE id = ?").bind(orderId, cardToLock.id);
             await env.DB.batch([orderInsert, cardUpdate]);
         } else {
-            // 仅创建订单
             await orderInsert.run();
         }
 
@@ -204,7 +181,6 @@ router.post('/api/shop/order/create', async (request, env) => {
 
 // 支付 (公开)
 router.post('/api/shop/pay', async (request, env) => {
-    // ... (此部分代码保持不变)
     const { order_id } = await request.json();
     if (!order_id) return new Response(JSON.stringify({ error: '缺少 order_id' }), { status: 400 });
 
@@ -219,38 +195,29 @@ router.post('/api/shop/pay', async (request, env) => {
         order_id: order_id
     };
     
-    // 模拟支付回调 (在实际场景中, 这是由支付网关异步调用的)
-    // 为了演示, 我们在一段时间后自动更新订单状态
-    const waitUntil = new Date(Date.now() + 10 * 1000); // 10秒后
+    // 模拟支付回调
     env.CTX.waitUntil(
         (async () => {
-            await new Promise(resolve => setTimeout(resolve, 10000)); // 等待10秒
+            await new Promise(resolve => setTimeout(resolve, 10000));
             
-            // 1. 检查订单是否还是待支付
             const currentOrder = await env.DB.prepare("SELECT * FROM orders WHERE id = ?").bind(order_id).first();
             if (currentOrder && currentOrder.status === 0) {
                 
-                // 2. 检查是自选还是随机
                 let cardsToUpdate;
                 const lockedCard = await env.DB.prepare("SELECT * FROM cards WHERE order_id = ? AND status = 2").bind(order_id).first();
                 
                 if (lockedCard) {
-                    // 自选
                     cardsToUpdate = [lockedCard];
                 } else {
-                    // 随机
                     const { results } = await env.DB.prepare(
                         "SELECT * FROM cards WHERE variant_id = ? AND status = 0 LIMIT ?"
                     ).bind(currentOrder.variant_id, currentOrder.quantity).all();
                     cardsToUpdate = results;
                 }
 
-                // 3. 检查卡密是否足够
                 if (cardsToUpdate.length < currentOrder.quantity) {
-                    // 库存不足，支付失败 (实际应退款)
-                    await env.DB.prepare("UPDATE orders SET status = 3 WHERE id = ?").bind(order_id).run(); // 3 = 已退款
+                    await env.DB.prepare("UPDATE orders SET status = 3 WHERE id = ?").bind(order_id).run();
                 } else {
-                    // 4. 事务：更新订单状态 + 绑定卡密
                     const statements = [
                         env.DB.prepare("UPDATE orders SET status = 1, paid_at = CURRENT_TIMESTAMP WHERE id = ?").bind(order_id)
                     ];
@@ -270,7 +237,6 @@ router.post('/api/shop/pay', async (request, env) => {
 
 // 查询订单状态 (公开)
 router.get('/api/shop/order/status', async (request, env) => {
-    // ... (此部分代码保持不变)
     const { query } = request;
     const orderId = query.order_id;
     if (!orderId) return new Response(JSON.stringify({ error: '缺少 order_id' }), { status: 400 });
@@ -283,7 +249,6 @@ router.get('/api/shop/order/status', async (request, env) => {
 
 // 获取文章列表 (公开)
 router.get('/api/shop/articles', async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { results } = await env.DB.prepare(
             `SELECT a.id, a.title, a.summary, a.created_at, c.name as category_name 
@@ -300,7 +265,6 @@ router.get('/api/shop/articles', async (request, env) => {
 
 // 获取文章详情 (公开)
 router.get('/api/shop/article/detail', async (request, env) => {
-    // ... (此部分代码保持不变)
     const { query } = request;
     const id = query.id;
     if (!id) return new Response(JSON.stringify({ error: '缺少 id' }), { status: 400 });
@@ -323,7 +287,6 @@ router.get('/api/shop/article/detail', async (request, env) => {
 
 // 获取文章分类 (公开)
 router.get('/api/shop/article/categories', async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { results } = await env.DB.prepare("SELECT * FROM article_categories ORDER BY sort_order ASC").all();
         return new Response(JSON.stringify(results));
@@ -335,22 +298,23 @@ router.get('/api/shop/article/categories', async (request, env) => {
 
 // --- 管理员路由 (需要鉴权) ---
 
-// 登录
+// 登录 (已修正为使用环境变量)
 router.post('/api/admin/login', async (request, env) => {
-    // ... (此部分代码保持不变)
     const { password } = await request.json();
-    const adminPass = await env.KV.get('adminPassword');
     
-    if (adminPass && password === adminPass) {
-        const token = uuidv4();
-        await env.KV.put('adminToken', token, { expirationTtl: 3600 * 24 }); // 24小时过期
-        return new Response(JSON.stringify({ token }));
-    } else if (!adminPass && password === '123456') {
-        // 初始密码
-        const token = uuidv4();
-        await env.KV.put('adminToken', token, { expirationTtl: 3600 * 24 });
-        await env.KV.put('adminPassword', '123456'); // 保存初始密码
-        return new Response(JSON.stringify({ token }));
+    // 1. 从环境变量读取密码 (您在机密中设置的)
+    const adminPass = env.ADMIN_PASS; 
+    // 2. 从环境变量读取 Token (您在机密中设置的)
+    const adminToken = env.ADMIN_TOKEN;
+
+    if (!adminPass || !adminToken) {
+         return new Response(JSON.stringify({ error: '服务器未配置 ADMIN_PASS 或 ADMIN_TOKEN' }), { status: 500 });
+    }
+
+    // 3. 检查密码是否匹配
+    if (password === adminPass) {
+        // 4. 如果匹配，返回您预设的 ADMIN_TOKEN
+        return new Response(JSON.stringify({ token: adminToken }));
     } else {
         return new Response(JSON.stringify({ error: '密码错误' }), { status: 401 });
     }
@@ -358,46 +322,37 @@ router.post('/api/admin/login', async (request, env) => {
 
 // 仪表盘统计
 router.get('/api/admin/dashboard/stats', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0];
         
-        // 1. 今日销售额
         const { result: todaySales } = await env.DB.prepare(
             "SELECT SUM(total_amount) as total FROM orders WHERE status >= 1 AND date(paid_at) = ?"
         ).bind(today).first();
 
-        // 2. 今日订单
         const { result: todayOrders } = await env.DB.prepare(
             "SELECT COUNT(id) as count FROM orders WHERE date(created_at) = ?"
         ).bind(today).first();
         
-        // 3. 总销售额
         const { result: totalSales } = await env.DB.prepare(
             "SELECT SUM(total_amount) as total FROM orders WHERE status >= 1"
         ).first();
 
-        // 4. 总订单数
         const { result: totalOrders } = await env.DB.prepare(
             "SELECT COUNT(id) as count FROM orders"
         ).first();
 
-        // 5. 总商品数
         const { result: totalProducts } = await env.DB.prepare(
             "SELECT COUNT(id) as count FROM products"
         ).first();
 
-        // 6. 总卡密数
         const { result: totalCards } = await env.DB.prepare(
             "SELECT COUNT(id) as count FROM cards"
         ).first();
         
-        // 7. 待发货 (已支付但未完成) - 假设自动发货失败
         const { result: pendingOrders } = await env.DB.prepare(
             "SELECT COUNT(id) as count FROM orders WHERE status = 1"
         ).first();
 
-        // 8. 库存预警 (库存 < 10)
         const { results: lowStock } = await env.DB.prepare(
             `SELECT v.name, COUNT(c.id) as stock
              FROM variants v
@@ -425,7 +380,6 @@ router.get('/api/admin/dashboard/stats', authMiddleware, async (request, env) =>
 
 // --- 商品管理 ---
 router.get('/api/admin/products', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { results } = await env.DB.prepare(
             `SELECT p.*, c.name as category_name 
@@ -440,7 +394,6 @@ router.get('/api/admin/products', authMiddleware, async (request, env) => {
 });
 
 router.post('/api/admin/products', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { name, description, category_id, status, sort_order, image_url } = await request.json();
         const id = uuidv4();
@@ -454,7 +407,6 @@ router.post('/api/admin/products', authMiddleware, async (request, env) => {
 });
 
 router.put('/api/admin/products/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
         const { name, description, category_id, status, sort_order, image_url } = await request.json();
@@ -468,10 +420,8 @@ router.put('/api/admin/products/:id', authMiddleware, async (request, env) => {
 });
 
 router.delete('/api/admin/products/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
-        // 事务：删除商品、规格、卡密
         const variants = await env.DB.prepare("SELECT id FROM variants WHERE product_id = ?").bind(id).all();
         const variantIds = variants.results.map(v => v.id);
         
@@ -493,7 +443,6 @@ router.delete('/api/admin/products/:id', authMiddleware, async (request, env) =>
 
 // --- 分类管理 ---
 router.get('/api/admin/categories', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { results } = await env.DB.prepare("SELECT * FROM categories ORDER BY sort_order ASC").all();
         return new Response(JSON.stringify(results));
@@ -503,7 +452,6 @@ router.get('/api/admin/categories', authMiddleware, async (request, env) => {
 });
 
 router.post('/api/admin/categories', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { name, status, sort_order } = await request.json();
         const id = uuidv4();
@@ -517,7 +465,6 @@ router.post('/api/admin/categories', authMiddleware, async (request, env) => {
 });
 
 router.put('/api/admin/categories/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
         const { name, status, sort_order } = await request.json();
@@ -531,10 +478,8 @@ router.put('/api/admin/categories/:id', authMiddleware, async (request, env) => 
 });
 
 router.delete('/api/admin/categories/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
-        // 检查是否有商品关联
         const product = await env.DB.prepare("SELECT id FROM products WHERE category_id = ? LIMIT 1").bind(id).first();
         if (product) {
             return new Response(JSON.stringify({ error: '分类下尚有商品，无法删除' }), { status: 400 });
@@ -548,7 +493,6 @@ router.delete('/api/admin/categories/:id', authMiddleware, async (request, env) 
 
 // --- 规格管理 ---
 router.get('/api/admin/variants', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { query } = request;
         const productId = query.product_id;
@@ -562,7 +506,6 @@ router.get('/api/admin/variants', authMiddleware, async (request, env) => {
 });
 
 router.post('/api/admin/variants', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { product_id, name, price, status, sort_order, custom_markup, wholesale_config, image_url, color, auto_delivery } = await request.json();
         const id = uuidv4();
@@ -577,7 +520,6 @@ router.post('/api/admin/variants', authMiddleware, async (request, env) => {
 });
 
 router.put('/api/admin/variants/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
         const { name, price, status, sort_order, custom_markup, wholesale_config, image_url, color, auto_delivery } = await request.json();
@@ -593,10 +535,8 @@ router.put('/api/admin/variants/:id', authMiddleware, async (request, env) => {
 });
 
 router.delete('/api/admin/variants/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
-        // 事务：删除规格和关联卡密
         await env.DB.batch([
             env.DB.prepare("DELETE FROM cards WHERE variant_id = ?").bind(id),
             env.DB.prepare("DELETE FROM variants WHERE id = ?").bind(id)
@@ -609,7 +549,6 @@ router.delete('/api/admin/variants/:id', authMiddleware, async (request, env) =>
 
 // --- 卡密管理 ---
 router.post('/api/admin/cards', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { variant_id, content, note } = await request.json();
         if (!variant_id || !content) {
@@ -636,7 +575,6 @@ router.post('/api/admin/cards', authMiddleware, async (request, env) => {
 });
 
 router.get('/api/admin/cards', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { query } = request;
         const variantId = query.variant_id;
@@ -652,9 +590,8 @@ router.get('/api/admin/cards', authMiddleware, async (request, env) => {
 });
 
 router.delete('/api/admin/cards', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
-        const { ids } = await request.json(); // 接收 ID 数组
+        const { ids } = await request.json();
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return new Response(JSON.stringify({ error: '无效的卡密ID' }), { status: 400 });
         }
@@ -672,7 +609,6 @@ router.delete('/api/admin/cards', authMiddleware, async (request, env) => {
 
 // 卡密导入 (R2)
 router.post('/api/admin/cards/import', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { variant_id, file_key, note } = await request.json();
         if (!variant_id || !file_key) {
@@ -685,7 +621,7 @@ router.post('/api/admin/cards/import', authMiddleware, async (request, env) => {
         }
 
         const content = await object.text();
-        await env.R2.delete(file_key); // 用后即焚
+        await env.R2.delete(file_key);
 
         const cards = content.split(/[\n\r]+/).filter(line => line.trim() !== '');
         if (cards.length === 0) {
@@ -708,7 +644,6 @@ router.post('/api/admin/cards/import', authMiddleware, async (request, env) => {
 
 // 卡密导出 (R2)
 router.get('/api/admin/cards/export', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { query } = request;
         const variantId = query.variant_id;
@@ -729,7 +664,6 @@ router.get('/api/admin/cards/export', authMiddleware, async (request, env) => {
             httpMetadata: { contentType: 'text/plain' },
         });
 
-        // 生成一个临时的预签名下载链接 (有效期 60 秒)
         const supabase = createClient(env.R2_URL, env.R2_ANON_KEY);
         const { data, error } = await supabase
             .storage
@@ -747,7 +681,6 @@ router.get('/api/admin/cards/export', authMiddleware, async (request, env) => {
 
 // --- 订单管理 ---
 router.get('/api/admin/orders', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { results } = await env.DB.prepare(
             "SELECT * FROM orders ORDER BY created_at DESC"
@@ -758,7 +691,7 @@ router.get('/api/admin/orders', authMiddleware, async (request, env) => {
     }
 });
 
-// *** 2. 新增：修改单个订单状态 (受保护) ***
+// *** 新增：修改单个订单状态 ***
 router.put('/api/admin/orders/:id', authMiddleware, async (request, env) => {
     const { id } = request.params;
     const { status } = await request.json();
@@ -777,11 +710,10 @@ router.put('/api/admin/orders/:id', authMiddleware, async (request, env) => {
     }
 });
 
-// *** 2. 新增：删除单个订单 (受保护) ***
+// *** 新增：删除单个订单 ***
 router.delete('/api/admin/orders/:id', authMiddleware, async (request, env) => {
     const { id } = request.params;
     try {
-        // 使用事务删除订单和关联的卡密 (如果卡密已售出或锁定)
         const statements = [
             env.DB.prepare("DELETE FROM cards WHERE order_id = ?").bind(id),
             env.DB.prepare("DELETE FROM orders WHERE id = ?").bind(id)
@@ -793,7 +725,7 @@ router.delete('/api/admin/orders/:id', authMiddleware, async (request, env) => {
     }
 });
 
-// *** 3. 新增：批量修改订单状态 (受保护) ***
+// *** 新增：批量修改订单状态 ***
 router.put('/api/admin/orders', authMiddleware, async (request, env) => {
     const { ids, status } = await request.json();
 
@@ -802,7 +734,6 @@ router.put('/api/admin/orders', authMiddleware, async (request, env) => {
     }
 
     try {
-        // 构建 IN 查询
         const placeholders = ids.map(() => '?').join(',');
         const query = `UPDATE orders SET status = ? WHERE id IN (${placeholders})`;
         
@@ -816,7 +747,7 @@ router.put('/api/admin/orders', authMiddleware, async (request, env) => {
     }
 });
 
-// *** 3. 新增：批量删除订单 (受保护) ***
+// *** 新增：批量删除订单 ***
 router.delete('/api/admin/orders', authMiddleware, async (request, env) => {
     const { ids } = await request.json();
     
@@ -825,13 +756,11 @@ router.delete('/api/admin/orders', authMiddleware, async (request, env) => {
     }
 
     try {
-        // 构建 IN 查询
         const placeholders = ids.map(() => '?').join(',');
         
         const deleteCardsQuery = `DELETE FROM cards WHERE order_id IN (${placeholders})`;
         const deleteOrdersQuery = `DELETE FROM orders WHERE id IN (${placeholders})`;
         
-        // 使用事务删除
         const statements = [
             env.DB.prepare(deleteCardsQuery).bind(...ids),
             env.DB.prepare(deleteOrdersQuery).bind(...ids)
@@ -847,7 +776,6 @@ router.delete('/api/admin/orders', authMiddleware, async (request, env) => {
 
 // --- 文章管理 ---
 router.get('/api/admin/articles', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { results } = await env.DB.prepare(
             `SELECT a.*, c.name as category_name
@@ -862,7 +790,6 @@ router.get('/api/admin/articles', authMiddleware, async (request, env) => {
 });
 
 router.post('/api/admin/articles', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { title, content, summary, category_id, status } = await request.json();
         const id = uuidv4();
@@ -876,7 +803,6 @@ router.post('/api/admin/articles', authMiddleware, async (request, env) => {
 });
 
 router.put('/api/admin/articles/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
         const { title, content, summary, category_id, status } = await request.json();
@@ -890,7 +816,6 @@ router.put('/api/admin/articles/:id', authMiddleware, async (request, env) => {
 });
 
 router.delete('/api/admin/articles/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
         await env.DB.prepare("DELETE FROM articles WHERE id = ?").bind(id).run();
@@ -902,7 +827,6 @@ router.delete('/api/admin/articles/:id', authMiddleware, async (request, env) =>
 
 // --- 文章分类管理 ---
 router.get('/api/admin/article_categories', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { results } = await env.DB.prepare("SELECT * FROM article_categories ORDER BY sort_order ASC").all();
         return new Response(JSON.stringify(results));
@@ -912,7 +836,6 @@ router.get('/api/admin/article_categories', authMiddleware, async (request, env)
 });
 
 router.post('/api/admin/article_categories', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { name, sort_order } = await request.json();
         const id = uuidv4();
@@ -926,7 +849,6 @@ router.post('/api/admin/article_categories', authMiddleware, async (request, env
 });
 
 router.put('/api/admin/article_categories/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
         const { name, sort_order } = await request.json();
@@ -940,7 +862,6 @@ router.put('/api/admin/article_categories/:id', authMiddleware, async (request, 
 });
 
 router.delete('/api/admin/article_categories/:id', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const { id } = request.params;
         const article = await env.DB.prepare("SELECT id FROM articles WHERE category_id = ? LIMIT 1").bind(id).first();
@@ -957,7 +878,6 @@ router.delete('/api/admin/article_categories/:id', authMiddleware, async (reques
 
 // --- 支付设置 ---
 router.get('/api/admin/payments', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const keys = ['payment_alipay_f2f_enabled', 'payment_alipay_f2f_appid', 'payment_alipay_f2f_private_key', 'payment_alipay_f2f_public_key'];
         const placeholders = keys.map(() => '?').join(',');
@@ -977,7 +897,6 @@ router.get('/api/admin/payments', authMiddleware, async (request, env) => {
 });
 
 router.post('/api/admin/payments', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const settings = await request.json();
         const statements = Object.entries(settings).map(([key, value]) => {
@@ -994,7 +913,6 @@ router.post('/api/admin/payments', authMiddleware, async (request, env) => {
 
 // --- 系统设置 ---
 router.get('/api/admin/settings', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const keys = ['site_title', 'site_description', 'site_keywords', 'site_logo_url', 'site_footer_text', 'site_announcement', 'theme'];
         const placeholders = keys.map(() => '?').join(',');
@@ -1014,22 +932,43 @@ router.get('/api/admin/settings', authMiddleware, async (request, env) => {
 });
 
 router.post('/api/admin/settings', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const settings = await request.json();
-        const statements = Object.entries(settings).map(([key, value]) => {
+        
+        // 分离密码和 D1 设置
+        let adminPassword = null;
+        const dbSettings = {};
+        for (const [key, value] of Object.entries(settings)) {
+            if (key === 'admin_password') {
+                if (value && value.trim() !== '') {
+                    adminPassword = value.trim();
+                }
+            } else {
+                dbSettings[key] = value;
+            }
+        }
+
+        // 1. 更新 D1 中的设置
+        const statements = Object.entries(dbSettings).map(([key, value]) => {
             return env.DB.prepare(
                 "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
             ).bind(key, value);
         });
         
-        // 单独处理管理员密码
-        if (settings.admin_password && settings.admin_password.trim() !== '') {
-            await env.KV.put('adminPassword', settings.admin_password.trim());
+        if (statements.length > 0) {
+            await env.DB.batch(statements);
         }
 
-        await env.DB.batch(statements);
-        return new Response(JSON.stringify({ success: true }));
+        // 2. 更新环境变量中的密码 (注意：Worker 无法修改环境变量，这里是警告)
+        if (adminPassword) {
+            // 在 worker 中无法直接修改 env.ADMIN_PASS。
+            // 真正安全的做法是让用户去 Cloudflare Dashboard 手动修改 ADMIN_PASS 环境变量。
+            // 这里的逻辑是一个“陷阱”，它无法按预期工作。
+            // 我们将跳过修改密码的逻辑，因为 worker 无法修改自己的环境变量。
+            // adminPass = adminPassword; // 这只是一个局部变量，不会生效
+        }
+
+        return new Response(JSON.stringify({ success: true, message: "设置已保存。注意：管理员密码请在 Cloudflare 仪表盘 的“环境变量”中修改。" }));
     } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), { status: 500 });
     }
@@ -1037,7 +976,6 @@ router.post('/api/admin/settings', authMiddleware, async (request, env) => {
 
 // --- 文件上传 (R2) ---
 router.post('/api/admin/upload', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
     try {
         const formData = await request.formData();
         const file = formData.get('file');
@@ -1051,7 +989,6 @@ router.post('/api/admin/upload', authMiddleware, async (request, env) => {
             httpMetadata: { contentType: file.type },
         });
 
-        // 假设 R2 绑定了公开访问域名
         const publicUrl = `${env.R2_PUBLIC_URL}/${fileKey}`;
 
         return new Response(JSON.stringify({ url: publicUrl, key: fileKey }));
@@ -1060,20 +997,7 @@ router.post('/api/admin/upload', authMiddleware, async (request, env) => {
     }
 });
 
-// --- 主题管理 (KV) ---
-router.get('/api/admin/themes', authMiddleware, async (request, env) => {
-    // ... (此部分代码保持不变)
-    try {
-        // 假设主题文件信息存储在 KV 中
-        const themeList = await env.KV.get('theme_list', 'json');
-        if (!themeList) {
-            return new Response(JSON.stringify([])); // 返回空列表
-        }
-        return new Response(JSON.stringify(themeList));
-    } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
-    }
-});
+// --- (已删除 “主题管理 (KV)” 路由) ---
 
 // 404
 router.all('*', () => new Response('Not Found.', { status: 404 }));
