@@ -290,8 +290,20 @@ async function handleApi(request, env, url) {
             }
             
             // --- 订单管理 API ---
+            // *** 修改点: 支持按 contact 搜索 ***
             if (path === '/api/admin/orders/list') {
-                const { results } = await db.prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 100").all();
+                const contact = url.searchParams.get('contact');
+                let query;
+                let params = [];
+                
+                if (contact) {
+                    query = "SELECT * FROM orders WHERE contact LIKE ? ORDER BY created_at DESC LIMIT 100";
+                    params = [`%${contact}%`];
+                } else {
+                    query = "SELECT * FROM orders ORDER BY created_at DESC LIMIT 100";
+                }
+                
+                const { results } = await db.prepare(query).bind(...params).all();
                 return jsonRes(results);
             }
 
@@ -546,11 +558,17 @@ async function handleApi(request, env, url) {
 
         // --- 订单与支付 API (Shop) ---
 
-        // [修改] 创建订单 (支持自选卡密 card_id)
+        // *** 修改点: 创建订单 (支持自选卡密 card_id 和 查单密码 query_password) ***
         if (path === '/api/shop/order/create' && method === 'POST') {
-            const { variant_id, quantity, contact, payment_method, card_id } = await request.json();
+            // 1. 接收 query_password
+            const { variant_id, quantity, contact, payment_method, card_id, query_password } = await request.json();
             const variant = await db.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
             if (!variant) return errRes('规格不存在');
+
+            // [新增] 验证查单密码
+            if (!query_password || query_password.length < 6) {
+                return errRes('请设置6位以上的查单密码');
+            }
 
             // === 库存检查 ===
             let stock = 0;
@@ -606,8 +624,9 @@ async function handleApi(request, env, url) {
             let cardsSentPlaceholder = null;
             if (card_id) cardsSentPlaceholder = JSON.stringify({ target_id: card_id });
 
-            await db.prepare("INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, payment_method, created_at, status, cards_sent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)")
-                .bind(order_id, variant_id, product.name, variant.name, finalPrice, finalQuantity, total_amount, contact, payment_method, time(), cardsSentPlaceholder).run();
+            // 2. 插入 query_password 到数据库
+            await db.prepare("INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, query_password, payment_method, created_at, status, cards_sent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)")
+                .bind(order_id, variant_id, product.name, variant.name, finalPrice, finalQuantity, total_amount, contact, query_password, payment_method, time(), cardsSentPlaceholder).run();
 
             return jsonRes({ order_id, total_amount, payment_method });
         }
