@@ -104,6 +104,27 @@
         #spec-pagination-container .page-item.disabled .page-link {
             color: #dc3545; 
         }
+        .spec-btn.disabled {
+            color: #bbb !important; /* 强制灰色文字, 覆盖内联颜色 */
+            background-color: #fcfcfc; /* 浅灰色背景 */
+            pointer-events: none; /* 禁止点击 */
+            position: relative; /* 用于角标定位 */
+            overflow: hidden; /* 隐藏溢出的角标 */
+        }
+        
+        .spec-btn.disabled::after {
+            content: "缺货"; /* 角标文字 */
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #dc3545; /* 红色背景 */
+            color: #fff; /* 白色文字 */
+            font-size: 9px;
+            padding: 1px 4px;
+            border-bottom-left-radius: 4px; /* 轻微圆角 */
+            line-height: 1.2;
+            font-weight: normal; /* 抵消按钮的粗体 */
+        }
     </style>
 </head>
 <body>
@@ -237,8 +258,10 @@
             if (!currentProduct || !vList) return;
 
             vList.innerHTML = currentProduct.variants.map((v) => {
-                const style = v.color ? `style="color:${v.color}"` : '';
-                return `<div class="spec-btn" ${style} data-id="${v.id}">${v.name}</div>`;
+            const style = v.color ? `style="color:${v.color}"` : '';
+            const isDisabled = v.stock <= 0;
+            const disabledClass = isDisabled ? 'disabled' : '';
+            return `<div class="spec-btn ${disabledClass}" ${style} data-id="${v.id}">${v.name}</div>`;
             }).join('');
             
             const buttons = vList.querySelectorAll('.spec-btn');
@@ -322,9 +345,12 @@
             const variantsToShow = specPages[specCurrentPage - 1] || [];
 
             vList.innerHTML = variantsToShow.map((v) => {
-                const style = v.color ? `style="color:${v.color}"` : '';
-                const isActive = selectedVariant && selectedVariant.id === v.id;
-                return `<div class="spec-btn ${isActive ? 'active' : ''}" ${style} onclick="selectVariant(${v.id})" data-id="${v.id}">${v.name}</div>`;
+            const style = v.color ? `style="color:${v.color}"` : '';
+            const isActive = selectedVariant && selectedVariant.id === v.id;
+            const isDisabled = v.stock <= 0;
+            const disabledClass = isDisabled ? 'disabled' : '';
+            const clickHandler = isDisabled ? '' : `onclick="selectVariant(${v.id})"`; // 缺货时移除点击事件
+            return `<div class="spec-btn ${isActive ? 'active' : ''} ${disabledClass}" ${style} ${clickHandler} data-id="${v.id}">${v.name}</div>`;
             }).join('');
 
             renderSpecPagination();
