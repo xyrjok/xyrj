@@ -18,6 +18,7 @@
         .prod-title { font-size: 16px; font-weight: 600; color: #051b28; line-height: 1.4; margin-bottom: 8px; }
         .prod-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-bottom: 5px; }
         
+        /* 优惠信息模块 */
         .extra-info { 
             background: #fff5f7; 
             border-radius: 4px; 
@@ -51,7 +52,7 @@
         .sku-sheet { border-top-left-radius: 16px; border-top-right-radius: 16px; height: 80vh !important; }
         .sku-header { display: flex; padding: 15px; position: relative; border-bottom: 1px solid #f5f5f5; }
         .sku-thumb { width: 90px; height: 90px; border-radius: 6px; margin-top: -30px; border: 3px solid #fff; background: #fff; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .sku-info { margin-left: 12px; padding-top: 5px; flex: 1; min-width: 0; }
+        .sku-info { margin-left: 12px; padding-top: 5px; flex: 1; min-width: 0; } /* 增加 flex: 1 和 min-width: 0 确保长标题能换行 */
         .sku-price { color: #ff5000; font-size: 20px; font-weight: bold; }
         .sku-stock { font-size: 12px; color: #999; margin-top: 4px; }
         .sku-selected { font-size: 12px; color: #333; margin-top: 2px; }
@@ -101,25 +102,23 @@
             color: #212529bf; 
         }
         #spec-pagination-container .page-item.disabled .page-link {
-            color: #dc3545; 
+            color: #ff5000; 
         }
-
         .spec-btn.disabled {
-            color: #bbb !important;
-            pointer-events: none;
-            position: relative;
+            color: #bbb !important; /* 强制灰色文字, 覆盖内联颜色 */
+            pointer-events: none; /* 禁止点击 */
+            position: relative; /* 用于角标定位 */
         }
-        
         .spec-btn.disabled::after {
             content: "缺货";
             position: absolute;
-            top: 0;
-            right: 0;
-            background: #dc3545;
+            top: -5px;
+            right: -5px;
+            background: #918c8d;
             color: #fff;
             font-size: 9px;
             padding: 1px 4px;
-            border-bottom-left-radius: 4px;
+            border-radius: 3px;
             line-height: 1.2;
             font-weight: normal;
         }
@@ -205,12 +204,6 @@
                 <div class="section-title">联系方式 <span class="text-danger">*</span></div>
                 <input type="text" id="contact-info" class="form-control form-control-custom" placeholder="请输入邮箱或QQ (用于接收卡密)">
             </div>
-            
-            <div class="mb-4" id="query-password-container">
-                <div class="section-title">查单密码 <small class="text-muted fw-normal ms-1">(可选)</small></div>
-                <input type="password" id="query-password" class="form-control form-control-custom" placeholder="用于查询订单">
-            </div>
-
             <div class="mb-4" id="payment-method-container">
                 <div class="section-title">支付方式</div>
                 <div class="d-flex align-items-center p-2 border rounded bg-light">
@@ -247,7 +240,7 @@
 
         let specPages = []; 
         let specCurrentPage = 1;
-        const specListMaxRows = 5;
+        const specListMaxRows = 6; // 每页5行
         let hasCalculatedPages = false;
 
         skuSheetEl.addEventListener('show.bs.offcanvas', () => {
@@ -262,10 +255,10 @@
             if (!currentProduct || !vList) return;
 
             vList.innerHTML = currentProduct.variants.map((v) => {
-                const style = v.color ? `style="color:${v.color}"` : ''; // 移除 border-color
-                const isDisabled = v.stock <= 0;
-                const disabledClass = isDisabled ? 'disabled' : '';
-                return `<div class="spec-btn ${disabledClass}" ${style} data-id="${v.id}">${v.name}</div>`;
+            const style = v.color ? `style="color:${v.color}"` : '';
+            const isDisabled = v.stock <= 0;
+            const disabledClass = isDisabled ? 'disabled' : '';
+            return `<div class="spec-btn ${disabledClass}" ${style} data-id="${v.id}">${v.name}</div>`;
             }).join('');
             
             const buttons = vList.querySelectorAll('.spec-btn');
@@ -349,12 +342,12 @@
             const variantsToShow = specPages[specCurrentPage - 1] || [];
 
             vList.innerHTML = variantsToShow.map((v) => {
-                const style = v.color ? `style="color:${v.color}"` : ''; // 移除 border-color
-                const isActive = selectedVariant && selectedVariant.id === v.id;
-                const isDisabled = v.stock <= 0;
-                const disabledClass = isDisabled ? 'disabled' : '';
-                const clickHandler = isDisabled ? '' : `onclick="selectVariant(${v.id})"`;
-                return `<div class="spec-btn ${isActive ? 'active' : ''} ${disabledClass}" ${style} ${clickHandler} data-id="${v.id}">${v.name}</div>`;
+            const style = v.color ? `style="color:${v.color}"` : '';
+            const isActive = selectedVariant && selectedVariant.id === v.id;
+            const isDisabled = v.stock <= 0;
+            const disabledClass = isDisabled ? 'disabled' : '';
+            const clickHandler = isDisabled ? '' : `onclick="selectVariant(${v.id})"`; // 缺货时移除点击事件
+            return `<div class="spec-btn ${isActive ? 'active' : ''} ${disabledClass}" ${style} ${clickHandler} data-id="${v.id}">${v.name}</div>`;
             }).join('');
 
             renderSpecPagination();
@@ -437,8 +430,9 @@
             const tagsToShow = p.variants.slice(0, maxTagsToShow);
             let skuTagsHtml = tagsToShow.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
             
+            // *** 修改点 (JS): 增加 (共xxx个) ***
             if (p.variants.length > maxTagsToShow) {
-                skuTagsHtml += ` <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
+                skuTagsHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
             }
             document.getElementById('p-select-text').innerHTML = skuTagsHtml;
 
@@ -470,7 +464,7 @@
                 const hasWholesale = variants.some(v => v.wholesale_config);
                 if (hasWholesale) { wsText = `批发价：请选择规格`; }
             }
-            if (wsText) { html += `<span>${wsText}</span>`; }
+            if (wsText) { html += `<span style="padding-top: 2px;vertical-align: middle;">${wsText}</span>`; }
             if (html) {
                 infoDiv.innerHTML = html;
                 infoDiv.classList.remove('d-none');
@@ -490,12 +484,11 @@
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
             document.getElementById('p-price').innerText = selectedVariant.price;
             
+            // --- *** 修改点 (JS): 构造 "已选" + "更多" 的HTML *** ---
             const p = currentProduct;
-            let selectedHtml = `<div>已选: ${selectedVariant.name}</div>`;
-            
-            // *** 修改点 (JS): 逻辑改为 > 1 ***
+            let selectedHtml = `<div style="padding-right: 10px;">已选: ${selectedVariant.name}</div>`;
             if (p.variants.length > 1) { 
-                selectedHtml += ` <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
+                selectedHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
             }
             document.getElementById('p-select-text').innerHTML = selectedHtml;
             
@@ -668,21 +661,12 @@
             const oldText = btn.innerText;
             btn.disabled = true; btn.innerText = '正在创建...';
             try {
-                // *** 1. 新增：获取查单密码 (JS) ***
-                const queryPassword = document.getElementById('query-password').value;
-
                 const payload = { 
                     variant_id: selectedVariant.id, 
                     quantity, 
                     contact, 
                     payment_method: paymentMethod.value
                 };
-
-                // *** 1. 新增：添加到 payload (JS) ***
-                if (queryPassword) {
-                    payload.query_password = queryPassword;
-                }
-                
                 if (buyMode === 'select' && selectedCardId) payload.card_id = selectedCardId;
                 
                 const res = await fetch('/api/shop/order/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
