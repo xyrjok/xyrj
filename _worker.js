@@ -290,7 +290,6 @@ async function handleApi(request, env, url) {
             }
             
             // --- 订单管理 API ---
-            // *** 修改点: 支持按 contact 搜索 ***
             if (path === '/api/admin/orders/list') {
                 const contact = url.searchParams.get('contact');
                 let query;
@@ -306,6 +305,32 @@ async function handleApi(request, env, url) {
                 const { results } = await db.prepare(query).bind(...params).all();
                 return jsonRes(results);
             }
+
+            // *** 新增: 删除单个订单 ***
+            if (path === '/api/admin/order/delete' && method === 'POST') {
+                const { id } = await request.json();
+                if (!id) return errRes('未提供订单ID');
+
+                // 注意：这里只是简单删除订单。如果需要，还可以添加逻辑来恢复已售卡密(status=0)或库存(stock+1)
+                // 鉴于系统复杂性，目前只做删除订单记录
+                await db.prepare("DELETE FROM orders WHERE id = ?").bind(id).run();
+                return jsonRes({ success: true });
+            }
+
+            // *** 新增: 批量删除订单 ***
+            if (path === '/api/admin/orders/batch_delete' && method === 'POST') {
+                const { ids } = await request.json();
+                if (!Array.isArray(ids) || ids.length === 0) {
+                    return errRes('未提供订单ID列表');
+                }
+                
+                // 构建 IN 查询
+                const placeholders = ids.map(() => '?').join(',');
+                await db.prepare(`DELETE FROM orders WHERE id IN (${placeholders})`).bind(...ids).run();
+                
+                return jsonRes({ success: true, deletedCount: ids.length });
+            }
+
 
             // --- 卡密管理 API ---
             if (path === '/api/admin/cards/list') {
@@ -558,7 +583,7 @@ async function handleApi(request, env, url) {
 
         // --- 订单与支付 API (Shop) ---
 
-        // *** 修改点: 创建订单 (支持自选卡密 card_id 和 查单密码 query_password) ***
+        // 创建订单 (支持自选卡密 card_id 和 查单密码 query_password)
         if (path === '/api/shop/order/create' && method === 'POST') {
             // 1. 接收 query_password
             const { variant_id, quantity, contact, payment_method, card_id, query_password } = await request.json();
