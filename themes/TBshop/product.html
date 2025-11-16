@@ -465,7 +465,7 @@
             const p = currentProduct;
             let selectedHtml = `<div style="padding-right: 10px;">已选: ${selectedVariant.name}</div>`;
             if (p.variants.length > 1) { 
-                selectedHtml += ` <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
+                selectedHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
             }
             document.getElementById('p-select-text').innerHTML = selectedHtml;
             
