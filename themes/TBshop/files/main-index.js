@@ -47,15 +47,20 @@ window.addEventListener('resize', checkSidebarStatus);
 
 document.getElementById('year').innerText = new Date().getFullYear();
 
-let allProducts = []; // 存储所有商品
-let allCategories = []; // 存储所有分类
+// [修改] 检查变量是否已由 product.html 声明，避免冲突
+var allProducts = window.allProducts || []; // 存储所有商品
+var allCategories = window.allCategories || []; // 存储所有分类
 
 async function init() {
     // 1. 加载配置与公告
     try {
         const configRes = await fetch('/api/shop/config');
         const config = await configRes.json();
-        document.title = config.site_name || '商店首页';
+        
+        // 仅在非商品页（即首页）设置文档标题
+        if (document.getElementById('products-list-area')) {
+             document.title = config.site_name || '商店首页';
+        }
         
         // --- PC端Logo/名称 ---
         const logoEl = document.getElementById('site-logo');
@@ -85,24 +90,26 @@ async function init() {
         const mobileNameWrapEl = document.getElementById('mobile-site-name-wrap');
         const mobileNameTextEl = document.getElementById('mobile-header-site-name');
         
-        mobileNameTextEl.innerText = config.site_name || 'TB Shop';
+        if (mobileNameTextEl) { // 检查元素是否存在
+             mobileNameTextEl.innerText = config.site_name || 'TB Shop';
         
-        if (!showName && !showLogo) {
-            mobileNameWrapEl.classList.remove('d-none');
-        } else {
-            if (showLogo && config.site_logo) {
-                mobileLogoEl.src = config.site_logo;
-                mobileLogoEl.classList.remove('d-none');
-            }
-            if (showName) {
+            if (!showName && !showLogo) {
                 mobileNameWrapEl.classList.remove('d-none');
+            } else {
+                if (showLogo && config.site_logo) {
+                    mobileLogoEl.src = config.site_logo;
+                    mobileLogoEl.classList.remove('d-none');
+                }
+                if (showName) {
+                    mobileNameWrapEl.classList.remove('d-none');
+                }
             }
         }
 
         
         // --- 公告 ---
         const notice = config.notice_content || config.announce;
-        if (notice) {
+        if (notice && document.getElementById('notice-box')) {
             document.getElementById('notice-box').innerHTML = notice;
         }
 
@@ -113,14 +120,20 @@ async function init() {
 
         if (contactInfo) {
             // 填充PC端
-            document.getElementById('contact-box').innerHTML = contactInfo;
+            if(document.getElementById('contact-box')) {
+                document.getElementById('contact-box').innerHTML = contactInfo;
+            }
             // 填充移动端
-            contactContentMobile.innerHTML = contactInfo;
+            if (contactContentMobile) {
+                contactContentMobile.innerHTML = contactInfo;
+            }
         } else {
             // 如果没有设置，就隐藏PC端的这个模块
             if(contactModulePC) contactModulePC.style.display = 'none';
             // 移动端显示提示
-            contactContentMobile.innerHTML = '<p>暂无联系方式</p>';
+            if (contactContentMobile) {
+                contactContentMobile.innerHTML = '<p>暂无联系方式</p>';
+            }
         }
 
         // --- 移动端内容重排：移动公告到顶部 ---
@@ -137,39 +150,51 @@ async function init() {
 
     // 2. 加载分类
     try {
-        const catRes = await fetch('/api/shop/categories');
-        allCategories = await catRes.json(); 
+        // 仅在 allCategories 为空时才 fetch，避免重复加载
+        if (allCategories.length === 0) { 
+            const catRes = await fetch('/api/shop/categories');
+            allCategories = await catRes.json(); 
+        }
         
         const catContainer = document.getElementById('category-container');
         const mobileCatContainer = document.getElementById('mobile-category-list');
         
-        let pc_html = '<div class="cat-pill active" onclick="filterCategory(\'all\', this)">全部商品</div>';
-        let mobile_html = '<a href="#" onclick="filterCategoryMobile(\'all\')">全部商品</a>';
-        
-        allCategories.forEach(c => {
-            const pcImgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : '';
-            const mobileImgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : '';
+        // 仅在首页填充分类
+        if (catContainer && mobileCatContainer) {
+            let pc_html = '<div class="cat-pill active" onclick="filterCategory(\'all\', this)">全部商品</div>';
+            let mobile_html = '<a href="#" onclick="filterCategoryMobile(\'all\')">全部商品</a>';
             
-            pc_html += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${pcImgTag}${c.name}</div>`;
-            mobile_html += `<a href="#" onclick="filterCategoryMobile(${c.id})">${mobileImgTag}${c.name}</a>`;
-        });
-        catContainer.innerHTML = pc_html;
-        mobileCatContainer.innerHTML = mobile_html;
+            allCategories.forEach(c => {
+                const pcImgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : '';
+                const mobileImgTag = c.image_url ? `<img src="${c.image_url}" alt="${c.name}">` : '';
+                
+                pc_html += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${pcImgTag}${c.name}</div>`;
+                mobile_html += `<a href="#" onclick="filterCategoryMobile(${c.id})">${mobileImgTag}${c.name}</a>`;
+            });
+            catContainer.innerHTML = pc_html;
+            mobileCatContainer.innerHTML = mobile_html;
+        }
 
     } catch(e) { console.error('Failed to load categories:', e); }
 
     // 3. 加载商品数据
     try {
-        const prodRes = await fetch('/api/shop/products');
-        allProducts = await prodRes.json(); 
+        // 仅在 allProducts 为空时才 fetch，避免重复加载
+        if (allProducts.length === 0) {
+            const prodRes = await fetch('/api/shop/products');
+            allProducts = await prodRes.json(); 
+        }
 
-        // 渲染商品视图
-        renderCategorizedView('all');
+        // [修改] 仅在首页 (存在 #products-list-area 元素时) 才执行渲染
+        if (document.getElementById('products-list-area')) {
+            // 渲染商品视图
+            renderCategorizedView('all');
+        }
 
-        // 渲染标签云
+        // 渲染标签云 (这个PC侧边栏需要，保留)
         renderTagCloud(allProducts);
 
-        // 渲染销量排行
+        // 渲染销量排行 (这个PC侧边栏需要，保留)
         const topProducts = [...allProducts].sort((a, b) => {
             const salesA = a.variants.reduce((s, v) => s + (v.sales_count||0), 0);
             const salesB = b.variants.reduce((s, v) => s + (v.sales_count||0), 0);
@@ -177,27 +202,32 @@ async function init() {
         }).slice(0, 5);
 
         const topListEl = document.getElementById('top-sales-list');
-        if (topProducts.length > 0) {
-            topListEl.innerHTML = topProducts.map(p => {
-                const mainImg = p.image_url || (p.variants[0] && p.variants[0].image_url) || 'https://via.placeholder.com/50';
-                const price = p.variants[0] ? p.variants[0].price : 0;
-                return `
-                    <a href="/product.html?id=${p.id}" class="top-item">
-                        <img src="${mainImg}" class="top-img">
-                        <div class="top-info">
-                            <div class="top-title">${p.name}</div>
-                            <div class="top-price">¥${price}</div>
-                        </div>
-                    </a>
-                `;
-            }).join('');
-        } else {
-            topListEl.innerHTML = '<div class="text-muted small text-center">暂无数据</div>';
+        if (topListEl) { // 检查元素是否存在
+            if (topProducts.length > 0) {
+                topListEl.innerHTML = topProducts.map(p => {
+                    const mainImg = p.image_url || (p.variants[0] && p.variants[0].image_url) || 'https://via.placeholder.com/50';
+                    const price = p.variants[0] ? p.variants[0].price : 0;
+                    return `
+                        <a href="/product.html?id=${p.id}" class="top-item">
+                            <img src="${mainImg}" class="top-img">
+                            <div class="top-info">
+                                <div class="top-title">${p.name}</div>
+                                <div class="top-price">¥${price}</div>
+                            </div>
+                        </a>
+                    `;
+                }).join('');
+            } else {
+                topListEl.innerHTML = '<div class="text-muted small text-center">暂无数据</div>';
+            }
         }
 
     } catch (e) {
         console.error(e);
-        document.getElementById('products-list-area').innerHTML = '加载失败';
+        const prodListArea = document.getElementById('products-list-area');
+        if (prodListArea) {
+            prodListArea.innerHTML = '加载失败';
+        }
     }
 
     // 4. 加载文章数据
@@ -205,28 +235,36 @@ async function init() {
         const artRes = await fetch('/api/shop/articles/list');
         const articles = await artRes.json();
         const hotListEl = document.getElementById('hot-articles-list');
-        if (articles.length > 0) {
-            hotListEl.innerHTML = articles.slice(0, 8).map((a, index) => `
-                <div class="hot-article-item">
-                    <a href="/article.html?id=${a.id}" class="text-truncate" style="flex:1">
-                        <span class="hot-rank ${index < 3 ? 'top-3' : ''}">${index + 1}</span>
-                        ${a.title}
-                    </a>
-                    <small class="text-muted ms-2">${new Date(a.created_at * 1000).toLocaleDateString()}</small>
-                </div>
-            `).join('');
+        
+        if (hotListEl) { // 检查元素是否存在
+            if (articles.length > 0) {
+                hotListEl.innerHTML = articles.slice(0, 8).map((a, index) => `
+                    <div class="hot-article-item">
+                        <a href="/article.html?id=${a.id}" class="text-truncate" style="flex:1">
+                            <span class="hot-rank ${index < 3 ? 'top-3' : ''}">${index + 1}</span>
+                            ${a.title}
+                        </a>
+                        <small class="text-muted ms-2">${new Date(a.created_at * 1000).toLocaleDateString()}</small>
+                    </div>
+                `).join('');
+            }
         }
+        
         const artCats = [...new Set(articles.map(a => a.category_name))].filter(Boolean);
         const artCatListEl = document.getElementById('article-cat-list');
-        if (artCats.length > 0) {
-            artCatListEl.innerHTML = artCats.map(c => `<a href="#">${c}</a>`).join('');
-        } else {
-            artCatListEl.innerHTML = '<div class="text-muted small">暂无分类</div>';
+        if (artCatListEl) { // 检查元素是否存在
+            if (artCats.length > 0) {
+                artCatListEl.innerHTML = artCats.map(c => `<a href="#">${c}</a>`).join('');
+            } else {
+                artCatListEl.innerHTML = '<div class="text-muted small">暂无分类</div>';
+            }
         }
     } catch (e) {}
 
     // 数据全部加载完成后，再次检查高度状态
-    setTimeout(checkSidebarStatus, 500);
+    if (document.getElementById('products-list-area')) {
+        setTimeout(checkSidebarStatus, 500);
+    }
 }
 
 function getProductCardHtml(p) {
@@ -257,6 +295,7 @@ function getProductCardHtml(p) {
 // 渲染分类视图
 function renderCategorizedView(filterId) {
     const area = document.getElementById('products-list-area');
+    if (!area) return; // 如果元素不存在，直接返回
     area.innerHTML = ''; 
 
     let categoriesToShow = [];
@@ -297,6 +336,8 @@ function renderCategorizedView(filterId) {
 // 渲染单一大网格
 function renderSingleGrid(products, title) {
     const area = document.getElementById('products-list-area');
+    if (!area) return; // 如果元素不存在，直接返回
+    
     if (products.length === 0) {
         area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100">未找到相关商品</div></div>`;
     } else {
@@ -356,6 +397,8 @@ function renderTagCloud(products) {
     });
 
     const listEl = document.getElementById('tag-cloud-list');
+    if (!listEl) return; // 如果元素不存在，直接返回
+
     if(tagSet.size === 0) {
         listEl.innerHTML = '<div class="text-muted small w-100 text-center">暂无标签</div>';
         return;
@@ -366,6 +409,13 @@ function renderTagCloud(products) {
 }
 
 function filterByTag(tag) {
+    // 确保在首页才执行
+    if (!document.getElementById('products-list-area')) {
+         // 如果不在首页，跳转到首页并带上标签参数
+         window.location.href = `/?tag=${encodeURIComponent(tag)}`;
+         return;
+    }
+
     document.querySelectorAll('.tag-cloud-item').forEach(el => {
         if(el.innerText === tag) el.classList.add('active');
         else el.classList.remove('active');
@@ -380,6 +430,13 @@ function doSearch(source = 'pc') {
     const inputId = (source === 'mobile') ? 'mobile-search-input' : 'search-input';
     const keyword = document.getElementById(inputId).value.toLowerCase().trim();
     
+    // 确保在首页才执行
+    if (!document.getElementById('products-list-area')) {
+         // 如果不在首页，跳转到首页并带上搜索参数
+         window.location.href = `/?search=${encodeURIComponent(keyword)}`;
+         return;
+    }
+
     if (!keyword) { 
         renderCategorizedView('all'); 
         return; 
@@ -393,16 +450,26 @@ function doSearch(source = 'pc') {
     }
 }
 
-document.getElementById('search-input').addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') doSearch('pc');
-});
+// 确保元素存在后再绑定事件
+const searchInput = document.getElementById('search-input');
+if (searchInput) {
+    searchInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') doSearch('pc');
+    });
+}
 
-document.getElementById('mobile-search-input').addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') doSearch('mobile');
-});
+const mobileSearchInput = document.getElementById('mobile-search-input');
+if (mobileSearchInput) {
+    mobileSearchInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') doSearch('mobile');
+    });
+}
 
 
 function filterCategory(id, el) {
+    // 仅在首页执行
+    if (!document.getElementById('products-list-area')) return;
+
     document.querySelectorAll('.cat-pill').forEach(e => e.classList.remove('active'));
     if(el) el.classList.add('active');
 
@@ -445,6 +512,8 @@ function toggleMobileSearch(forceShow = null) {
     const searchDropdown = document.querySelector('.mobile-search-dropdown');
     const searchOverlay = document.getElementById('mobile-search-overlay');
     
+    if (!searchDropdown || !searchOverlay) return; // 检查元素
+
     let show;
     if (forceShow === null) {
         show = !searchDropdown.classList.contains('show');
@@ -468,7 +537,7 @@ function filterCategoryMobile(id) {
     let targetOnclick = (id === 'all') ? `filterCategory('all', this)` : `filterCategory(${id}, this)`;
     
     for (let pill of pills) {
-        if (pill.getAttribute('onclick') === targetOncheck) {
+        if (pill.getAttribute('onclick') === targetOnclick) {
             targetPill = pill;
             break;
         }
@@ -478,27 +547,32 @@ function filterCategoryMobile(id) {
     togglePanel('mobile-sidebar', 'mobile-overlay', false); 
 }
 
-document.getElementById('mobile-menu-btn').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay'));
-document.getElementById('mobile-overlay').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay', false));
-document.getElementById('mobile-sidebar-close-btn').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay', false));
+// 为首页的移动端元素绑定事件
+if (document.getElementById('mobile-menu-btn')) {
+    document.getElementById('mobile-menu-btn').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay'));
+    document.getElementById('mobile-overlay').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay', false));
+    document.getElementById('mobile-sidebar-close-btn').addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay', false));
 
-document.getElementById('mobile-search-btn').addEventListener('click', () => toggleMobileSearch());
-document.getElementById('mobile-search-overlay').addEventListener('click', () => toggleMobileSearch(false));
+    document.getElementById('mobile-search-btn').addEventListener('click', () => toggleMobileSearch());
+    document.getElementById('mobile-search-overlay').addEventListener('click', () => toggleMobileSearch(false));
 
-// [新增] 联系方式面板事件
-document.getElementById('mobile-contact-close-btn').addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false));
-document.getElementById('mobile-contact-overlay').addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false));
+    // [新增] 联系方式面板事件
+    document.getElementById('mobile-contact-close-btn').addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false));
+    document.getElementById('mobile-contact-overlay').addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false));
 
 
-window.addEventListener('scroll', () => {
-    if (document.querySelector('.mobile-search-dropdown').classList.contains('show')) {
-        toggleMobileSearch(false);
-    }
-    // [修改] 滚动时关闭联系方式面板
-    if (document.getElementById('mobile-contact-sheet').classList.contains('show')) {
-        togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false);
-    }
-}, { passive: true });
+    window.addEventListener('scroll', () => {
+        const searchDropdown = document.querySelector('.mobile-search-dropdown');
+        if (searchDropdown && searchDropdown.classList.contains('show')) {
+            toggleMobileSearch(false);
+        }
+        
+        const contactSheet = document.getElementById('mobile-contact-sheet');
+        if (contactSheet && contactSheet.classList.contains('show')) {
+            togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false);
+        }
+    }, { passive: true });
+}
 
 
 init();
