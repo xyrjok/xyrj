@@ -191,7 +191,7 @@
                     <div class="card-select-list" id="card-list"></div>
                 </div>
             </div>
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items: center mb-4">
                 <div class="section-title mb-0">购买数量</div>
                 <div class="stepper">
                     <div class="stepper-btn" onclick="changeQty(-1)">-</div>
@@ -233,7 +233,6 @@
         const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
 
         // *** payModal 变量定义已被删除 ***
-        // const payModal = new bootstrap.Modal(document.getElementById('payModal'));
 
         let specPages = []; 
         let specCurrentPage = 1;
@@ -612,7 +611,7 @@
             document.getElementById('sku-price-text').innerText = price.toFixed(2);
         }
 
-        // --- *** 修改后的 submitOrder 函数 *** ---
+        // --- *** 优化后的 submitOrder 函数 (只请求一次) *** ---
         async function submitOrder() {
             if (!selectedVariant) {
                 alert('请选择规格');
@@ -651,8 +650,7 @@
                 highlightAndScroll('contact-info-container');
                 return;
             }
-
-            // --- 新增：密码验证 ---
+            
             const passwordInput = document.getElementById('query-password');
             const password = passwordInput.value;
             if (!password || password.length < 6) {
@@ -660,7 +658,6 @@
                 highlightAndScroll('query-password-container');
                 return;
             }
-            // --- 验证结束 ---
             
             const paymentMethod = document.querySelector('input[name="payment"]:checked');
             if (!paymentMethod) {
@@ -673,32 +670,24 @@
             const oldText = btn.innerText;
             btn.disabled = true; btn.innerText = '正在创建...';
             try {
-                // --- 新增：payload 中加入密码 ---
                 const payload = { 
                     variant_id: selectedVariant.id, 
                     quantity, 
                     contact, 
-                    query_password: password, // <-- 添加密码字段
+                    query_password: password, 
                     payment_method: paymentMethod.value
                 };
                 if (buyMode === 'select' && selectedCardId) payload.card_id = selectedCardId;
                 
+                // 1. 只调用 /api/shop/order/create
                 const res = await fetch('/api/shop/order/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const order = await res.json();
                 if(order.error) throw new Error(order.error);
-                btn.innerText = '获取支付码...';
-                const payRes = await fetch('/api/shop/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: order.order_id }) });
-                const payData = await payRes.json();
-                if(payData.error) throw new Error(payData.error);
-                
-                // *** --- 关键修改：从显示弹窗改为页面跳转 --- ***
-                if(payData.type === 'qrcode' || payData.qr_code) {
-                    skuSheet.hide();
-                    // 跳转到新的支付页面，并传递订单ID
-                    window.location.href = `pay.html?order_id=${order.order_id}`;
-                }
-                // *** --- 修改结束 --- ***
 
+                // 2. 创建成功后，立刻跳转 (不再调用 /api/shop/pay)
+                skuSheet.hide();
+                window.location.href = `pay.html?order_id=${order.order_id}`;
+                
             } catch (e) { alert(e.message); } 
             finally { btn.disabled = false; btn.innerText = oldText; }
         }
