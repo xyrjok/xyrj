@@ -83,7 +83,8 @@ CREATE TABLE orders (
     status INTEGER DEFAULT 0,
     cards_sent TEXT,
     created_at INTEGER,
-    paid_at INTEGER
+    paid_at INTEGER,
+    query_password TEXT
 );
 
 DROP TABLE IF EXISTS article_categories;
