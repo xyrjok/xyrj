@@ -721,14 +721,13 @@ async function submitOrder() {
 
 async function init() {
     
-    // [!! 修复 !!] 在函数顶部声明 config，以便所有代码块都能访问
     let config = {};
 
     // --- 1. COMMON INIT (所有页面都执行) ---
     try {
         // 加载配置 (页头/页脚/公告/联系方式)
         const configRes = await fetch('/api/shop/config');
-        config = await configRes.json(); // [!! 修复 !!] 赋值给外部的 config
+        config = await configRes.json();
         
         // 设置页脚
         if (document.getElementById('footer-name')) {
@@ -741,29 +740,10 @@ async function init() {
         const nameWrapEl = document.getElementById('site-name-wrap');
         const nameTextEl = document.getElementById('header-site-name');
         if (nameTextEl) nameTextEl.innerText = config.site_name || 'TB Shop';
-        const showName = config.show_site_name === '1';
-        const showLogo = config.show_site_logo === '1';
-        if (logoEl && nameWrapEl) {
-            if (!showName && !showLogo) { nameWrapEl.classList.remove('d-none'); }
-            else {
-                if (showLogo && config.site_logo) { logoEl.src = config.site_logo; logoEl.classList.remove('d-none'); }
-                if (showName) { nameWrapEl.classList.remove('d-none'); }
-            }
-        }
-
-        // 移动端Logo/名称 (首页)
-        const mobileLogoEl = document.getElementById('mobile-logo-img');
-        const mobileNameWrapEl = document.getElementById('mobile-site-name-wrap');
-        const mobileNameTextEl = document.getElementById('mobile-header-site-name');
-        if (mobileNameTextEl) {
-             mobileNameTextEl.innerText = config.site_name || 'TB Shop';
-            if (!showName && !showLogo) { mobileNameWrapEl.classList.remove('d-none'); }
-            else {
-                if (showLogo && config.site_logo) { mobileLogoEl.src = config.site_logo; mobileLogoEl.classList.remove('d-none'); }
-                if (showName) { mobileNameWrapEl.classList.remove('d-none'); }
-            }
-        }
         
+        // [!! 修复 !!] 移除了对 mobile-header-site-name 的引用
+        // 这部分逻辑被移动到了下面的 "首页 (index.html)" 专属块中
+
         // 公告 (PC侧边栏)
         const notice = config.notice_content || config.announce;
         if (notice && document.getElementById('notice-box')) {
@@ -835,9 +815,35 @@ async function init() {
     // 如果是 首页 (index.html)
     if (document.getElementById('products-list-area')) {
         try {
-            // [!! 修复 !!] 现在 config 在这里是可见的
             document.title = config.site_name || '商店首页';
             
+            // [!! 修复 !!] 移动端Logo/名称的逻辑只在这里运行
+            const showName = config.show_site_name === '1';
+            const showLogo = config.show_site_logo === '1';
+            const logoEl = document.getElementById('site-logo'); // PC
+            const nameWrapEl = document.getElementById('site-name-wrap'); // PC
+            const mobileLogoEl = document.getElementById('mobile-logo-img');
+            const mobileNameWrapEl = document.getElementById('mobile-site-name-wrap');
+            const mobileNameTextEl = document.getElementById('mobile-header-site-name');
+            
+            // 设置 PC Logo
+            if (logoEl && nameWrapEl) {
+                if (!showName && !showLogo) { nameWrapEl.classList.remove('d-none'); }
+                else {
+                    if (showLogo && config.site_logo) { logoEl.src = config.site_logo; logoEl.classList.remove('d-none'); }
+                    if (showName) { nameWrapEl.classList.remove('d-none'); }
+                }
+            }
+            // 设置 移动端 Logo
+            if (mobileNameTextEl) {
+                mobileNameTextEl.innerText = config.site_name || 'TB Shop';
+                if (!showName && !showLogo) { mobileNameWrapEl.classList.remove('d-none'); }
+                else {
+                    if (showLogo && config.site_logo) { mobileLogoEl.src = config.site_logo; mobileLogoEl.classList.remove('d-none'); }
+                    if (showName) { mobileNameWrapEl.classList.remove('d-none'); }
+                }
+            }
+
             // 加载分类 (仅首页需要)
             const catRes = await fetch('/api/shop/categories');
             allCategories = await catRes.json(); 
@@ -886,6 +892,19 @@ async function init() {
     // 如果是 商品页 (product.html)
     if (document.getElementById('skuSheet')) {
         try {
+            // [!! 修复 !!] PC Logo的逻辑也需要在这里运行
+            const showName = config.show_site_name === '1';
+            const showLogo = config.show_site_logo === '1';
+            const logoEl = document.getElementById('site-logo'); // PC
+            const nameWrapEl = document.getElementById('site-name-wrap'); // PC
+            if (logoEl && nameWrapEl) {
+                if (!showName && !showLogo) { nameWrapEl.classList.remove('d-none'); }
+                else {
+                    if (showLogo && config.site_logo) { logoEl.src = config.site_logo; logoEl.classList.remove('d-none'); }
+                    if (showName) { nameWrapEl.classList.remove('d-none'); }
+                }
+            }
+
             // 初始化 SKU 面板
             const skuSheetEl = document.getElementById('skuSheet');
             skuSheet = new bootstrap.Offcanvas(skuSheetEl);
