@@ -180,8 +180,7 @@
 
                     <input type="radio" name="buy_mode" id="mode_select" class="mode-radio" value="select" onchange="toggleBuyMode()">
                     <label for="mode_select" class="mode-label">
-                        自选号码
-                        <small>加价 <span id="markup-amount">0</span> 元</small>
+                        <span id="selection-label-text">自选卡密/号码</span> <small>加价 <span id="markup-amount">0</span> 元</small>
                     </label>
                 </div>
                 <div id="card-selector" class="d-none">
@@ -492,6 +491,8 @@
             document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
             document.getElementById('sku-selected-text').innerText = selectedVariant.name;
             document.getElementById('p-price').innerText = selectedVariant.price;
+            const labelText = selectedVariant.selection_label || '自选卡密/号码';
+            document.getElementById('selection-label-text').innerText = labelText;
             
             // --- *** 修改点 (JS): 构造 "已选" + "更多" 的HTML *** ---
             const p = currentProduct;
@@ -566,7 +567,7 @@
             try {
                 const res = await fetch(`/api/shop/cards/notes?variant_id=${selectedVariant.id}`);
                 const notes = await res.json();
-                if (notes.length === 0) { listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">暂无可自选号码</div>'; return; }
+                if (notes.length === 0) { listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">暂无可自选卡密/号码</div>'; return; }
                 listEl.innerHTML = notes.map(n => `<div class="card-option" onclick="selectCard(this, ${n.id})">${n.note}</div>`).join('');
             } catch(e) { listEl.innerHTML = '<div class="text-danger">加载失败</div>'; }
         }
