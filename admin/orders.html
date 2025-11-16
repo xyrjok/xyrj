@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>订单管理 - Faka Admin</title>
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <style>
         body { padding-top: 56px; }
         .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; z-index: 100; padding: 48px 0 0; box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1); }
         .main { margin-left: 240px; padding: 20px; }
         @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
         .table-responsive { max-height: 80vh; }
+        .btn-group-sm > .btn { padding: .25rem .5rem; font-size: .875rem; }
     </style>
 </head>
 <body>
@@ -40,14 +42,18 @@
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h2>订单管理</h2>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <input type="text" id="search-contact" class="form-control form-control-sm" placeholder="按联系方式搜索..." onchange="loadOrders()">
+                    <div class="btn-toolbar mb-2 mb-md-0 d-flex align-items-center">
+                        <button class="btn btn-sm btn-outline-danger me-2" onclick="batchDelete()">
+                            <i class="fa fa-trash-alt"></i> 批量删除
+                        </button>
+                        <input type="text" id="search-contact" class="form-control form-control-sm" style="width: 200px;" placeholder="按联系方式搜索..." onchange="loadOrders()">
                     </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover table-sm align-middle">
                         <thead>
                             <tr>
+                                <th style="width: 30px;"><input class="form-check-input" type="checkbox" onchange="toggleSelectAll(this)"></th>
                                 <th>订单号 (ID)</th>
                                 <th>商品/规格</th>
                                 <th>金额</th>
@@ -70,11 +76,25 @@
         const TOKEN = localStorage.getItem('ADMIN_TOKEN');
         if(!TOKEN) window.location.href = '/admin/index.html';
         function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
+        
+        // *** 修改: api 函数以支持 DELETE 和处理非 JSON 响应 ***
         async function api(path, options = {}) {
-            options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+            options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`};
+            if (options.body && typeof options.body === 'object') {
+                 options.body = JSON.stringify(options.body);
+                 options.headers['Content-Type'] = 'application/json';
+            }
+            
             const res = await fetch('/api/admin/' + path, options);
             if(res.status === 401) logout();
-            return res.json();
+            
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error("API response was not JSON:", text);
+                return { error: text || res.statusText };
+            }
         }
 
         function formatTime(timestamp) {
@@ -95,22 +115,27 @@
             const contact = document.getElementById('search-contact').value || '';
             let url = 'orders/list';
             if (contact) {
-                // 这里的 ?contact=... 会被 _worker.js 中的 API 捕获
                 url += `?contact=${encodeURIComponent(contact)}`;
             }
             
             const orders = await api(url);
             const listEl = document.getElementById('orders-list');
             
+            if (orders.error) {
+                listEl.innerHTML = `<tr><td colspan="9" class="text-center text-danger">${orders.error}</td></tr>`;
+                return;
+            }
+            
             if (orders.length === 0) {
-                // *** 修改点: colspan 变为 8 ***
-                listEl.innerHTML = '<tr><td colspan="8" class="text-center">暂无订单</td></tr>';
+                 // *** 修改: colspan 变为 9 ***
+                listEl.innerHTML = '<tr><td colspan="9" class="text-center">暂无订单</td></tr>';
                 return;
             }
 
-            // *** 修改点: 增加 o.query_password ***
+            // *** 修改: 增加复选框 和 编辑/删除 按钮 ***
             listEl.innerHTML = orders.map(o => `
                 <tr>
+                    <td><input class="form-check-input order-checkbox" type="checkbox" value="${o.id}"></td>
                     <td><small class="font-monospace">${o.id}</small></td>
                     <td>${o.product_name}<br><small class="text-muted">${o.variant_name}</small></td>
                     <td><strong class="text-danger">￥${o.total_amount}</strong></td>
@@ -119,7 +144,11 @@
                     <td>${getStatusBadge(o.status)}</td>
                     <td>${formatTime(o.created_at)}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="viewOrder('${o.id}')">详情</button>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-primary" onclick="viewOrder('${o.id}')"><i class="fa fa-eye"></i></button>
+                            <button class="btn btn-outline-secondary" onclick="editOrder('${o.id}')"><i class="fa fa-edit"></i></button>
+                            <button class="btn btn-outline-danger" onclick="deleteOrder('${o.id}')"><i class="fa fa-trash"></i></button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -128,6 +157,74 @@
         function viewOrder(id) {
             // 在实际应用中， 这里会弹出一个模态框显示订单详情，包括发送的卡密
             alert('查看订单详情 (功能待实现): ' + id);
+        }
+
+        // --- *** 以下是新增的 JS 函数 *** ---
+
+        /**
+         * 占位符：编辑订单
+         */
+        function editOrder(id) {
+            alert('编辑订单 (功能待实现): ' + id + '\n\n你可以在此实现一个弹窗，用于修改订单状态或补发卡密。');
+        }
+
+        /**
+         * 全选/取消全选
+         */
+        function toggleSelectAll(checkbox) {
+            document.querySelectorAll('.order-checkbox').forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        /**
+         * 删除单个订单
+         */
+        async function deleteOrder(id) {
+            if (!confirm(`确定要删除订单 ${id} 吗？此操作不可逆！`)) return;
+            
+            try {
+                const res = await api('order/delete', {
+                    method: 'POST',
+                    body: { id }
+                });
+                if (res.success) {
+                    loadOrders(); // 成功后刷新列表
+                } else {
+                    alert('删除失败: ' + res.error);
+                }
+            } catch (e) {
+                alert('操作失败: ' + e.message);
+            }
+        }
+
+        /**
+         * 批量删除
+         */
+        async function batchDelete() {
+            const selectedIds = Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.value);
+            
+            if (selectedIds.length === 0) {
+                alert('请至少选择一个订单');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${selectedIds.length} 个订单吗？此操作不可逆！`)) return;
+
+            try {
+                const res = await api('orders/batch_delete', {
+                    method: 'POST',
+                    body: { ids: selectedIds }
+                });
+                if (res.success) {
+                    alert(`成功删除了 ${res.deletedCount || 0} 个订单`);
+                    loadOrders(); // 成功后刷新列表
+                } else {
+                    alert('批量删除失败: ' + res.error);
+                }
+            } catch (e) {
+                alert('操作失败: ' + e.message);
+            }
         }
 
         loadOrders();
