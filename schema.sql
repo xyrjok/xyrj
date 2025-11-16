@@ -54,6 +54,7 @@ CREATE TABLE variants (
     sales_count INTEGER DEFAULT 0,
     auto_delivery INTEGER DEFAULT 1,
     created_at INTEGER,
+    selection_label TEXT,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
