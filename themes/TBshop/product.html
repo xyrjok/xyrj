@@ -219,17 +219,7 @@
         </div>
         <div class="sku-footer"><button class="btn-confirm" onclick="submitOrder()">确定支付</button></div>
     </div>
-    <div class="modal fade" id="payModal" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content text-center p-4">
-                <h5 class="mb-3">请使用支付宝扫码</h5>
-                <div id="qr-container" class="mb-3"></div>
-                <p class="text-danger fw-bold">¥<span id="pay-amount"></span></p>
-                <small class="text-muted d-block mb-3">支付完成后请等待自动跳转</small>
-                <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">我已支付</button>
-            </div>
-        </div>
-    </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
     <script>
@@ -241,7 +231,9 @@
         
         const skuSheetEl = document.getElementById('skuSheet');
         const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
-        const payModal = new bootstrap.Modal(document.getElementById('payModal'));
+
+        // *** payModal 变量定义已被删除 ***
+        // const payModal = new bootstrap.Modal(document.getElementById('payModal'));
 
         let specPages = []; 
         let specCurrentPage = 1;
@@ -698,28 +690,22 @@
                 const payRes = await fetch('/api/shop/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: order.order_id }) });
                 const payData = await payRes.json();
                 if(payData.error) throw new Error(payData.error);
-                if(payData.type === 'qrcode') {
+                
+                // *** --- 关键修改：从显示弹窗改为页面跳转 --- ***
+                if(payData.type === 'qrcode' || payData.qr_code) {
                     skuSheet.hide();
-                    document.getElementById('qr-container').innerHTML = '';
-                    new QRCode(document.getElementById("qr-container"), { text: payData.qr_code, width: 200, height: 200 });
-                    document.getElementById('pay-amount').innerText = order.total_amount;
-                    payModal.show();
-                    checkOrderLoop(order.order_id);
+                    // 跳转到新的支付页面，并传递订单ID
+                    window.location.href = `pay.html?order_id=${order.order_id}`;
                 }
+                // *** --- 修改结束 --- ***
+
             } catch (e) { alert(e.message); } 
             finally { btn.disabled = false; btn.innerText = oldText; }
         }
         // --- *** 修改结束 *** ---
 
-        function checkOrderLoop(orderId) {
-            const timer = setInterval(async () => {
-                try {
-                    const res = await fetch(`/api/shop/order/status?order_id=${orderId}`);
-                    const data = await res.json();
-                    if(data.status >= 1) { clearInterval(timer); payModal.hide(); alert('支付成功！'); window.location.reload(); }
-                } catch(e) {}
-            }, 3000);
-        }
+        // *** checkOrderLoop 函数已被删除 ***
+
         init();
     </script>
 </body>
