@@ -177,6 +177,8 @@
             modal.show();
         }
 
+        /* * * --- [ 修改后的函数 ] ---
+         * */
         function addVariantRow(v) {
             const vList = document.getElementById('v-list');
             const row = document.createElement('div');
@@ -192,6 +194,15 @@
 
             row.innerHTML = `
                 <input type="hidden" class="v-id" value="${v.id || ''}">
+                
+                <button type="button" class="btn btn-sm btn-outline-success position-absolute top-0 end-0 m-2" 
+                        style="margin-right: 2.5rem !important; z-index: 10;" 
+                        aria-label="保存所有更改" 
+                        title="保存所有更改 (同底部保存)" 
+                        onclick="saveProduct()">
+                    <i class="fa fa-save"></i>
+                </button>
+                
                 <button type="button" class="btn-close position-absolute top-0 end-0 m-2" aria-label="删除此规格" onclick="this.closest('.variant-row').remove()"></button>
                 
                 <div class="variant-fields-container">
@@ -243,6 +254,8 @@
             `;
             vList.appendChild(row);
         }
+        /* * --- [ 修改结束 ] ---
+         * */
 
         function toggleStockInput(selectEl) {
             const row = selectEl.closest('.variant-row');
