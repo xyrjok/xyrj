@@ -25,6 +25,7 @@
         .v-color-wrap { min-width: 70px; }
         .v-mode-wrap { min-width: 85px; }
         .v-image_url { min-width: 100px; }
+        .v-selection_label { min-width: 100px; }
         .v-price-wrap { min-width: 65px; }
         .v-stock-wrap { min-width: 65px; }
         .v-markup-wrap { min-width: 65px; }
@@ -226,6 +227,10 @@
                         <input type="number" class="form-control form-control-sm v-stock" value="${v.stock || 0}" 
                             ${isAuto ? 'disabled readonly title="自动从卡密库计算"' : ''}>
                     </div>
+                    <div class="variant-field v-selection_label">
+                        <label class="form-label-sm">自选标签</label>
+                        <input type="text" class="form-control form-control-sm" name="v_selection_label" value="${v.selection_label || ''}" placeholder="自选卡密/号码">
+                    </div>
                     <div class="variant-field v-markup-wrap">
                         <label class="form-label-sm">加价</label>
                         <input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}">
@@ -289,6 +294,7 @@
                         price: price,
                         color: row.querySelector('.v-color').value || null,
                         image_url: row.querySelector('input.v-image_url').value || null,
+                        selection_label: row.querySelector('[name="v_selection_label"]').value.trim() || null,
                         custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0,
                         wholesale_config: wholesale_config,
                         auto_delivery: parseInt(row.querySelector('.v-auto_delivery').value),
