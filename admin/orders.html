@@ -52,14 +52,14 @@
                                 <th>商品/规格</th>
                                 <th>金额</th>
                                 <th>联系方式</th>
+                                <th>查单密码</th> 
                                 <th>状态</th>
                                 <th>创建时间</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="orders-list">
-                            <!-- JS 渲染 -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
             </main>
@@ -95,6 +95,7 @@
             const contact = document.getElementById('search-contact').value || '';
             let url = 'orders/list';
             if (contact) {
+                // 这里的 ?contact=... 会被 _worker.js 中的 API 捕获
                 url += `?contact=${encodeURIComponent(contact)}`;
             }
             
@@ -102,16 +103,19 @@
             const listEl = document.getElementById('orders-list');
             
             if (orders.length === 0) {
-                listEl.innerHTML = '<tr><td colspan="7" class="text-center">暂无订单</td></tr>';
+                // *** 修改点: colspan 变为 8 ***
+                listEl.innerHTML = '<tr><td colspan="8" class="text-center">暂无订单</td></tr>';
                 return;
             }
 
+            // *** 修改点: 增加 o.query_password ***
             listEl.innerHTML = orders.map(o => `
                 <tr>
-                    <td><small class.font-monospace">${o.id}</small></td>
+                    <td><small class="font-monospace">${o.id}</small></td>
                     <td>${o.product_name}<br><small class="text-muted">${o.variant_name}</small></td>
                     <td><strong class="text-danger">￥${o.total_amount}</strong></td>
                     <td>${o.contact || '-'}</td>
+                    <td>${o.query_password || '-'}</td>
                     <td>${getStatusBadge(o.status)}</td>
                     <td>${formatTime(o.created_at)}</td>
                     <td>
