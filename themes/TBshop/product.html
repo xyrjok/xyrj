@@ -409,7 +409,7 @@
             
             // *** 修改点 (JS): 增加 (共xxx个) ***
             if (p.variants.length > maxTagsToShow) {
-                skuTagsHtml += ` <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
+                skuTagsHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
             }
             document.getElementById('p-select-text').innerHTML = skuTagsHtml;
 
@@ -441,7 +441,7 @@
                 const hasWholesale = variants.some(v => v.wholesale_config);
                 if (hasWholesale) { wsText = `批发价：请选择规格`; }
             }
-            if (wsText) { html += `<span>${wsText}</span>`; }
+            if (wsText) { html += `<span style="padding-top: 2px;vertical-align: middle;">${wsText}</span>`; }
             if (html) {
                 infoDiv.innerHTML = html;
                 infoDiv.classList.remove('d-none');
@@ -463,7 +463,7 @@
             
             // --- *** 修改点 (JS): 构造 "已选" + "更多" 的HTML *** ---
             const p = currentProduct;
-            let selectedHtml = `<div>已选: ${selectedVariant.name}</div>`;
+            let selectedHtml = `<div style="padding-right: 10px;">已选: ${selectedVariant.name}</div>`;
             if (p.variants.length > 1) { 
                 selectedHtml += ` <span class="text-danger small" style="vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
             }
