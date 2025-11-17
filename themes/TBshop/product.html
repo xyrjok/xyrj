@@ -71,15 +71,14 @@
             .stepper-pc .stepper-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #666; cursor: pointer; }
             .stepper-pc .stepper-input { width: 40px; text-align: center; border: none; background: transparent; font-size: 14px; padding: 0; }
 
-            /* [修改] PC端自选号码滑出面板 */
+            /* PC端自选号码滑出面板 */
             #pc-card-selector-panel {
                 position: absolute;
                 top: 0;
                 left: 0;
                 width: 100%;
-                /* [修改] 移除 height: 100%; */
-                max-height: 100%; /* [新增] 限制最大高度为父容器高度 */
-                overflow-y: auto; /* [新增] 如果内容溢出，面板自身滚动 */
+                max-height: 100%; 
+                overflow-y: auto; 
                 background-color: #ffffff;
                 z-index: 10;
                 transform: translateY(-100%);
@@ -90,7 +89,7 @@
                 border-radius: 8px; 
                 box-shadow: 0 4px 12px rgba(0,0,0,0.1);
                 visibility: hidden;
-                border: 1px solid #dcdcdc; /* [新增] 灰色边框 */
+                border: 1px solid #dcdcdc; 
             }
             #pc-card-selector-panel.show {
                 transform: translateY(0);
@@ -103,10 +102,9 @@
                 font-weight: 600;
                 color: #333;
                 border-bottom: 1px solid #f0f0f0;
-                background: #fafafa; /* [修改] 增加一点底色 */
+                background: #fafafa;
             }
             .pc-card-content {
-                /* [修改] 移除 flex: 1; */
                 overflow-y: auto;
                 padding: 16px;
                 background-color: #fff;
@@ -116,13 +114,17 @@
                 display: grid; 
                 grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
                 gap: 8px;
-                max-height: 300px; /* [修改] 保持最大高度和滚动 */
+                max-height: 300px; 
                 overflow-y: auto;
-                background-color: #f_a_f_a_f_a; /* 浅灰底色 */
+                background-color: #f_a_f_a_f_a; 
                 padding: 8px;
                 border-radius: 4px;
-                border: 1px solid #f0f0f0; /* [新增] 列表区域加个浅框 */
+                border: 1px solid #f0f0f0; 
             }
+            
+            /* ======================================================= */
+            /* [修改] 卡密选项样式 (实现要求1) */
+            /* ======================================================= */
             .card-select-list-pc .card-option {
                 padding: 8px;
                 border: 1px solid #eee;
@@ -131,22 +133,28 @@
                 font-size: 12px;
                 text-align: center;
                 cursor: pointer;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                white-space: normal; /* [修改] 允许换行 */
+                word-break: break-all; /* [新增] 强制换行 */
+                /* [移除] white-space: nowrap; */
+                /* [移除] overflow: hidden; */
+                /* [移除] text-overflow: ellipsis; */
             }
             .card-select-list-pc .card-option.active {
                 border-color: #ff5000;
                 background: #ffefe7;
                 color: #ff5000;
             }
+            /* ======================================================= */
+            /* [修改] 结束 */
+            /* ======================================================= */
+
             .pc-card-footer {
                 padding: 10px 16px;
                 display: flex;
                 justify-content: flex-end; 
                 gap: 10px;
                 border-top: 1px solid #f0f0f0;
-                background-color: #fafafa; /* [修改] 增加一点底色 */
+                background-color: #fafafa; 
             }
             .pc-card-btn {
                 padding: 6px 16px;
@@ -370,7 +378,7 @@
                                         <button class="pc-card-btn confirm" onclick="confirmPcCardSelection()">确定</button>
                                     </div>
                                 </div>
-                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -439,7 +447,7 @@
         <div class="sku-header">
             <img id="sku-img" src="" class="sku-thumb">
             <div class="sku-info">
-                <div id="sku-title" style="font-size: 13px; color: #333; font-weight: bold; margin-bottom: 4px; line-height: 1.4; white-space: normal; word-break: break-all;">加载中...</div>
+                <div id="sku-title" style="font-size: 13px; color: #333; font-weight: bold; margin-bottom: 4px; line-height: 1.4; white-space: normal; word-break: break-all;"></div>
                 <div class="sku-price">¥<span id="sku-price-text">-</span></div>
                 <div class="sku-stock">库存: <span id="sku-stock-text">-</span></div>
                 <div class="sku-selected">已选: <span id="sku-selected-text">未选择</span></div>
