@@ -1,6 +1,7 @@
 // =============================================
 // === themes/TBshop/files/common.js
 // === (全局共享JS)
+// === [购物车-升级版]
 // =============================================
 
 // --- 1. UI交互逻辑：Sticky Sidebar ---
@@ -241,6 +242,7 @@ function highlightAndScroll(elementId) {
 
 /**
  * 渲染PC和移动端的Logo和名称
+ * [修改] 增加PC端购物车图标
  * @param {object} config 
  */
 function renderGlobalHeaders(config) {
@@ -295,6 +297,28 @@ function renderGlobalHeaders(config) {
             }
         }
     }
+
+    // --- [新增] 在PC端头部右侧添加购物车图标 ---
+    const headerRight = document.querySelector('.tb-header .header-right');
+    if (headerRight && !document.getElementById('cart-btn-pc')) { // 检查是否已存在
+        const cartBtnHtml = `
+        <a href="/cart.html" class="icon-btn-pc" id="cart-btn-pc" style="position: relative; margin-left: 15px; color: #333; text-decoration: none;">
+            <i class="fa fa-shopping-cart" style="font-size: 20px;"></i>
+            <span id="cart-badge-pc" class="badge bg-danger rounded-pill" style="position: absolute; top: -8px; right: -10px; font-size: 9px; padding: 2px 4px; display: none;">0</span>
+        </a>`;
+        
+        // 插入到“登录”按钮之前
+        const loginBtn = headerRight.querySelector('.btn-login');
+        if (loginBtn) {
+            loginBtn.insertAdjacentHTML('beforebegin', cartBtnHtml);
+            loginBtn.style.marginLeft = "15px"; // 确保登录按钮也有间距
+        } else {
+            headerRight.innerHTML += cartBtnHtml; // 降级处理
+        }
+    }
+    
+    // [新增] 页面加载时立即更新一次角标
+    loadCartBadge();
 }
 
 /**
@@ -468,4 +492,44 @@ function renderSidebarArticleCats(articles) {
             artCatListEl.innerHTML = '<div class="text-muted small">暂无分类</div>';
         }
     }
+}
+
+
+// =============================================
+// === [新增] 全局购物车角标函数 ===
+// =============================================
+
+/**
+ * [新增] 从 localStorage 读取购物车信息并更新角标
+ */
+function loadCartBadge() {
+    try {
+        let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
+        updateCartBadge(cart.length);
+    } catch (e) {
+        console.error("Failed to load cart badge", e);
+    }
+}
+
+/**
+ * [新增] 更新所有购物车角标（移动端和PC端）
+ * (product-page.js 上的 #cart-badge-mobile)
+ * (cart.html / common.js 上的 #cart-badge-pc)
+ */
+function updateCartBadge(count) {
+    const badgeMobile = document.getElementById('cart-badge-mobile'); // 商品页
+    const badgePC = document.getElementById('cart-badge-pc'); // PC 头部
+    
+    const badges = [badgeMobile, badgePC];
+    
+    badges.forEach(badge => {
+        if (badge) {
+            if (count > 0) {
+                badge.innerText = count > 99 ? '99+' : count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    });
 }
