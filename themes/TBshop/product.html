@@ -46,14 +46,16 @@
             .pc-product-view .price-row { color: #ff5000; }
             .pc-product-view .price-symbol { font-size: 16px; font-weight: bold; }
             .pc-product-view .price-num { font-size: 28px; font-weight: bold; }
-            .pc-product-view .cell-item { background: #f5f5f5; border-radius: 8px; cursor: pointer; padding: 14px 16px; }
+            /* [修改] 移除 .cell-item 的背景，因为我们现在直接显示规格 */
+            .pc-product-view .cell-item { cursor: pointer; padding: 14px 16px; }
             .pc-product-view .cell-label { color: #999; margin-right: 10px; font-weight: bold; min-width: 30px; }
             .pc-product-view .cell-content { flex: 1; font-weight: 500; }
             .pc-product-view .btn-buy { flex: 1; height: 45px; border-radius: 8px; font-size: 16px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; }
             .pc-product-view .extra-info { background: #fff5f7; border-radius: 4px; padding: 8px; font-size: 12px; color: #ff0036; margin-top: 10px; line-height: 1.6; }
             .pc-product-view .extra-tag-solid { display: inline-block; background: #ff0036; color: #fff; padding: 1px 5px; border-radius: 2px; margin-right: 5px; font-size: 11px; vertical-align: middle; }
             .pc-product-view .sku-preview-tag { display: inline-block; border: 1px solid #dcdcdc; background: #fcfcfc; color: #333; padding: 3px 10px; border-radius: 4px; margin-right: 6px; margin-bottom: 4px; font-size: 13px; }
-
+            /* [新增] 确保PC端规格列表有最小高度 */
+            .pc-product-view .spec-list { min-height: 30px; }
         }
 
         /* 共享的SKU面板样式 (全局) */
@@ -89,6 +91,21 @@
         #spec-pagination-container .page-item.disabled .page-link { color: #ff5000; }
         .spec-btn.disabled { color: #bbb !important; pointer-events: none; position: relative; }
         .spec-btn.disabled::after { content: "缺货"; position: absolute; top: -5px; right: -5px; background: #918c8d; color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 3px; line-height: 1.2; font-weight: normal; }
+
+        /* [新增] PC端规格分页样式 */
+        #spec-pagination-container-pc .page-link { 
+            cursor: pointer;
+            color: #212529bf; 
+            padding: 0.25rem 0.5rem; /* 更紧凑的分页 */
+            font-size: 0.875rem;
+        }
+        #spec-pagination-container-pc .page-item.disabled .page-link { 
+            color: #ff5000; 
+            cursor: default;
+        }
+        #spec-pagination-container-pc .pagination {
+             margin-bottom: 0; /* 移除分页的下边距 */
+        }
     </style>
 </head>
 <body>
@@ -186,12 +203,18 @@
                                 
                                 <hr class="my-3">
                                 
-                                <div class="cell-item mt-2" onclick="handleBuyNow()">
-                                    <span class="cell-label">选择</span>
-                                    <div class="cell-content" id="p-select-text-pc">规格加载中...</div>
-                                    <i class="fa fa-angle-right text-muted"></i>
+                                <div class="mt-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="cell-label" style="margin-bottom: 10px; min-width: 30px; font-weight: bold; color: #999;">选择</span>
+                                        <div class="section-title" id="sku-spec-title-container-pc" style="font-size: 13px; color: #333; font-weight: bold; margin-bottom: 10px; margin-left: 10px;">规格</div>
+                                    </div>
+                                    
+                                    <div class="spec-list" id="variant-list-pc" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; min-height: 30px;">
+                                        <div class="text-muted small">规格加载中...</div>
+                                    </div>
+                                    
+                                    <nav id="spec-pagination-container-pc" class="mt-2" aria-label="PC规格分页"></nav>
                                 </div>
-
                                 <div class="mt-4 pt-2">
                                     <button class="btn-buy" onclick="handleBuyNow()">立即购买</button>
                                 </div>
