@@ -399,7 +399,7 @@ function renderSpecListPage(page) {
 
 function changeSpecPage(page) {
     const totalPages = specPages.length;
-    if (page < 1 || page > totalPages || page === specCurrentPage) return;
+    if (page < 1 || page > totalPages || page === pcSpecCurrentPage) return;
     renderSpecListPage(page);
 }
 
@@ -785,7 +785,7 @@ function updatePrice() {
 // ==========================================================
 
 /**
- * [新增] 更新PC端的“已选”提示文本
+ * [新增] 更新PC端的“已选”提示文本 (实现要求2)
  */
 function updatePcSelectionText() {
     const noteEl = document.getElementById('pc-selected-card-note');
