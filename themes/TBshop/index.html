@@ -5,206 +5,213 @@
     <meta name="renderer" content="webkit">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>商店首页</title>
+    
     <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="/assets/css/all.min.css" rel="stylesheet">
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
-    </head>
+</head>
 <body>
 
-    <header class="mobile-header d-lg-none">
-        <div class="mh-left" id="mobile-menu-btn">
-            <i class="fa fa-bars"></i>
-        </div>
-        <div class="mh-center">
-            <a href="/" class="d-flex align-items-center justify-content-center h-100">
-                <img id="mobile-logo-img" class="d-none" alt="Logo">
-                <span id="mobile-site-name-wrap" class="d-none">
+    <div class="mobile-view d-lg-none">
+        
+        <header class="mobile-header">
+            <button class="icon-btn" id="mobile-menu-btn"><i class="fa fa-bars"></i></button>
+            <a href="/" class="site-brand">
+                <img id="mobile-logo-img" class="d-none" style="max-height: 30px; width: auto; margin-right: 5px;" alt="Logo">
+                <span id="mobile-site-name-wrap" class="d-flex align-items-center d-none">
                     <i class="fa fa-shopping-bag"></i>
                     <span id="mobile-header-site-name">TB Shop</span>
                 </span>
             </a>
-        </div>
-        <div class="mh-right" id="mobile-search-btn">
-            <i class="fa fa-search"></i>
-        </div>
-    </header>
+            <button class="icon-btn" id="mobile-search-btn"><i class="fa fa-search"></i></button>
+        </header>
 
-    <div class="mobile-search-dropdown d-lg-none">
-        <div class="tb-search-group">
-            <input type="text" id="mobile-search-input" class="tb-search-input" placeholder="搜索商品...">
-            <button class="tb-search-btn" onclick="doSearch('mobile')">搜索</button>
-        </div>
-    </div>
-    <div class="mobile-search-overlay d-lg-none" id="mobile-search-overlay"></div>
-
-
-    <div class="mobile-sidebar d-lg-none" id="mobile-sidebar">
-        <div class="mobile-sidebar-header">
-            <h5 class="mobile-sidebar-title">分类菜单</h5>
-            <i class="fa fa-times mobile-sidebar-close" id="mobile-sidebar-close-btn"></i>
-        </div>
-        <div class="mobile-sidebar-content">
-            <div id="mobile-category-list">
-                <a href="#" onclick="filterCategoryMobile('all')">全部商品</a>
-                </div>
-        </div>
-        <div class="mobile-sidebar-footer">
-            <a href="/admin/" class="mobile-sidebar-login-link">
-                <i class="fa fa-user-circle"></i> 登录
-            </a>
-        </div>
-    </div>
-    <div class="mobile-overlay d-lg-none" id="mobile-overlay"></div>
-
-
-    <header class="tb-header d-none d-lg-block">
-        <div class="container header-inner">
-            <a href="/" class="site-brand">
-                <img id="site-logo" class="d-none" style="max-height: 45px; width: auto; margin-right: 10px;" alt="Logo">
-                <span id="site-name-wrap" class="d-flex align-items-center d-none">
-                    <i class="fa fa-shopping-bag"></i>
-                    <span id="header-site-name">TB Shop</span>
-                </span>
-            </a>
-
-            <nav class="main-nav d-none d-md-flex">
-                <a href="/" class="nav-link-item">首页</a>
-                <a href="/articles.html" class="nav-link-item">教程文章</a>
-                <a href="/admin/orders.html" target="_blank" class="nav-link-item">查询订单</a>
-            </nav>
-
-            <div class="header-right">
-                <div class="tb-search-group">
-                    <input type="text" id="search-input" class="tb-search-input" placeholder="搜索商品...">
-                    <button class="tb-search-btn" onclick="doSearch('pc')">搜索</button>
-                </div>
-                <a href="/admin/" class="btn-login">登录</a>
+        <div class="mobile-search-dropdown">
+            <div class="tb-search-group">
+                <input type="text" id="mobile-search-input" class="tb-search-input" placeholder="搜索商品...">
+                <button class="tb-search-btn" onclick="doSearch('mobile')">搜索</button>
             </div>
         </div>
-    </header>
+        <div class="mobile-search-overlay" id="mobile-search-overlay"></div>
 
-    <div class="container mt-4">
-        <div class="row gx-3" id="main-content-row">
-            
-            <div class="col-lg-9">
+        <div class="mobile-category-bar">
+            <div class="mobile-category-list" id="mobile-category-list">
+                <a href="#" class="active">加载中...</a>
+            </div>
+        </div>
+
+        <div class="container-fluid" style="padding: 10px;">
+            <div class="row">
+                <div class="col-12" id="products-list-area-mobile">
+                    <div id="products-list-area">
+                        <div class="module-box"><div class="text-center py-5 w-100 text-muted">商品加载中...</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mobile-sidebar" id="mobile-sidebar">
+            <div class="sidebar-header">
+                <h5>菜单</h5>
+                <button class="btn-close" id="mobile-sidebar-close-btn"></button>
+            </div>
+            <div class="sidebar-content">
+                <a href="/" class="sidebar-link active">首页</a>
+                <a href="/articles.html" class="sidebar-link">教程文章</a>
+                <a href="/admin/orders.html" target="_blank" class="sidebar-link">查询订单</a>
+                <a href="/admin/" class="sidebar-link">登录</a>
+                <hr>
+                <div class="module-title-sm">教程分类</div>
+                <div class="art-cat-list" id="article-cat-list-mobile">
+                    </div>
+                <div class="module-title-sm mt-3">热门标签</div>
+                <div class="tag-cloud" id="tag-cloud-list-mobile">
+                    </div>
+            </div>
+        </div>
+        <div class="mobile-overlay" id="mobile-overlay"></div>
+
+        <div class="mobile-bottom-nav">
+            <a href="/" class="nav-item active">
+                <i class="fa fa-store"></i>
+                <span>首页</span>
+            </a>
+            <a href="#" id="mobile-contact-btn" class="nav-item">
+                <i class="fa fa-headset"></i>
+                <span>客服</span>
+            </a>
+            <a href="/admin/orders.html" target="_blank" class="nav-item">
+                <i class="fa fa-receipt"></i>
+                <span>订单</span>
+            </a>
+            <a href="/admin/" class="nav-item">
+                <i class="fa fa-user-circle"></i>
+                <span>登录</span>
+            </a>
+        </div>
+
+        <div class="offcanvas offcanvas-bottom" tabindex="-1" id="mobile-contact-sheet" style="height: 50vh; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title">联系客服</h5>
+                <button type="button" class="btn-close" id="mobile-contact-close-btn"></button>
+            </div>
+            <div class="offcanvas-body" id="mobile-contact-content">
+                <p>暂无联系方式</p>
+            </div>
+        </div>
+        <div class="mobile-overlay" id="mobile-contact-overlay"></div>
+
+    </div>
+    
+    <div class="pc-view d-none d-lg-block">
+        
+        <header class="tb-header">
+            <div class="container header-inner">
+                <a href="/" class="site-brand">
+                    <img id="site-logo" class="d-none" style="max-height: 45px; width: auto; margin-right: 10px;" alt="Logo">
+                    <span id="site-name-wrap" class="d-flex align-items-center d-none">
+                        <i class="fa fa-shopping-bag"></i>
+                        <span id="header-site-name">TB Shop</span>
+                    </span>
+                </a>
+                <nav class="main-nav d-none d-md-flex">
+                    <a href="/" class="nav-link-item active">首页</a>
+                    <a href="/articles.html" class="nav-link-item">教程文章</a>
+                    <a href="/admin/orders.html" target="_blank" class="nav-link-item">查询订单</a>
+                </nav>
+                <div class="header-right">
+                    <div class="tb-search-group">
+                        <input type="text" id="search-input" class="tb-search-input" placeholder="搜索商品...">
+                        <button class="tb-search-btn" onclick="doSearch('pc')">搜索</button>
+                    </div>
+                    <a href="/admin/" class="btn-login">登录</a>
+                </div>
+            </div>
+        </header>
+
+        <div class="category-bar-wrapper">
+            <div class="container">
+                <div class="category-bar" id="category-container">
+                    <div class="cat-pill active">加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container mt-4">
+            <div class="row gx-3" id="main-content-row">
                 
-                <div class="module-box">
-                    <div class="category-bar" id="category-container">
-                        <div class="cat-pill active" onclick="filterCategory('all', this)">全部商品</div>
+                <div class="col-lg-9">
+                    <div id="products-list-area">
+                        <div class="module-box"><div class="text-center py-5 w-100 text-muted">商品加载中...</div></div>
                     </div>
                 </div>
 
-                <div id="products-list-area" style="padding-bottom: 15px; min-height: 400px;">
-                    <div class="text-center w-100 py-5 text-muted">
-                        <i class="fa fa-spinner fa-spin fa-2x"></i><br>加载商品中...
-                    </div>
-                </div>
-
-                <div class="module-box">
-                    <div class="module-title">
-                        热门教程
-                        <a href="/articles.html">更多 ></a>
-                    </div>
-                    <div id="hot-articles-list">
-                        <div class="text-muted small text-center">暂无文章</div>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="col-lg-3 d-none d-lg-block">
-                <div id="sidebar-wrapper"> 
-                    <div class="sidebar-inner">
-
-                        <div class="module-box" id="notice-module-box">
-                            <div class="module-title">店铺公告</div>
-                            <div class="notice-content" id="notice-box">
-                                暂无公告
+                <div class="col-lg-3 d-none d-lg-block">
+                    <div id="sidebar-wrapper">
+                        <div class="sidebar-inner">
+                            
+                            <div class="module-box" id="notice-module-box">
+                                <div class="module-title">店铺公告</div>
+                                <div class="notice-content" id="notice-box">
+                                    暂无公告
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="module-box" id="contact-module-box">
-                            <div class="module-title">联系客服</div>
-                            <div class="notice-content" id="contact-box">
-                                暂无联系方式
+                            
+                            <div class="module-box" id="contact-module-box">
+                                <div class="module-title">联系客服</div>
+                                <div class="notice-content" id="contact-box">
+                                    暂无联系方式
+                                </div>
                             </div>
-                        </div>
-                        <div class="module-box">
-                            <div class="module-title">销量排行</div>
-                            <div id="top-sales-list">
-                                </div>
-                        </div>
+                            
+                            <div class="module-box">
+                                <div class="module-title">销量排行</div>
+                                <div id="top-sales-list">
+                                    </div>
+                            </div>
+                            
+                            <div class="module-box">
+                                <div class="module-title">热门文章</div>
+                                <div id="hot-articles-list">
+                                    </div>
+                            </div>
 
-                        <div class="module-box">
-                            <div class="module-title">教程分类</div>
-                            <div class="art-cat-list" id="article-cat-list">
-                                </div>
-                        </div>
-                        
-                        <div class="module-box">
-                            <div class="module-title">热门标签</div>
-                            <div class="tag-cloud" id="tag-cloud-list">
-                                </div>
-                        </div>
+                            <div class="module-box">
+                                <div class="module-title">教程分类</div>
+                                <div class="art-cat-list" id="article-cat-list">
+                                    </div>
+                            </div>
+                            
+                            <div class="module-box">
+                                <div class="module-title">热门标签</div>
+                                <div class="tag-cloud" id="tag-cloud-list">
+                                    </div>
+                            </div>
 
-                    </div> 
-                </div> 
+                        </div> </div> </div> </div> </div> <footer class="site-footer">
+            <div class="container">
+                <div class="footer-links">
+                    <a href="/">首页</a>
+                    <a href="/articles.html">教程文章</a>
+                    <a href="#">关于我们</a>
+                    <a href="#">联系客服</a>
+                </div>
+                <div class="copyright">
+                    &copy; <span id="year"></span> <span id="footer-name">TB Shop</span>. All Rights Reserved.
+                </div>
             </div>
-        </div>
-    </div>
+        </footer>
 
-    <footer class="site-footer">
-        <div class="container">
-            <div class="footer-links">
-                <a href="/">首页</a>
-                <a href="/articles.html">教程文章</a>
-                <a href="#">关于我们</a>
-                <a href="#">联系客服</a>
-            </div>
-            <div class="copyright">
-                &copy; <span id="year"></span> <span id="footer-name">TB Shop</span>. All Rights Reserved.
-            </div>
-        </div>
-    </footer>
-
-    <nav class="mobile-bottom-nav d-lg-none">
-        <a href="/" class="mbn-item active">
-            <i class="fa fa-home"></i>
-            <span>首页</span>
-        </a>
-        <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-sidebar', 'mobile-overlay');">
-            <i class="fa fa-th-large"></i>
-            <span>商品分类</span>
-        </a>
-        <a href="/admin/orders.html" target="_blank" class="mbn-item">
-            <i class="fa fa-file-alt"></i>
-            <span>订单查询</span>
-        </a>
-        <a href="/articles.html" class="mbn-item">
-            <i class="fa fa-book-open"></i>
-            <span>教程文章</span>
-        </a>
-        <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-contact-sheet', 'mobile-contact-overlay');">
-            <i class="fa fa-headset"></i>
-            <span>客服</span>
-        </a>
-    </nav>
-
-    <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
-    <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
-        <div class="mcs-header">
-            <span class="mcs-title">联系客服</span>
-            <i class="fa fa-times mcs-close" id="mobile-contact-close-btn"></i>
-        </div>
-        <div class="mcs-content" id="mobile-contact-content">
-            <p>加载中...</p>
-        </div>
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="/themes/TBshop/files/common.js"></script>
+
     <script src="/themes/TBshop/files/main-index.js"></script>
-    </body>
+    
+</body>
 </html>
