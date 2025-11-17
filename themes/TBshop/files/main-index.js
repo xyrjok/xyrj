@@ -1,6 +1,7 @@
 // =============================================
 // === themes/TBshop/files/main-index.js
 // === (首页专属JS - 已精简)
+// === [购物车-升级版]
 // =============================================
 
 let allProducts = []; // 存储所有商品 (仅首页使用)
@@ -84,6 +85,11 @@ async function init() {
     // 5. 数据全部加载完成后，再次检查高度状态
     if (typeof checkSidebarStatus === 'function') {
         setTimeout(checkSidebarStatus, 500);
+    }
+
+    // --- [新增] 首页加载时也更新购物车角标 ---
+    if (typeof loadCartBadge === 'function') {
+        loadCartBadge();
     }
 }
 
