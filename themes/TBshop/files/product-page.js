@@ -1,12 +1,14 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
 // === (商品详情页专属JS)
+// === [购物车-升级版]
 // =============================================
 
 let currentProduct = null;
 let selectedVariant = null;
 let selectedCardId = null;
 let buyMode = null;
+let currentAction = 'buy'; // [新增] 'buy' (立即购买) 或 'cart' (加入购物车)
 
 const skuSheetEl = document.getElementById('skuSheet');
 const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
@@ -16,17 +18,54 @@ let specCurrentPage = 1;
 const specListMaxRows = 6;
 let hasCalculatedPages = false;
 
+// [修改] 监听SKU面板打开事件
 skuSheetEl.addEventListener('show.bs.offcanvas', () => {
     if (!hasCalculatedPages && currentProduct) {
         calculateSpecPages();
         hasCalculatedPages = true;
     }
+
+    // --- [新增] 根据 currentAction 修改 SKU 底部按钮 ---
+    const confirmBtn = skuSheetEl.querySelector('.btn-confirm');
+    if (currentAction === 'cart') {
+        confirmBtn.innerText = '加入购物车';
+        confirmBtn.onclick = submitAddToCart; // 指向新的“加入购物车”函数
+    } else {
+        // 默认是 'buy'
+        confirmBtn.innerText = '确定支付';
+        confirmBtn.onclick = submitOrder; // 指向原始的“创建订单”函数
+    }
+    // --- [新增逻辑结束] ---
 });
+
+/**
+ * [新增] 处理“立即购买”点击
+ * 设置当前操作为 'buy' 并打开 SKU 面板
+ */
+function handleBuyNow() {
+    currentAction = 'buy';
+    skuSheet.show();
+}
+
+/**
+ * [新增] 处理“加入购物车”点击
+ * 设置当前操作为 'cart' 并打开 SKU 面板
+ */
+function handleAddToCart() {
+    currentAction = 'cart';
+    skuSheet.show();
+}
+
 
 /**
  * 页面加载总入口
  */
 async function init() {
+    // [修改] 页面加载时更新购物车角标 (调用 common.js 的函数)
+    if (typeof loadCartBadge === 'function') {
+        loadCartBadge();
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
     if(!id) return alert('未指定商品');
@@ -322,7 +361,10 @@ function renderExtraInfo(selectedV) {
     }
 }
 
-function openSkuSheet() { skuSheet.show(); }
+// [修改] 默认调用 handleBuyNow
+function openSkuSheet() { 
+    handleBuyNow(); 
+}
 
 function selectVariant(vid) {
     selectedVariant = currentProduct.variants.find(v => v.id == vid);
@@ -451,6 +493,101 @@ function updatePrice() {
     }
     document.getElementById('sku-price-text').innerText = price.toFixed(2);
 }
+
+/**
+ * [新增] 提交到购物车 (使用 localStorage 模拟)
+ */
+async function submitAddToCart() {
+    // 1. 验证规格 (逻辑同 submitOrder)
+    if (!selectedVariant) {
+        alert('请选择规格');
+        if (typeof highlightAndScroll === 'function') highlightAndScroll('sku-spec-title-container');
+        return;
+    }
+    
+    const modeContainer = document.getElementById('buy-mode-container');
+    if (modeContainer.offsetHeight > 0 || modeContainer.offsetWidth > 0) {
+        const buyModeRadio = document.querySelector('input[name="buy_mode"]:checked');
+        if (!buyModeRadio) {
+            alert('请选择购买方式');
+            if (typeof highlightAndScroll === 'function') highlightAndScroll('buy-mode-container');
+            return;
+        }
+        if (buyMode === 'select' && !selectedCardId) {
+            alert('请选择号码');
+            if (typeof highlightAndScroll === 'function') highlightAndScroll('card-selector');
+            return;
+        }
+    }
+    
+    const quantity = parseInt(document.getElementById('buy-qty').value);
+    if (buyMode !== 'select') {
+        if (selectedVariant.stock < quantity) {
+            alert('库存不足');
+            if (typeof highlightAndScroll === 'function') highlightAndScroll(document.getElementById('buy-qty').closest('.d-flex'));
+            return;
+        }
+    }
+    
+    // 2. 将商品加入 localStorage
+    const btn = skuSheetEl.querySelector('.btn-confirm');
+    const oldText = btn.innerText;
+    btn.disabled = true; btn.innerText = '正在添加...';
+    
+    try {
+        let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
+        
+        // 构造购物车项
+        const cartItem = {
+            productId: currentProduct.id,
+            productName: currentProduct.name,
+            variantId: selectedVariant.id,
+            variantName: selectedVariant.name,
+            price: parseFloat(document.getElementById('sku-price-text').innerText), // 获取SKU面板计算后的价格
+            quantity: quantity,
+            img: document.getElementById('sku-img').src,
+            buyMode: buyMode,
+            selectedCardId: (buyMode === 'select') ? selectedCardId : null,
+            selectedCardNote: (buyMode === 'select') ? document.querySelector('.card-option.active')?.innerText : null
+        };
+
+        // 检查购物车中是否已有此规格 (简易合并逻辑)
+        // 注意：自选商品 (buyMode === 'select') 永远不合并
+        const existingItemIndex = cart.findIndex(item => 
+            item.variantId === cartItem.variantId && 
+            item.buyMode !== 'select' && 
+            cartItem.buyMode !== 'select' &&
+            item.buyMode === cartItem.buyMode // 确保都是随机模式
+        );
+
+        if (existingItemIndex > -1) {
+            // 如果已存在（非自选），则增加数量
+            cart[existingItemIndex].quantity += cartItem.quantity;
+        } else {
+            // 否则，添加为新项目
+            cart.push(cartItem);
+        }
+
+        localStorage.setItem('tbShopCart', JSON.stringify(cart));
+        
+        // 3. 更新角标 (调用 common.js 的函数)
+        if (typeof updateCartBadge === 'function') {
+            updateCartBadge(cart.length);
+        }
+        
+        // 4. 关闭面板
+        skuSheet.hide();
+        
+    } catch (e) {
+        console.error('Add to cart failed', e);
+        alert('添加失败，请重试');
+    } finally {
+        // 按钮状态将在下次打开时由 'show.bs.offcanvas' 事件重置
+        btn.disabled = false;
+        btn.innerText = oldText; // 恢复一下，以防关闭失败
+    }
+}
+
 
 async function submitOrder() {
     if (!selectedVariant) {
