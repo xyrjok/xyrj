@@ -227,7 +227,7 @@ function updatePcElements(product, variant, priceStr) {
 }
 
 // ==========================================================
-// PC 端页内规格函数 (来自上一步)
+// PC 端页内规格函数
 // ==========================================================
 function calculatePCSpecPages() {
     const vList = document.getElementById('variant-list-pc');
@@ -316,7 +316,7 @@ function changePCSpecPage(page) {
 
 
 // ==========================================================
-// SKU 弹出面板函数 (来自上一步)
+// SKU 弹出面板函数
 // ==========================================================
 function calculateSpecPages() {
     const vList = document.getElementById('variant-list');
@@ -459,7 +459,7 @@ function renderPage() {
     document.getElementById('buy-mode-container-pc').classList.add('d-none');
     document.getElementById('quantity-container-pc').classList.add('d-none');
     document.getElementById('buy-qty-pc').value = 1;
-    selectPcBuyMode(null); // [修改] 重置PC端按钮状态并更新文本
+    selectPcBuyMode(null); 
     
     updatePcElements(p, null);
 
@@ -580,12 +580,16 @@ function selectVariant(vid) {
         modeContainer.classList.add('d-none');
     }
 
-    // 8. PC端购买方式 (控制PC页面)
+    // 8. [修改] PC端购买方式 (控制PC页面)
     const modeContainerPc = document.getElementById('buy-mode-container-pc');
     const qtyContainerPc = document.getElementById('quantity-container-pc');
+    const noteEl = document.getElementById('pc-selected-card-note'); // [新增]
+    
     if (selectedVariant.custom_markup > 0 && selectedVariant.auto_delivery === 1) {
         modeContainerPc.classList.remove('d-none'); // 显示PC购买方式
         qtyContainerPc.classList.remove('d-none');  // 显示PC购买数量
+        noteEl.classList.remove('d-none'); // [新增] 显示“已选”文本
+        
         document.getElementById('markup-amount-pc').innerText = selectedVariant.custom_markup;
         document.getElementById('selection-label-text-pc').innerText = labelText;
         // 重置
@@ -595,6 +599,8 @@ function selectVariant(vid) {
     } else {
         modeContainerPc.classList.add('d-none'); // 隐藏PC购买方式
         qtyContainerPc.classList.remove('d-none'); // 基础数量选择器总是显示
+        noteEl.classList.add('d-none'); // [新增] 隐藏“已选”文本
+        
         // 重置
         selectPcBuyMode(null);
         document.getElementById('buy-qty-pc').value = 1;
@@ -614,7 +620,7 @@ function selectVariant(vid) {
     // 11. 更新PC端元素 (价格等)
     updatePcElements(currentProduct, selectedVariant, selectedVariant.price);
 
-    // 12. [新增] 更新PC端已选文本
+    // 12. [修改] 更新PC端已选文本
     updatePcSelectionText();
 }
 
@@ -781,17 +787,18 @@ function updatePrice() {
 }
 
 // ==========================================================
-// [新增] PC端 购买方式/卡密选择 面板控制
+// PC端 购买方式/卡密选择 面板控制
 // ==========================================================
 
 /**
- * [新增] 更新PC端的“已选”提示文本 (实现要求2)
+ * [修改] 更新PC端的“已选”提示文本 (实现要求2)
  */
 function updatePcSelectionText() {
     const noteEl = document.getElementById('pc-selected-card-note');
     if (!noteEl) return;
 
-    if (!selectedVariant) {
+    // [修改] 如果没有规格，或者“已选”框被设为d-none，则清空并返回
+    if (!selectedVariant || noteEl.classList.contains('d-none')) {
         noteEl.innerText = '';
         return;
     }
@@ -892,7 +899,7 @@ function confirmPcCardSelection() {
 // ==========================================================
 
 /**
- * [新增] 提交到购物车
+ * 提交到购物车
  */
 async function submitAddToCart() {
     // 1. 验证 (基于SKU面板)
