@@ -7,8 +7,8 @@
 let currentProduct = null;
 let selectedVariant = null;
 let selectedCardId = null;
-let buyMode = null;
-let currentAction = 'buy'; // [新增] 'buy' (立即购买) 或 'cart' (加入购物车)
+let buyMode = null; // [修改] 'random' 或 'select'，全局状态，由PC和SKU面板共享
+let currentAction = 'buy'; // 'buy' (立即购买) 或 'cart' (加入购物车)
 
 const skuSheetEl = document.getElementById('skuSheet');
 const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
@@ -19,37 +19,74 @@ let specCurrentPage = 1;
 const specListMaxRows = 6;
 let hasCalculatedPages = false;
 
-// [新增] PC端页内规格的分页变量
+// PC端页内规格的分页变量
 let pcSpecPages = [];
 let pcSpecCurrentPage = 1;
-// const pcSpecListMaxRows = 6; // 可以重用 specListMaxRows
 let pcHasCalculatedPages = false;
 
 
 // [修改] 监听SKU面板打开事件
 skuSheetEl.addEventListener('show.bs.offcanvas', () => {
-    // [修改] SKU面板的规格列表使用 lazy loading，打开时才计算
+    // 1. SKU面板的规格列表使用 lazy loading，打开时才计算
     if (!hasCalculatedPages && currentProduct) {
         calculateSpecPages(); // 计算 SKU 面板的分页
         hasCalculatedPages = true;
     }
 
-    // --- [新增] 根据 currentAction 修改 SKU 底部按钮 ---
+    // 2. [修改] 根据 currentAction 修改 SKU 底部按钮
     const confirmBtn = skuSheetEl.querySelector('.btn-confirm');
     if (currentAction === 'cart') {
         confirmBtn.innerText = '加入购物车';
-        confirmBtn.onclick = submitAddToCart; // 指向新的“加入购物车”函数
+        confirmBtn.onclick = submitAddToCart; 
     } else {
-        // 默认是 'buy'
         confirmBtn.innerText = '确定支付';
-        confirmBtn.onclick = submitOrder; // 指向原始的“创建订单”函数
+        confirmBtn.onclick = submitOrder; 
     }
-    // --- [新增逻辑结束] ---
+
+    // 3. [新增] 同步PC端的状态到SKU面板
+    if (selectedVariant) {
+        // 3.1 同步购买方式
+        const modeContainer = document.getElementById('buy-mode-container');
+        if (modeContainer.classList.contains('d-none')) {
+            // 如果 SKU 面板的购买方式是隐藏的 (即规格不支持)，则跳过
+        } else {
+            // 如果支持，则根据全局 buyMode 状态设置单选框
+            const randomRadio = document.getElementById('mode_random');
+            const selectRadio = document.getElementById('mode_select');
+            
+            if (buyMode === 'random') {
+                randomRadio.checked = true;
+                selectRadio.checked = false;
+            } else if (buyMode === 'select') {
+                randomRadio.checked = false;
+                selectRadio.checked = true;
+            } else {
+                randomRadio.checked = false;
+                selectRadio.checked = false;
+            }
+            // 触发 toggleBuyMode 以显示/隐藏 SKU 面板中的卡密列表
+            toggleBuyMode();
+            
+            // 如果是自选，需要重新加载卡密列表并高亮已选项
+            if (buyMode === 'select') {
+                // 确保列表是可见的
+                document.getElementById('card-selector').classList.remove('d-none');
+                // 加载数据，loadCardNotes 会自动高亮 selectedCardId
+                loadCardNotes('card-list'); 
+            }
+        }
+
+        // 3.2 同步购买数量 (从PC端同步到SKU面板)
+        const pcQty = document.getElementById('buy-qty-pc').value;
+        document.getElementById('buy-qty').value = pcQty;
+
+        // 3.3 更新SKU面板的价格
+        updatePrice();
+    }
 });
 
 /**
  * [新增] 处理“立即购买”点击
- * 设置当前操作为 'buy' 并打开 SKU 面板
  */
 function handleBuyNow() {
     currentAction = 'buy';
@@ -58,7 +95,6 @@ function handleBuyNow() {
 
 /**
  * [新增] 处理“加入购物车”点击
- * 设置当前操作为 'cart' 并打开 SKU 面板
  */
 function handleAddToCart() {
     currentAction = 'cart';
@@ -70,20 +106,16 @@ function handleAddToCart() {
  * 页面加载总入口
  */
 async function init() {
-    // [修改] 页面加载时更新购物车角标 (调用 common.js 的函数)
     if (typeof loadCartBadge === 'function') {
         loadCartBadge();
     }
-
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
     if(!id) return alert('未指定商品');
 
-    // 1. 加载配置 (用于公告/联系方式/Logo)
     try {
         const configRes = await fetch('/api/shop/config');
         const siteConfig = await configRes.json();
-        // 调用 common.js 中的函数
         if (typeof renderGlobalHeaders === 'function') {
             renderGlobalHeaders(siteConfig);
         }
@@ -92,44 +124,35 @@ async function init() {
         }
     } catch (e) { console.error('Failed to load config', e); }
 
-    // 2. 加载所有商品 (用于查找当前商品 和 渲染侧边栏)
     let allProducts = [];
     try {
         const res = await fetch('/api/shop/products');
         allProducts = await res.json();
         currentProduct = allProducts.find(p => p.id == id);
         if (!currentProduct) return alert('商品不存在或已下架');
-        
-        // 渲染页面
         renderPage();
-
-        // 调用 common.js 中的函数
         if (typeof renderSidebarTopSales === 'function') {
             renderSidebarTopSales(allProducts);
         }
         if (typeof renderSidebarTagCloud === 'function') {
             renderSidebarTagCloud(allProducts);
         }
-
     } catch (e) { console.error(e); alert('加载失败'); }
 
-    // 3. 加载文章 (用于侧边栏)
     try {
         const artRes = await fetch('/api/shop/articles/list');
         const articles = await artRes.json();
-        // 调用 common.js 中的函数
         if (typeof renderSidebarArticleCats === 'function') {
             renderSidebarArticleCats(articles);
         }
     } catch(e) { console.error('Failed to load articles', e); }
     
-    // 4. 数据加载完成后，检查侧边栏粘性
     if (typeof checkSidebarStatus === 'function') {
         setTimeout(checkSidebarStatus, 500);
     }
 }
 
-// --- 以下是 product.html 的专属函数 (从内联脚本复制而来) ---
+// --- (专属函数) ---
 
 function updatePcElements(product, variant, priceStr) {
     const p = product || currentProduct;
@@ -157,38 +180,14 @@ function updatePcElements(product, variant, priceStr) {
     const pStockPc = document.getElementById('p-stock-pc');
     const pSalesPc = document.getElementById('p-sales-pc');
     const pDescPc = document.getElementById('p-desc-pc');
-    
-    // [修改] p-select-text-pc 已被移除，不再需要更新它
-    // const pSelectTextPc = document.getElementById('p-select-text-pc');
-    
     const pExtraInfoPc = document.getElementById('p-extra-info-pc');
+    
     if (pImgPc) pImgPc.src = targetImg;
     if (pTitlePc) pTitlePc.innerText = p.name;
     if (pPricePc) pPricePc.innerText = priceDisplay;
     if (pStockPc) pStockPc.innerText = `库存: ${totalStock}`;
     if (pSalesPc) pSalesPc.innerText = `已售: ${totalSales}`;
     if (pDescPc) pDescPc.innerText = p.description || '暂无详细介绍';
-    
-    // [修改] p-select-text-pc 已被移除
-    /*
-    if (pSelectTextPc) {
-        if (v) {
-            let selectedHtml = `<div style="padding-right: 10px;">已选: ${v.name}</div>`;
-            if (p.variants.length > 1) { 
-                selectedHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
-            }
-            pSelectTextPc.innerHTML = selectedHtml;
-        } else {
-            const maxTagsToShow = 10;
-            const tagsToShow = p.variants.slice(0, maxTagsToShow);
-            let skuTagsHtml = tagsToShow.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
-            if (p.variants.length > maxTagsToShow) {
-                skuTagsHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
-            }
-            pSelectTextPc.innerHTML = skuTagsHtml;
-        }
-    }
-    */
     
     if(pExtraInfoPc) {
         const variants = p.variants;
@@ -225,10 +224,6 @@ function updatePcElements(product, variant, priceStr) {
 // ==========================================================
 // [新增] 专用于 PC 端页内规格的函数
 // ==========================================================
-
-/**
- * [新增] 计算 PC 端页内规格的分页
- */
 function calculatePCSpecPages() {
     const vList = document.getElementById('variant-list-pc');
     if (!currentProduct || !vList) return;
@@ -271,9 +266,6 @@ function calculatePCSpecPages() {
     renderPCSpecListPage(1);
 }
 
-/**
- * [新增] 渲染 PC 端页内规格的分页控件
- */
 function renderPCSpecPagination() {
     const totalPages = pcSpecPages.length;
     const container = document.getElementById('spec-pagination-container-pc');
@@ -282,7 +274,8 @@ function renderPCSpecPagination() {
         return;
     }
     let pagesHtml = `
-        <ul class="pagination pagination-sm justify-content-start"> <li class="page-item ${pcSpecCurrentPage === 1 ? 'disabled' : ''}"><a class="page-link" onclick="changePCSpecPage(1)">首页</a></li>
+        <ul class="pagination pagination-sm justify-content-start">
+            <li class="page-item ${pcSpecCurrentPage === 1 ? 'disabled' : ''}"><a class="page-link" onclick="changePCSpecPage(1)">首页</a></li>
             <li class="page-item ${pcSpecCurrentPage === 1 ? 'disabled' : ''}"><a class="page-link" onclick="changePCSpecPage(${pcSpecCurrentPage - 1})">上一页</a></li>
             <li class="page-item disabled"><span class="page-link">${pcSpecCurrentPage} / ${totalPages}</span></li>
             <li class="page-item ${pcSpecCurrentPage === totalPages ? 'disabled' : ''}"><a class="page-link" onclick="changePCSpecPage(${pcSpecCurrentPage + 1})">下一页</a></li>
@@ -291,9 +284,6 @@ function renderPCSpecPagination() {
     container.innerHTML = pagesHtml;
 }
 
-/**
- * [新增] 渲染 PC 端页内指定页码的规格
- */
 function renderPCSpecListPage(page) {
     const vList = document.getElementById('variant-list-pc');
     if (!pcSpecPages || pcSpecPages.length === 0) {
@@ -313,9 +303,6 @@ function renderPCSpecListPage(page) {
     renderPCSpecPagination();
 }
 
-/**
- * [新增] PC 端页内规格的翻页
- */
 function changePCSpecPage(page) {
     const totalPages = pcSpecPages.length;
     if (page < 1 || page > totalPages || page === pcSpecCurrentPage) return;
@@ -326,7 +313,6 @@ function changePCSpecPage(page) {
 // ==========================================================
 // 专用于 SKU 弹出面板的函数 (原函数)
 // ==========================================================
-
 function calculateSpecPages() {
     const vList = document.getElementById('variant-list');
     if (!currentProduct || !vList) return;
@@ -445,7 +431,7 @@ function renderPage() {
     document.getElementById('spec-pagination-container').innerHTML = '';
     document.getElementById('sku-spec-title-container').innerHTML = `规格 <span style="font-size: 12px; color: #999; font-weight: normal;">（共${p.variants.length}个）</span>`;
     
-    // [修改] PC 端页内规格重置 (变量)
+    // PC 端页内规格重置 (变量)
     pcHasCalculatedPages = false;
     pcSpecPages = [];
     pcSpecCurrentPage = 1;
@@ -463,16 +449,22 @@ function renderPage() {
     document.getElementById('sku-selected-text').innerText = '未选择';
     document.getElementById('random-mode-desc').innerText = '享受批发优惠';
     selectedVariant = null;
+    
+    // [新增] 重置PC端购买方式/数量
+    document.getElementById('buy-mode-container-pc').classList.add('d-none');
+    document.getElementById('quantity-container-pc').classList.add('d-none');
+    document.getElementById('buy-qty-pc').value = 1;
+    document.getElementById('pc-selected-card-note').innerText = '';
+    selectPcBuyMode(null); // 重置PC端按钮状态
+    
     updatePcElements(p, null);
 
-    // [新增] 立即为PC端计算并渲染规格
+    // 立即为PC端计算并渲染规格
     if (!pcHasCalculatedPages && currentProduct) {
-        // [新增] 顺便更新PC端的规格标题
         const pcTitleContainer = document.getElementById('sku-spec-title-container-pc');
         if (pcTitleContainer) {
             pcTitleContainer.innerHTML = `规格 <span style="font-size: 12px; color: #999; font-weight: normal;">（共${p.variants.length}个）</span>`;
         }
-        // [新增] 调用PC端专属的计算函数
         calculatePCSpecPages(); 
         pcHasCalculatedPages = true;
     }
@@ -509,7 +501,6 @@ function renderExtraInfo(selectedV) {
     }
 }
 
-// [修改] 默认调用 handleBuyNow
 function openSkuSheet() { 
     handleBuyNow(); 
 }
@@ -520,30 +511,40 @@ function openSkuSheet() {
 function selectVariant(vid) {
     selectedVariant = currentProduct.variants.find(v => v.id == vid);
     
-    // [修改] 同时更新 PC 端和 SKU 面板的列表状态
+    // 1. [修改] 同时更新 PC 端和 SKU 面板的列表状态
     renderSpecListPage(specCurrentPage); // 更新 SKU 面板
     if (pcHasCalculatedPages) {
         renderPCSpecListPage(pcSpecCurrentPage); // 更新 PC 端页内
     }
     
+    // 2. 更新SKU面板的常规信息
     document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
     document.getElementById('sku-selected-text').innerText = selectedVariant.name;
-    document.getElementById('p-price').innerText = selectedVariant.price;
+    document.getElementById('p-price').innerText = selectedVariant.price; // 移动端价格
     const labelText = selectedVariant.selection_label || '自选卡密/号码';
     document.getElementById('selection-label-text').innerText = labelText;
+    
+    // 3. 更新移动端“已选”
     const p = currentProduct;
     let selectedHtml = `<div style="padding-right: 10px;">已选: ${selectedVariant.name}</div>`;
     if (p.variants.length > 1) { 
         selectedHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
     }
     document.getElementById('p-select-text').innerHTML = selectedHtml;
+    
+    // 4. 更新图片
     const defV = p.variants[0];
     const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
     const targetImg = selectedVariant.image_url || mainImg;
     document.getElementById('sku-img').src = targetImg;
     document.getElementById('p-img').src = targetImg;
+    
+    // 5. 更新移动端批发/加价信息
     renderExtraInfo(selectedVariant);
+    
+    // 6. 更新SKU面板批发信息
     const randomDesc = document.getElementById('random-mode-desc');
+    const randomDescPc = document.getElementById('random-mode-desc-pc'); // [新增] PC端
     if (selectedVariant.wholesale_config) {
         try {
             let ws = selectedVariant.wholesale_config;
@@ -552,91 +553,227 @@ function selectVariant(vid) {
                 ws.sort((a, b) => a.qty - b.qty);
                 const wsText = ws.map(w => `${w.qty}起${w.price}元/1个`).join('，');
                 randomDesc.innerText = `批发价：${wsText}`;
+                randomDescPc.innerText = `批发价：${wsText}`; // [新增] PC端
             } else {
                 randomDesc.innerText = '暂无批发价';
+                randomDescPc.innerText = '暂无批发价'; // [新增] PC端
             }
-        } catch(e) { randomDesc.innerText = '暂无批发价'; }
+        } catch(e) { 
+            randomDesc.innerText = '暂无批发价'; 
+            randomDescPc.innerText = '暂无批发价'; // [新增] PC端
+        }
     } else {
         randomDesc.innerText = '暂无批发价';
+        randomDescPc.innerText = '暂无批发价'; // [新增] PC端
     }
+    
+    // 7. [修改] SKU面板购买方式 (仅控制SKU面板)
     const modeContainer = document.getElementById('buy-mode-container');
     if (selectedVariant.custom_markup > 0 && selectedVariant.auto_delivery === 1) {
         modeContainer.classList.remove('d-none');
         document.getElementById('markup-amount').innerText = selectedVariant.custom_markup;
-        const radios = document.getElementsByName('buy_mode');
-        radios.forEach(r => r.checked = false);
-        buyMode = null;
-        document.getElementById('card-selector').classList.add('d-none');
-        selectedCardId = null;
-        updatePrice();
     } else {
         modeContainer.classList.add('d-none');
-        buyMode = null; 
-        updatePrice();
     }
+
+    // 8. [新增] PC端购买方式 (控制PC页面)
+    const modeContainerPc = document.getElementById('buy-mode-container-pc');
+    const qtyContainerPc = document.getElementById('quantity-container-pc');
+    if (selectedVariant.custom_markup > 0 && selectedVariant.auto_delivery === 1) {
+        modeContainerPc.classList.remove('d-none'); // 显示PC购买方式
+        qtyContainerPc.classList.remove('d-none');  // 显示PC购买数量
+        document.getElementById('markup-amount-pc').innerText = selectedVariant.custom_markup;
+        document.getElementById('selection-label-text-pc').innerText = labelText;
+        // 重置选择
+        selectPcBuyMode(null);
+        document.getElementById('buy-qty-pc').value = 1;
+        document.getElementById('pc-selected-card-note').innerText = '';
+        selectedCardId = null;
+    } else {
+        modeContainerPc.classList.add('d-none'); // 隐藏PC购买方式
+        qtyContainerPc.classList.remove('d-none'); // [修改] 基础数量选择器总是显示
+        // 重置
+        selectPcBuyMode(null);
+        document.getElementById('buy-qty-pc').value = 1;
+        document.getElementById('pc-selected-card-note').innerText = '';
+        selectedCardId = null;
+    }
+    
+    // 9. 重置全局状态 (buyMode)
+    // 注意：selectedCardId 在上面被重置了
+    buyMode = null; 
+    // 重置SKU面板的单选框
+    const radios = document.getElementsByName('buy_mode');
+    radios.forEach(r => r.checked = false);
+    document.getElementById('card-selector').classList.add('d-none');
+    
+    // 10. 更新价格 (SKU面板)
+    updatePrice();
+    
+    // 11. 更新PC端元素 (价格等)
     updatePcElements(currentProduct, selectedVariant, selectedVariant.price);
 }
 
+/**
+ * [修改] SKU面板的购买方式切换 (只管SKU面板)
+ */
 function toggleBuyMode() {
     const radios = document.getElementsByName('buy_mode');
-    for(let r of radios) if(r.checked) buyMode = r.value;
+    let currentSkuBuyMode = null;
+    for(let r of radios) if(r.checked) currentSkuBuyMode = r.value;
+    
+    // [修改] 将SKU面板的选择同步到全局 buyMode
+    // (注意：这可能会被PC端的选择覆盖，但在SKU面板打开时，PC端状态会预同步进来)
+    buyMode = currentSkuBuyMode;
+    
     const cardSelector = document.getElementById('card-selector');
-    if (buyMode === 'select') {
+    if (currentSkuBuyMode === 'select') {
         cardSelector.classList.remove('d-none');
         document.getElementById('buy-qty').value = 1;
-        loadCardNotes();
+        loadCardNotes('card-list'); // [修改] 指定SKU列表ID
     } else {
         cardSelector.classList.add('d-none');
-        selectedCardId = null;
+        // [修改] 只有当SKU面板选择"随机"时，才清除全局 selectedCardId
+        // (如果PC端已选，打开面板再点随机，PC端的选择也应被清除)
+        if (currentSkuBuyMode === 'random') {
+            selectedCardId = null;
+            document.getElementById('pc-selected-card-note').innerText = ''; // 清除PC端提示
+            selectPcBuyMode('random'); // 同步PC端按钮状态
+        }
     }
     updatePrice();
 }
 
-async function loadCardNotes() {
+/**
+ * [修改] 加载卡密/号码列表 (可用于PC或SKU面板)
+ * @param {string} targetListId - HTML 元素 ID (e.g., 'card-list-pc' or 'card-list')
+ */
+async function loadCardNotes(targetListId) {
     if (!selectedVariant) return;
-    const listEl = document.getElementById('card-list');
+    const listEl = document.getElementById(targetListId);
+    if (!listEl) return;
+    
     listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">加载中...</div>';
     try {
         const res = await fetch(`/api/shop/cards/notes?variant_id=${selectedVariant.id}`);
         const notes = await res.json();
-        if (notes.length === 0) { listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">暂无可自选卡密/号码</div>'; return; }
-        listEl.innerHTML = notes.map(n => `<div class="card-option" onclick="selectCard(this, ${n.id})">${n.note}</div>`).join('');
-    } catch(e) { listEl.innerHTML = '<div class="text-danger">加载失败</div>'; }
+        if (notes.length === 0) { 
+            listEl.innerHTML = '<div class="text-center text-muted w-100" style="grid-column: 1/-1;">暂无可自选卡密/号码</div>'; 
+            return; 
+        }
+        
+        listEl.innerHTML = notes.map(n => 
+            `<div class="card-option" onclick="selectCard(this, ${n.id})">${n.note}</div>`
+        ).join('');
+
+        // [新增] 加载后，自动高亮全局 selectedCardId
+        if (selectedCardId) {
+            const options = listEl.querySelectorAll('.card-option');
+            for (let opt of options) {
+                // 检查 onclick 属性是否包含正确的 ID
+                if (opt.getAttribute('onclick').includes(`selectCard(this, ${selectedCardId})`)) {
+                    opt.classList.add('active');
+                    break;
+                }
+            }
+        }
+
+    } catch(e) { 
+        listEl.innerHTML = '<div class="text-danger">加载失败</div>'; 
+    }
 }
 
+/**
+ * [修改] 选择一个卡密/号码
+ * @param {HTMLElement} el - 被点击的 .card-option 元素
+ * @param {number} id - 卡密 ID
+ */
 function selectCard(el, id) {
-    document.querySelectorAll('.card-option').forEach(opt => opt.classList.remove('active'));
+    // [修改] 仅在当前列表内清除 active 状态
+    const parentList = el.closest('.card-select-list, .card-select-list-pc');
+    if (parentList) {
+        parentList.querySelectorAll('.card-option').forEach(opt => opt.classList.remove('active'));
+    }
+    
     el.classList.add('active');
-    selectedCardId = id;
+    selectedCardId = id; // [修改] 始终更新全局 selectedCardId
 }
 
+/**
+ * [修改] 验证数量 (可用于PC或SKU)
+ * @param {HTMLInputElement} input - 数量输入框
+ */
 function validateQty(input) {
-    if (buyMode === 'select') {
+    let currentBuyMode = buyMode;
+    let inputId = input.id;
+    
+    // 如果在SKU面板操作，以SKU面板的为准
+    if (inputId === 'buy-qty') {
+        const radios = document.getElementsByName('buy_mode');
+        for(let r of radios) if(r.checked) currentBuyMode = r.value;
+    }
+
+    if (currentBuyMode === 'select') {
         input.value = 1;
         return;
     }
+    
     let val = parseInt(input.value);
     if (isNaN(val) || val < 1) val = 1;
     if (selectedVariant && val > selectedVariant.stock) val = selectedVariant.stock;
     input.value = val;
-    updatePrice();
+    
+    // [修改] 根据操作的输入框，决定同步到谁
+    if (inputId === 'buy-qty-pc') {
+        // 如果操作PC，同步到SKU (如果SKU面板打开了)
+        document.getElementById('buy-qty').value = val;
+    } else if (inputId === 'buy-qty') {
+        // 如果操作SKU，同步到PC
+        document.getElementById('buy-qty-pc').value = val;
+    }
+    
+    updatePrice(); // SKU面板价格计算
 }
 
-function changeQty(delta) {
-    if (buyMode === 'select') return;
-    const input = document.getElementById('buy-qty');
+/**
+ * [修改] 改变数量
+ * @param {number} delta - 变化量 (+1 or -1)
+ * @param {string} inputId - 目标输入框 ID ('buy-qty' or 'buy-qty-pc')
+ */
+function changeQty(delta, inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    let currentBuyMode = buyMode;
+    // 检查是否在SKU面板
+    if (inputId === 'buy-qty') {
+        const radios = document.getElementsByName('buy_mode');
+        for(let r of radios) if(r.checked) currentBuyMode = r.value;
+    }
+    
+    if (currentBuyMode === 'select') return; // 自选模式不允许增减
+
     let val = parseInt(input.value) + delta;
     input.value = val;
-    validateQty(input);
+    validateQty(input); // [修改] 传递元素本身
 }
 
 function updatePrice() {
     if (!selectedVariant) return;
+    
+    // [修改] 价格计算基于SKU面板的状态
     let price = selectedVariant.price;
     const qty = parseInt(document.getElementById('buy-qty').value);
-    if (buyMode === 'select') {
+    
+    // 检查SKU面板的buy_mode
+    const radios = document.getElementsByName('buy_mode');
+    let currentSkuBuyMode = null;
+    for(let r of radios) if(r.checked) currentSkuBuyMode = r.value;
+
+    if (currentSkuBuyMode === 'select') {
         price += (selectedVariant.custom_markup || 0);
-    } else if (buyMode === 'random') {
+    } else if (currentSkuBuyMode === 'random' || (currentSkuBuyMode === null && buyMode === 'random')) {
+        // (如果SKU没选，但全局是random，也按random算)
         if (selectedVariant.wholesale_config) {
             try {
                 let ws = selectedVariant.wholesale_config;
@@ -648,14 +785,112 @@ function updatePrice() {
             } catch(e) {}
         }
     }
+    
+    // [修改] 确保SKU面板的buy_mode和全局buyMode一致性
+    // (如果在SKU面板操作，全局buyMode也应更新)
+    if (currentSkuBuyMode) {
+        buyMode = currentSkuBuyMode;
+    }
+    
     document.getElementById('sku-price-text').innerText = price.toFixed(2);
 }
 
+// ==========================================================
+// [新增] PC端 购买方式/卡密选择 面板控制
+// ==========================================================
+
 /**
- * [新增] 提交到购物车 (使用 localStorage 模拟)
+ * [新增] 选择PC端的购买方式 (随机/自选)
+ * @param {string | null} mode - 'random', 'select', or null
+ */
+function selectPcBuyMode(mode) {
+    buyMode = mode;
+    const randomBtn = document.getElementById('mode_random_pc');
+    const selectBtn = document.getElementById('mode_select_pc');
+    
+    randomBtn.classList.remove('active');
+    selectBtn.classList.remove('active');
+
+    if (mode === 'random') {
+        randomBtn.classList.add('active');
+        selectedCardId = null; // 选随机，清除自选ID
+        document.getElementById('pc-selected-card-note').innerText = '';
+        validateQty(document.getElementById('buy-qty-pc'));
+    } else if (mode === 'select') {
+        selectBtn.classList.add('active');
+        // 不清除ID，留待面板打开
+    } else {
+        // null，清除所有
+        selectedCardId = null;
+        document.getElementById('pc-selected-card-note').innerText = '';
+    }
+}
+
+/**
+ * [新增] 打开PC端的自选滑出面板
+ */
+function openPcCardPanel() {
+    selectPcBuyMode('select'); // 激活"自选"按钮
+    loadCardNotes('card-list-pc'); // 加载卡密到PC面板
+    togglePcCardPanel(true); // 显示面板
+    
+    // PC端自选时，数量固定为1
+    document.getElementById('buy-qty-pc').value = 1;
+    document.getElementById('buy-qty-pc').disabled = true;
+    document.querySelector('#quantity-container-pc .stepper-pc').style.opacity = '0.5';
+}
+
+/**
+ * [新增] 切换PC端滑出面板的显示状态
+ * @param {boolean} show - true为显示, false为隐藏
+ */
+function togglePcCardPanel(show) {
+    const panel = document.getElementById('pc-card-selector-panel');
+    if (show) {
+        panel.classList.add('show');
+    } else {
+        panel.classList.remove('show');
+        // 关闭面板时，恢复数量输入框
+        document.getElementById('buy-qty-pc').disabled = false;
+        document.querySelector('#quantity-container-pc .stepper-pc').style.opacity = '1';
+
+        // 如果关闭时没有确认选择 (selectedCardId 为空)，则取消"自选"模式
+        if (!selectedCardId) {
+            selectPcBuyMode(null);
+        }
+    }
+}
+
+/**
+ * [新增] PC端滑出面板 - 点击“确定”
+ */
+function confirmPcCardSelection() {
+    togglePcCardPanel(false); // 关闭面板
+    
+    // 更新PC端的“已选”提示
+    const noteEl = document.getElementById('pc-selected-card-note');
+    if (selectedCardId) {
+        const activeOption = document.querySelector('#card-list-pc .card-option.active');
+        if (activeOption) {
+            noteEl.innerText = `已选: ${activeOption.innerText}`;
+        } else {
+            noteEl.innerText = '已选，但未找到描述'; // 容错
+        }
+    } else {
+        noteEl.innerText = '未选择号码';
+    }
+}
+
+
+// ==========================================================
+// 提交逻辑 (Add to Cart / Submit Order)
+// ==========================================================
+
+/**
+ * [新增] 提交到购物车
  */
 async function submitAddToCart() {
-    // 1. 验证规格 (逻辑同 submitOrder)
+    // 1. 验证 (基于SKU面板)
     if (!selectedVariant) {
         alert('请选择规格');
         if (typeof highlightAndScroll === 'function') highlightAndScroll('sku-spec-title-container');
@@ -694,66 +929,60 @@ async function submitAddToCart() {
     try {
         let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
         
-        // 构造购物车项
         const cartItem = {
             productId: currentProduct.id,
             productName: currentProduct.name,
             variantId: selectedVariant.id,
             variantName: selectedVariant.name,
-            price: parseFloat(document.getElementById('sku-price-text').innerText), // 获取SKU面板计算后的价格
+            price: parseFloat(document.getElementById('sku-price-text').innerText),
             quantity: quantity,
             img: document.getElementById('sku-img').src,
             buyMode: buyMode,
             selectedCardId: (buyMode === 'select') ? selectedCardId : null,
-            selectedCardNote: (buyMode === 'select') ? document.querySelector('.card-option.active')?.innerText : null
+            selectedCardNote: (buyMode === 'select') ? document.querySelector('#card-list .card-option.active')?.innerText : null
         };
 
-        // 检查购物车中是否已有此规格 (简易合并逻辑)
-        // 注意：自选商品 (buyMode === 'select') 永远不合并
         const existingItemIndex = cart.findIndex(item => 
             item.variantId === cartItem.variantId && 
             item.buyMode !== 'select' && 
             cartItem.buyMode !== 'select' &&
-            item.buyMode === cartItem.buyMode // 确保都是随机模式
+            item.buyMode === cartItem.buyMode
         );
 
         if (existingItemIndex > -1) {
-            // 如果已存在（非自选），则增加数量
             cart[existingItemIndex].quantity += cartItem.quantity;
         } else {
-            // 否则，添加为新项目
             cart.push(cartItem);
         }
 
         localStorage.setItem('tbShopCart', JSON.stringify(cart));
         
-        // 3. 更新角标 (调用 common.js 的函数)
         if (typeof updateCartBadge === 'function') {
             updateCartBadge(cart.length);
         }
         
-        // 4. 关闭面板
         skuSheet.hide();
         
     } catch (e) {
         console.error('Add to cart failed', e);
         alert('添加失败，请重试');
     } finally {
-        // 按钮状态将在下次打开时由 'show.bs.offcanvas' 事件重置
         btn.disabled = false;
-        btn.innerText = oldText; // 恢复一下，以防关闭失败
+        btn.innerText = oldText; 
     }
 }
 
-
+/**
+ * 提交订单 (基于SKU面板)
+ */
 async function submitOrder() {
     if (!selectedVariant) {
         alert('请选择规格');
-        // [修改] PC端现在点击的是页内规格，SKU面板里的规格可能没滚动到，
-        // 但验证逻辑还是在SKU面板内，因此高亮SKU面板的标题
         if (typeof highlightAndScroll === 'function') highlightAndScroll('sku-spec-title-container');
         return;
     }
+    
+    // [修改] 验证全局 buyMode 和 selectedCardId
     const modeContainer = document.getElementById('buy-mode-container');
     if (modeContainer.offsetHeight > 0 || modeContainer.offsetWidth > 0) {
         const buyModeRadio = document.querySelector('input[name="buy_mode"]:checked');
@@ -762,12 +991,16 @@ async function submitOrder() {
             if (typeof highlightAndScroll === 'function') highlightAndScroll('buy-mode-container');
             return;
         }
+        // 确保全局 buyMode 与 SKU 面板一致
+        buyMode = buyModeRadio.value; 
+        
         if (buyMode === 'select' && !selectedCardId) {
             alert('请选择号码');
             if (typeof highlightAndScroll === 'function') highlightAndScroll('card-selector');
             return;
         }
     }
+    
     const quantity = parseInt(document.getElementById('buy-qty').value);
     if (buyMode !== 'select') {
         if (selectedVariant.stock < quantity) {
@@ -796,9 +1029,11 @@ async function submitOrder() {
         if (typeof highlightAndScroll === 'function') highlightAndScroll('payment-method-container');
         return;
     }
+    
     const btn = document.querySelector('.btn-confirm');
     const oldText = btn.innerText;
     btn.disabled = true; btn.innerText = '正在创建...';
+    
     try {
         const payload = { 
             variant_id: selectedVariant.id, 
