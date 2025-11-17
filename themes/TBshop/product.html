@@ -16,7 +16,6 @@
         /* ========== MOBILE STYLES (UNCHANGED) ========== */
         /* ============================================= */
         @media (max-width: 991.98px) {
-            /* ... (移动端样式不变) ... */
             body { background-color: #f5f5f5; padding-bottom: 60px; }
             .nav-back { position: absolute; top: 10px; left: 10px; z-index: 100; width: 32px; height: 32px; background: rgba(0,0,0,0.4); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; }
             .prod-img-wrap { position: relative; width: 100%; padding-bottom: 100%; background: #fff; }
@@ -27,16 +26,18 @@
             .price-num { font-size: 24px; font-weight: bold; }
             .prod-title { font-size: 16px; font-weight: 600; color: #051b28; line-height: 1.4; margin-bottom: 8px; }
             .prod-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-bottom: 5px; }
+            
             .extra-info { background: #fff5f7; border-radius: 4px; padding: 8px; font-size: 12px; color: #ff0036; margin-top: 10px; line-height: 1.6; }
             .extra-tag-solid { display: inline-block; background: #ff0036; color: #fff; padding: 1px 5px; border-radius: 2px; margin-right: 5px; font-size: 11px; vertical-align: middle; }
+            
             .sku-preview-tag { display: inline-block; border: 1px solid #dcdcdc; background: #fcfcfc; color: #333; padding: 3px 10px; border-radius: 4px; margin-right: 6px; margin-bottom: 4px; font-size: 13px; }
             .cell-item { background: #fff; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #333; cursor: pointer; }
             .cell-label { color: #999; margin-right: 10px; font-weight: bold; min-width: 30px; }
             .cell-content { flex: 1; font-weight: 500; display: flex; flex-wrap: wrap; }
             .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background: #fff; display: flex; align-items: center; box-shadow: 0 -1px 5px rgba(0,0,0,0.05); z-index: 900; }
-            .icon-btn { width: 60px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; text-decoration: none; flex-shrink: 0; }
+            .icon-btn { width: 60px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; text-decoration: none; flex-shrink: 0; /* 防止图标被压缩 */ }
             .icon-btn i { font-size: 18px; margin-bottom: 2px; }
-            .btn-buy-wrap { flex: 1; padding: 0 10px; display: flex; min-width: 0; }
+            .btn-buy-wrap { flex: 1; padding: 0 10px; display: flex; min-width: 0; /* 防止伸缩 */ }
             .btn-buy { flex: 1; height: 36px; border-radius: 18px; background: linear-gradient(90deg, #ff9000, #ff5000); color: #fff; font-weight: bold; font-size: 14px; border: none; display: flex; align-items: center; justify-content: center; }
             .btn-buy:active { opacity: 0.9; }
         }
@@ -57,14 +58,20 @@
             .pc-product-view .extra-tag-solid { display: inline-block; background: #ff0036; color: #fff; padding: 1px 5px; border-radius: 2px; margin-right: 5px; font-size: 11px; vertical-align: middle; }
             .pc-product-view .sku-preview-tag { display: inline-block; border: 1px solid #dcdcdc; background: #fcfcfc; color: #333; padding: 3px 10px; border-radius: 4px; margin-right: 6px; margin-bottom: 4px; font-size: 13px; }
             .pc-product-view .spec-list { min-height: 30px; }
+
+            /* PC端购买方式 */
             .buy-mode-group-pc { display: flex; gap: 15px; }
             .mode-label-pc { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: center; font-size: 13px; cursor: pointer; position: relative; background: #f5f5f5; }
             .mode-label-pc.active { border-color: #ff5000; background: #ffefe7; color: #ff5000; }
             .mode-label-pc small { display: block; font-size: 10px; color: #999; margin-top: 2px; word-break: break-all; white-space: normal; line-height: 1.4; }
             .mode-label-pc.active small { color: #ff5000; }
+            
+            /* PC端数量步进器 */
             .stepper-pc { display: flex; align-items: center; background: #f5f5f5; border-radius: 4px; }
             .stepper-pc .stepper-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #666; cursor: pointer; }
             .stepper-pc .stepper-input { width: 40px; text-align: center; border: none; background: transparent; font-size: 14px; padding: 0; }
+
+            /* PC端自选号码滑出面板 */
             #pc-card-selector-panel {
                 position: absolute;
                 top: 0;
@@ -104,11 +111,13 @@
             }
 
             /* ======================================================= */
-            /* [修改] 卡密列表样式 (实现要求1) */
+            /* [修改] PC端卡密列表 (实现要求1) */
             /* ======================================================= */
             .card-select-list-pc {
-                display: flex; /* [修改] grid -> flex */
-                flex-direction: column; /* [新增] 垂直排列 */
+                display: flex; /* [修改] 改为flex布局 */
+                flex-wrap: wrap; /* [新增] 允许换行 */
+                /* [移除] display: grid; */
+                /* [移除] grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); */
                 gap: 8px;
                 max-height: 300px; 
                 overflow-y: auto;
@@ -116,18 +125,19 @@
                 padding: 8px;
                 border-radius: 4px;
                 border: 1px solid #f0f0f0; 
-                /* [移除] grid-template-columns */
             }
+            
             .card-select-list-pc .card-option {
                 padding: 8px;
                 border: 1px solid #eee;
                 background-color: #fff;
                 border-radius: 6px;
                 font-size: 12px;
-                text-align: left; /* [修改] center -> left */
+                text-align: center;
                 cursor: pointer;
-                white-space: normal; /* 允许换行 */
-                word-break: break-all; /* 强制换行 */
+                white-space: nowrap; /* [修改] 强制不换行 */
+                /* [移除] white-space: normal; */
+                /* [移除] word-break: break-all; */
             }
             .card-select-list-pc .card-option.active {
                 border-color: #ff5000;
@@ -161,7 +171,9 @@
             }
         }
 
-        /* ... (Shared SKU / Pagination styles unchanged) ... */
+        /* ============================================= */
+        /* ========== SHARED STYLES (UNCHANGED) ========== */
+        /* ============================================= */
         .sku-sheet { border-top-left-radius: 16px; border-top-right-radius: 16px; height: 80vh !important; }
         .sku-header { display: flex; padding: 15px; position: relative; border-bottom: 1px solid #f5f5f5; }
         .sku-thumb { width: 90px; height: 90px; border-radius: 6px; margin-top: -30px; border: 3px solid #fff; background: #fff; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -194,10 +206,11 @@
         #spec-pagination-container .page-item.disabled .page-link { color: #ff5000; }
         .spec-btn.disabled { color: #bbb !important; pointer-events: none; position: relative; }
         .spec-btn.disabled::after { content: "缺货"; position: absolute; top: -5px; right: -5px; background: #918c8d; color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 3px; line-height: 1.2; font-weight: normal; }
+
         #spec-pagination-container-pc .page-link { 
             cursor: pointer;
             color: #212529bf; 
-            padding: 0.25rem 0.5rem;
+            padding: 0.25rem 0.5rem; /* 更紧凑的分页 */
             font-size: 0.875rem;
         }
         #spec-pagination-container-pc .page-item.disabled .page-link { 
@@ -205,7 +218,7 @@
             cursor: default;
         }
         #spec-pagination-container-pc .pagination {
-             margin-bottom: 0;
+             margin-bottom: 0; /* 移除分页的下边距 */
         }
     </style>
 </head>
@@ -253,7 +266,7 @@
             <div class="container header-inner">
                 <a href="/" class="site-brand">
                     <img id="site-logo" class="d-none" style="max-height: 45px; width: auto; margin-right: 10px;" alt="Logo">
-                    <span id="site-name-wrap" class="d-flex align-items-center d-none">
+                    <span id="site-name-wrap" class="d-flex align-items: center d-none">
                         <i class="fa fa-shopping-bag"></i>
                         <span id="header-site-name">TB Shop</span>
                     </span>
@@ -310,9 +323,6 @@
                                         <div class="text-muted small">规格加载中...</div>
                                     </div>
                                     <nav id="spec-pagination-container-pc" class="mt-2" aria-label="PC规格分页"></nav>
-                                    
-                                    <div id="pc-selected-card-note" class="small text-muted d-none" style="margin-left: 40px; margin-top: 5px; min-height: 18px;">
-                                        </div>
                                 </div>
                                 
                                 <hr class="my-3">
@@ -331,7 +341,10 @@
                                             </label>
                                         </div>
                                     </div>
-                                    </div>
+                                    <div id="pc-selected-card-note" class="small text-muted" style="margin-left: 40px; margin-top: 5px; min-height: 18px;">
+                                        </div>
+                                </div>
+
                                 <div id="quantity-container-pc" class="mt-3 d-none">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="cell-label" style="font-weight: bold; color: #999;">数量</span>
@@ -344,8 +357,7 @@
                                 </div>
 
 
-                                <div class="mt-auto pt-4"> 
-                                    <button class="btn-buy" onclick="handleBuyNow()">立即购买</button>
+                                <div class="mt-auto pt-4"> <button class="btn-buy" onclick="handleBuyNow()">立即购买</button>
                                 </div>
 
                                 <div id="pc-card-selector-panel">
@@ -379,18 +391,122 @@
                 </div>
 
                 <div class="col-lg-3 d-none d-lg-block">
-                    </div>
+                    <div id="sidebar-wrapper"> 
+                        <div class="sidebar-inner">
+                            <div class="module-box" id="notice-module-box">
+                                <div class="module-title">店铺公告</div>
+                                <div class="notice-content" id="notice-box">
+                                    暂无公告
+                                </div>
+                            </div>
+                            <div class="module-box" id="contact-module-box">
+                                <div class="module-title">联系客服</div>
+                                <div class="notice-content" id="contact-box">
+                                    暂无联系方式
+                                </div>
+                            </div>
+                            <div class="module-box">
+                                <div class="module-title">销量排行</div>
+                                <div id="top-sales-list">
+                                    </div>
+                            </div>
+                            <div class="module-box">
+                                <div class="module-title">教程分类</div>
+                                <div class="art-cat-list" id="article-cat-list">
+                                    </div>
+                            </div>
+                            <div class="module-box">
+                                <div class="module-title">热门标签</div>
+                                <div class="tag-cloud" id="tag-cloud-list">
+                                    </div>
+                            </div>
+                        </div> 
+                    </div> 
+                </div>
 
             </div>
         </div>
 
         <footer class="site-footer">
-            </footer>
+            <div class="container">
+                <div class="footer-links">
+                    <a href="/">首页</a>
+                    <a href="/articles.html">教程文章</a>
+                    <a href="#">关于我们</a>
+                    <a href="#">联系客服</a>
+                </div>
+                <div class="copyright">
+                    &copy; <span id="year"></span> <span id="footer-name">TB Shop</span>. All Rights Reserved.
+                </div>
+            </div>
+        </footer>
     </div>
 
 
     <div class="offcanvas offcanvas-bottom sku-sheet" tabindex="-1" id="skuSheet">
+        <div class="sku-header">
+            <img id="sku-img" src="" class="sku-thumb">
+            <div class="sku-info">
+                <div id="sku-title" style="font-size: 13px; color: #333; font-weight: bold; margin-bottom: 4px; line-height: 1.4; white-space: normal; word-break: break-all;"></div>
+                <div class="sku-price">¥<span id="sku-price-text">-</span></div>
+                <div class="sku-stock">库存: <span id="sku-stock-text">-</span></div>
+                <div class="sku-selected">已选: <span id="sku-selected-text">未选择</span></div>
+            </div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="offcanvas"></button>
         </div>
+        <div class="sku-body">
+            <div class="section-title" id="sku-spec-title-container">规格</div>
+            <div class="spec-list" id="variant-list"></div>
+            <nav id="spec-pagination-container" class="mt-2" aria-label="规格分页"></nav>
+            <div id="buy-mode-container" class="d-none mb-4">
+                <div class="section-title">购买方式 <small class="text-muted fw-normal ms-2">(自选与批发互斥)</small></div>
+                <div class="buy-mode-group">
+                    <input type="radio" name="buy_mode" id="mode_random" class="mode-radio" value="random" onchange="toggleBuyMode()">
+                    <label for="mode_random" class="mode-label">
+                        随机发货
+                        <small id="random-mode-desc">享受批发优惠</small>
+                    </label>
+                    <input type="radio" name="buy_mode" id="mode_select" class="mode-radio" value="select" onchange="toggleBuyMode()">
+                    <label for="mode_select" class="mode-label">
+                        <span id="selection-label-text">自选卡密/号码</span> <small>加价 <span id="markup-amount">0</span> 元</small>
+                    </label>
+                </div>
+                <div id="card-selector" class="d-none">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="small text-muted">请选择号码:</span>
+                        <span class="small text-primary cursor-pointer" onclick="loadCardNotes('card-list')">刷新列表</span>
+                    </div>
+                    <div class="card-select-list" id="card-list"></div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="section-title mb-0">购买数量</div>
+                <div class="stepper">
+                    <div class="stepper-btn" onclick="changeQty(-1, 'buy-qty')">-</div>
+                    <input type="number" id="buy-qty" class="stepper-input" value="1" onchange="validateQty(this)">
+                    <div class="stepper-btn" onclick="changeQty(1, 'buy-qty')">+</div>
+                </div>
+            </div>
+            <div class="mb-4" id="contact-info-container">
+                <div class="section-title">联系方式 <span class="text-danger">*</span></div>
+                <input type="text" id="contact-info" class="form-control form-control-custom" placeholder="请输入邮箱或QQ (用于接收卡密)">
+            </div>
+            <div class="mb-4" id="query-password-container">
+                <div class="section-title">查单密码 <span class="text-danger">*</span></div>
+                <input type="password" id="query-password" class="form-control form-control-custom" placeholder="请设置6位以上密码, 用于查询订单">
+            </div>
+            <div class="mb-4" id="payment-method-container">
+                <div class="section-title">支付方式</div>
+                <div class="d-flex align-items-center p-2 border rounded bg-light">
+                    <i class="fab fa-alipay text-primary fs-4 me-2"></i><span class="flex-grow-1 font-size-14">支付宝</span>
+                    <input type="radio" name="payment" value="alipay_f2f" checked>
+                </div>
+            </div>
+        </div>
+        <div class="sku-footer">
+            <button class="btn-confirm" onclick="submitOrder()">确定支付</button>
+        </div>
+    </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
