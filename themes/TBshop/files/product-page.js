@@ -13,15 +13,24 @@ let currentAction = 'buy'; // [新增] 'buy' (立即购买) 或 'cart' (加入�
 const skuSheetEl = document.getElementById('skuSheet');
 const skuSheet = new bootstrap.Offcanvas(skuSheetEl);
 
+// SKU 面板 (移动端/弹出) 的分页变量
 let specPages = []; 
 let specCurrentPage = 1;
 const specListMaxRows = 6;
 let hasCalculatedPages = false;
 
+// [新增] PC端页内规格的分页变量
+let pcSpecPages = [];
+let pcSpecCurrentPage = 1;
+// const pcSpecListMaxRows = 6; // 可以重用 specListMaxRows
+let pcHasCalculatedPages = false;
+
+
 // [修改] 监听SKU面板打开事件
 skuSheetEl.addEventListener('show.bs.offcanvas', () => {
+    // [修改] SKU面板的规格列表使用 lazy loading，打开时才计算
     if (!hasCalculatedPages && currentProduct) {
-        calculateSpecPages();
+        calculateSpecPages(); // 计算 SKU 面板的分页
         hasCalculatedPages = true;
     }
 
@@ -148,7 +157,10 @@ function updatePcElements(product, variant, priceStr) {
     const pStockPc = document.getElementById('p-stock-pc');
     const pSalesPc = document.getElementById('p-sales-pc');
     const pDescPc = document.getElementById('p-desc-pc');
-    const pSelectTextPc = document.getElementById('p-select-text-pc');
+    
+    // [修改] p-select-text-pc 已被移除，不再需要更新它
+    // const pSelectTextPc = document.getElementById('p-select-text-pc');
+    
     const pExtraInfoPc = document.getElementById('p-extra-info-pc');
     if (pImgPc) pImgPc.src = targetImg;
     if (pTitlePc) pTitlePc.innerText = p.name;
@@ -156,6 +168,9 @@ function updatePcElements(product, variant, priceStr) {
     if (pStockPc) pStockPc.innerText = `库存: ${totalStock}`;
     if (pSalesPc) pSalesPc.innerText = `已售: ${totalSales}`;
     if (pDescPc) pDescPc.innerText = p.description || '暂无详细介绍';
+    
+    // [修改] p-select-text-pc 已被移除
+    /*
     if (pSelectTextPc) {
         if (v) {
             let selectedHtml = `<div style="padding-right: 10px;">已选: ${v.name}</div>`;
@@ -173,6 +188,8 @@ function updatePcElements(product, variant, priceStr) {
             pSelectTextPc.innerHTML = skuTagsHtml;
         }
     }
+    */
+    
     if(pExtraInfoPc) {
         const variants = p.variants;
         let html = '';
@@ -204,6 +221,111 @@ function updatePcElements(product, variant, priceStr) {
         }
     }
 }
+
+// ==========================================================
+// [新增] 专用于 PC 端页内规格的函数
+// ==========================================================
+
+/**
+ * [新增] 计算 PC 端页内规格的分页
+ */
+function calculatePCSpecPages() {
+    const vList = document.getElementById('variant-list-pc');
+    if (!currentProduct || !vList) return;
+    vList.innerHTML = currentProduct.variants.map((v) => {
+    const style = v.color ? `style="color:${v.color}"` : '';
+    const isDisabled = v.stock <= 0;
+    const disabledClass = isDisabled ? 'disabled' : '';
+    return `<div class="spec-btn ${disabledClass}" ${style} data-id="${v.id}">${v.name}</div>`;
+    }).join('');
+    const buttons = vList.querySelectorAll('.spec-btn');
+    if (buttons.length === 0) return;
+    const specRowHeight = buttons[0].offsetHeight;
+    const listStyle = window.getComputedStyle(vList);
+    const rowGap = parseFloat(listStyle.gap) || 10;
+    const pageMaxHeight = (specListMaxRows * specRowHeight) + ((specListMaxRows - 1) * rowGap);
+    const listTop = vList.offsetTop;
+    pcSpecPages = [];
+    let currentPageItems = [];
+    let currentPageStartOffset = listTop;
+    for (let i = 0; i < buttons.length; i++) {
+        const button = buttons[i];
+        const variant = currentProduct.variants[i];
+        const buttonTop = button.offsetTop; 
+        if (buttonTop >= (currentPageStartOffset + pageMaxHeight - (specRowHeight / 2))) {
+            if (currentPageItems.length > 0) {
+                pcSpecPages.push(currentPageItems);
+            }
+            currentPageItems = [variant];
+            currentPageStartOffset = buttonTop;
+        } else {
+            currentPageItems.push(variant);
+        }
+    }
+    if (currentPageItems.length > 0) {
+        pcSpecPages.push(currentPageItems);
+    }
+    if (pcSpecPages.length <= 1) {
+        document.getElementById('spec-pagination-container-pc').innerHTML = '';
+    }
+    renderPCSpecListPage(1);
+}
+
+/**
+ * [新增] 渲染 PC 端页内规格的分页控件
+ */
+function renderPCSpecPagination() {
+    const totalPages = pcSpecPages.length;
+    const container = document.getElementById('spec-pagination-container-pc');
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    let pagesHtml = `
+        <ul class="pagination pagination-sm justify-content-start"> <li class="page-item ${pcSpecCurrentPage === 1 ? 'disabled' : ''}"><a class="page-link" onclick="changePCSpecPage(1)">首页</a></li>
+            <li class="page-item ${pcSpecCurrentPage === 1 ? 'disabled' : ''}"><a class="page-link" onclick="changePCSpecPage(${pcSpecCurrentPage - 1})">上一页</a></li>
+            <li class="page-item disabled"><span class="page-link">${pcSpecCurrentPage} / ${totalPages}</span></li>
+            <li class="page-item ${pcSpecCurrentPage === totalPages ? 'disabled' : ''}"><a class="page-link" onclick="changePCSpecPage(${pcSpecCurrentPage + 1})">下一页</a></li>
+            <li class="page-item ${pcSpecCurrentPage === totalPages ? 'disabled' : ''}"><a class="page-link" onclick="changePCSpecPage(${totalPages})">尾页</a></li>
+        </ul>`;
+    container.innerHTML = pagesHtml;
+}
+
+/**
+ * [新增] 渲染 PC 端页内指定页码的规格
+ */
+function renderPCSpecListPage(page) {
+    const vList = document.getElementById('variant-list-pc');
+    if (!pcSpecPages || pcSpecPages.length === 0) {
+        vList.innerHTML = '<div class="text-muted">暂无规格</div>';
+        return;
+    }
+    pcSpecCurrentPage = Math.max(1, Math.min(page, pcSpecPages.length));
+    const variantsToShow = pcSpecPages[pcSpecCurrentPage - 1] || [];
+    vList.innerHTML = variantsToShow.map((v) => {
+    const style = v.color ? `style="color:${v.color}"` : '';
+    const isActive = selectedVariant && selectedVariant.id === v.id;
+    const isDisabled = v.stock <= 0;
+    const disabledClass = isDisabled ? 'disabled' : '';
+    const clickHandler = isDisabled ? '' : `onclick="selectVariant(${v.id})"`;
+    return `<div class="spec-btn ${isActive ? 'active' : ''} ${disabledClass}" ${style} ${clickHandler} data-id="${v.id}">${v.name}</div>`;
+    }).join('');
+    renderPCSpecPagination();
+}
+
+/**
+ * [新增] PC 端页内规格的翻页
+ */
+function changePCSpecPage(page) {
+    const totalPages = pcSpecPages.length;
+    if (page < 1 || page > totalPages || page === pcSpecCurrentPage) return;
+    renderPCSpecListPage(page);
+}
+
+
+// ==========================================================
+// 专用于 SKU 弹出面板的函数 (原函数)
+// ==========================================================
 
 function calculateSpecPages() {
     const vList = document.getElementById('variant-list');
@@ -290,6 +412,10 @@ function changeSpecPage(page) {
     renderSpecListPage(page);
 }
 
+// ==========================================================
+// 共享函数
+// ==========================================================
+
 function renderPage() {
     const p = currentProduct;
     const prices = p.variants.map(v => v.price);
@@ -310,12 +436,21 @@ function renderPage() {
     const mainImg = p.image_url || (defV && defV.image_url ? defV.image_url : 'https://via.placeholder.com/400x400?text=No+Image');
     document.getElementById('p-img').src = mainImg;
     document.getElementById('sku-img').src = mainImg;
+    
+    // SKU 面板的规格重置
     hasCalculatedPages = false;
     specPages = [];
     specCurrentPage = 1;
     document.getElementById('variant-list').innerHTML = '<div class="text-muted small">规格加载中...</div>';
     document.getElementById('spec-pagination-container').innerHTML = '';
     document.getElementById('sku-spec-title-container').innerHTML = `规格 <span style="font-size: 12px; color: #999; font-weight: normal;">（共${p.variants.length}个）</span>`;
+    
+    // [修改] PC 端页内规格重置 (变量)
+    pcHasCalculatedPages = false;
+    pcSpecPages = [];
+    pcSpecCurrentPage = 1;
+
+    // 移动端规格预览
     const maxTagsToShow = 10;
     const tagsToShow = p.variants.slice(0, maxTagsToShow);
     let skuTagsHtml = tagsToShow.map(v => `<span class="sku-preview-tag">${v.name}</span>`).join('');
@@ -323,11 +458,24 @@ function renderPage() {
         skuTagsHtml += ` <span class="text-danger small" style="padding-top: 1px; vertical-align: middle; font-weight: 500;">点此选择更多 (共${p.variants.length}个)</span>`;
     }
     document.getElementById('p-select-text').innerHTML = skuTagsHtml;
+    
     renderExtraInfo(null);
     document.getElementById('sku-selected-text').innerText = '未选择';
     document.getElementById('random-mode-desc').innerText = '享受批发优惠';
     selectedVariant = null;
     updatePcElements(p, null);
+
+    // [新增] 立即为PC端计算并渲染规格
+    if (!pcHasCalculatedPages && currentProduct) {
+        // [新增] 顺便更新PC端的规格标题
+        const pcTitleContainer = document.getElementById('sku-spec-title-container-pc');
+        if (pcTitleContainer) {
+            pcTitleContainer.innerHTML = `规格 <span style="font-size: 12px; color: #999; font-weight: normal;">（共${p.variants.length}个）</span>`;
+        }
+        // [新增] 调用PC端专属的计算函数
+        calculatePCSpecPages(); 
+        pcHasCalculatedPages = true;
+    }
 }
 
 function renderExtraInfo(selectedV) {
@@ -366,9 +514,18 @@ function openSkuSheet() {
     handleBuyNow(); 
 }
 
+/**
+ * [修改] 选择规格时，同时更新 PC端 和 SKU面板 的显示状态
+ */
 function selectVariant(vid) {
     selectedVariant = currentProduct.variants.find(v => v.id == vid);
-    renderSpecListPage(specCurrentPage); 
+    
+    // [修改] 同时更新 PC 端和 SKU 面板的列表状态
+    renderSpecListPage(specCurrentPage); // 更新 SKU 面板
+    if (pcHasCalculatedPages) {
+        renderPCSpecListPage(pcSpecCurrentPage); // 更新 PC 端页内
+    }
+    
     document.getElementById('sku-stock-text').innerText = selectedVariant.stock;
     document.getElementById('sku-selected-text').innerText = selectedVariant.name;
     document.getElementById('p-price').innerText = selectedVariant.price;
@@ -592,6 +749,8 @@ async function submitAddToCart() {
 async function submitOrder() {
     if (!selectedVariant) {
         alert('请选择规格');
+        // [修改] PC端现在点击的是页内规格，SKU面板里的规格可能没滚动到，
+        // 但验证逻辑还是在SKU面板内，因此高亮SKU面板的标题
         if (typeof highlightAndScroll === 'function') highlightAndScroll('sku-spec-title-container');
         return;
     }
