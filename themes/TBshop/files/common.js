@@ -512,21 +512,20 @@ function loadCartBadge() {
 }
 
 /**
- * [新增] 更新所有购物车角标（移动端和PC端）
- * (product-page.js 上的 #cart-badge-mobile)
- * (cart.html / common.js 上的 #cart-badge-pc)
+ * [更新] 更新所有购物车角标（移动端、PC头部、PC商品页）
  */
 function updateCartBadge(count) {
-    const badgeMobile = document.getElementById('cart-badge-mobile'); // 商品页
-    const badgePC = document.getElementById('cart-badge-pc'); // PC 头部
+    const badgeMobile = document.getElementById('cart-badge-mobile'); // 移动端底部
+    const badgePC = document.getElementById('cart-badge-pc'); // PC 顶部导航
+    const badgePCProduct = document.getElementById('cart-badge-pc-product'); // [新增] PC 商品详情页
     
-    const badges = [badgeMobile, badgePC];
+    const badges = [badgeMobile, badgePC, badgePCProduct];
     
     badges.forEach(badge => {
         if (badge) {
             if (count > 0) {
                 badge.innerText = count > 99 ? '99+' : count;
-                badge.style.display = 'block';
+                badge.style.display = 'block'; // Bootstrap badge 默认是 inline-block，这里强制显示
             } else {
                 badge.style.display = 'none';
             }
