@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (商品详情页专属JS)
+// === (商品详情页专属JS - 修复版)
 // === [购物车-升级版]
 // =============================================
 
@@ -1336,7 +1336,7 @@ async function submitOrder() {
 }
 
 /**
- * [新增] PC端加入购物车逻辑
+ * [新增] PC端加入购物车逻辑 (修复版)
  */
 function handlePcAddToCart() {
     // 1. 验证规格
@@ -1344,8 +1344,10 @@ function handlePcAddToCart() {
         alert('请选择规格');
         try {
             const vList = document.getElementById('variant-list-pc');
-            vList.style.border = '1px solid red';
-            setTimeout(() => { vList.style.border = 'none'; }, 2000);
+            if(vList) {
+                vList.style.border = '1px solid red';
+                setTimeout(() => { vList.style.border = 'none'; }, 2000);
+            }
         } catch(e){}
         return;
     }
@@ -1359,13 +1361,15 @@ function handlePcAddToCart() {
         }
         if (buyMode === 'select' && !selectedCardId) {
             alert('请选择号码');
-            handlePcBuyModeClick('select'); // 自动打开面板
+            handlePcBuyModeClick('select');
             return;
         }
     }
     
     // 3. 验证数量
-    const quantity = parseInt(document.getElementById('buy-qty-pc').value) || 1;
+    const qtyInput = document.getElementById('buy-qty-pc');
+    const quantity = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+    
     if (buyMode !== 'select') {
         if (selectedVariant.stock < quantity) {
             alert('库存不足');
@@ -1377,10 +1381,18 @@ function handlePcAddToCart() {
     try {
         let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
         
-        // 使用全局存储的文本或备用逻辑
+        // 确定存储的备注
         const noteToStore = (buyMode === 'select') ? (selectedCardNote || selectedCardId) : null;
-        // 使用 updatePrice 中计算好的价格
-        const finalPrice = window.currentCalculatedPrice || selectedVariant.price;
+        
+        // 确定价格 (强制转为浮点数)
+        let finalPrice = selectedVariant.price;
+        if (typeof window.currentCalculatedPrice === 'number') {
+            finalPrice = window.currentCalculatedPrice;
+        } else {
+            // 如果全局价格未计算，手动计算一次保险
+            if(buyMode === 'select') finalPrice += (selectedVariant.custom_markup || 0);
+        }
+        finalPrice = parseFloat(finalPrice); // 确保是数字
 
         const cartItem = {
             productId: currentProduct.id,
@@ -1395,10 +1407,10 @@ function handlePcAddToCart() {
             selectedCardNote: noteToStore
         };
 
-        // 检查购物车中是否已存在相同的商品配置
+        // 检查重复
         const existingItemIndex = cart.findIndex(item => 
             item.variantId === cartItem.variantId && 
-            item.buyMode !== 'select' && // 自选卡密通常不合并数量，或者你可以根据需求修改
+            item.buyMode !== 'select' && 
             cartItem.buyMode !== 'select' &&
             item.buyMode === cartItem.buyMode
         );
@@ -1418,13 +1430,15 @@ function handlePcAddToCart() {
         
         // 6. 成功动画/提示
         const btn = document.querySelector('.btn-buy-split-left');
-        const originalText = btn.innerText;
-        btn.innerText = '已加入 ✔';
-        btn.style.opacity = '0.8';
-        setTimeout(() => {
-            btn.innerText = originalText;
-            btn.style.opacity = '1';
-        }, 1500);
+        if(btn) {
+            const originalText = btn.innerText;
+            btn.innerText = '已加入 ✔';
+            btn.style.opacity = '0.8';
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.opacity = '1';
+            }, 1500);
+        }
 
     } catch (e) {
         console.error('PC Add to cart failed', e);
