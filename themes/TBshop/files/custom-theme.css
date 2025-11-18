@@ -775,7 +775,7 @@ a:hover { color: var(--tb-orange); }
 /* 按钮左半部分：加入购物车 (浅橙色渐变) */
 .btn-buy-split-left {
     height: 43px;
-    padding: 0 13px 0 16px;
+    padding: 0 12px 0 16px;
     border-radius: 22px 0 0 22px; /* 左侧圆角 */
     background: linear-gradient(90deg, #ffbf00, #ffa502) /* 浅橙色渐变 */
     color: #fff;
@@ -789,7 +789,7 @@ a:hover { color: var(--tb-orange); }
 /* 按钮右半部分：立即购买 (深橙色渐变) */
 .btn-buy-split-right {
     height: 43px;
-    padding: 0 16px 0 13px;
+    padding: 0 16px 0 12px;
     border-radius: 0 22px 22px 0; /* 右侧圆角 */
     background: linear-gradient(90deg, #ff8400, #ff5000) /* 深橙色渐变 */
     color: #fff;
