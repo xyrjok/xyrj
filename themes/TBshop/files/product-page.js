@@ -7,6 +7,7 @@
 let currentProduct = null;
 let selectedVariant = null;
 let selectedCardId = null;
+let selectedCardNote = null; // [新增] 用于存储已选卡密的文本
 let buyMode = null; // 'random' 或 'select'，全局状态，由PC和SKU面板共享
 let currentAction = 'buy'; // 'buy' (立即购买) 或 'cart' (加入购物车)
 
@@ -592,6 +593,7 @@ function selectVariant(vid) {
         selectPcBuyMode(null);
         document.getElementById('buy-qty-pc').value = 1;
         selectedCardId = null;
+        selectedCardNote = null; // [修改] 重置
     } else {
         modeContainerPc.classList.add('d-none'); // 隐藏PC购买方式
         qtyContainerPc.classList.remove('d-none'); // 基础数量选择器总是显示
@@ -599,10 +601,13 @@ function selectVariant(vid) {
         selectPcBuyMode(null);
         document.getElementById('buy-qty-pc').value = 1;
         selectedCardId = null;
+        selectedCardNote = null; // [修改] 重置
     }
     
     // 9. 重置全局状态 (buyMode)
     buyMode = null; 
+    selectedCardId = null; 
+    selectedCardNote = null; // [修改] 重置
     // 重置SKU面板的单选框
     const radios = document.getElementsByName('buy_mode');
     radios.forEach(r => r.checked = false);
@@ -642,6 +647,7 @@ function toggleBuyMode() {
         cardSelector.classList.add('d-none');
         if (currentSkuBuyMode === 'random') {
             selectedCardId = null;
+            selectedCardNote = null; // [修改] 重置
             selectPcBuyMode('random'); // 同步PC端按钮状态
         }
     }
@@ -697,6 +703,7 @@ function selectCard(el, id) {
     
     el.classList.add('active');
     selectedCardId = id; // 始终更新全局 selectedCardId
+    selectedCardNote = el.innerText; // [修改] 立即存储文本
 }
 
 /**
@@ -800,9 +807,13 @@ function updatePrice() {
 // [新增] PC端 购买方式/卡密选择 面板控制
 // ==========================================================
 
+// ==========================================================
+// [
+//   *** 关键修复点 2 ***
+// ]
+// ==========================================================
 /**
- * [新增] 更新PC端的“已选”提示文本 (实现要求2)
- * [已按您的要求修正]
+ * [修改] 更新PC端的“已选”提示文本 (使用全局变量)
  */
 function updatePcSelectionText() {
     const noteEl = document.getElementById('pc-selected-card-note');
@@ -813,34 +824,29 @@ function updatePcSelectionText() {
         return;
     }
     
-    // [新增] 检查父容器是否可见
     const modeContainerPc = document.getElementById('buy-mode-container-pc');
     
-    // [修正] 检查父容器是否可见
     if (modeContainerPc && modeContainerPc.classList.contains('d-none')) {
-        // [修正] 如果父容器是隐藏的 (即不支持自选), 则只显示规格
+        // 如果父容器是隐藏的 (即不支持自选), 则只显示规格
         noteEl.innerText = `已选: ${selectedVariant.name}`; 
         return;
     }
 
     // --- 以下逻辑处理支持自选的情况 ---
-
     let text = `已选: ${selectedVariant.name}`;
 
-    if (buyMode === 'select' && selectedCardId) {
-        // 尝试从PC列表中获取卡片文本
-        const activeOption = document.querySelector('#card-list-pc .card-option.active');
-        if (activeOption && activeOption.innerText) {
-            text += ` ${activeOption.innerText}`;
-        }
+    // [修改] 使用全局变量 selectedCardNote
+    if (buyMode === 'select' && selectedCardId && selectedCardNote) {
+        text += ` ${selectedCardNote}`;
     }
+    
     noteEl.innerText = text;
 }
 
 
 // ==========================================================
 // [
-//   *** 关键修复点 2 ***
+//   *** 关键修复点 3 ***
 // ]
 // ==========================================================
 /**
@@ -860,6 +866,7 @@ function selectPcBuyMode(mode) {
     if (mode === 'random') {
         randomBtn.classList.add('active');
         selectedCardId = null; // 选随机，清除自选ID
+        selectedCardNote = null; // [修改] 清除文本
         
         // 恢复PC端数量输入
         if(qtyInput) qtyInput.disabled = false;
@@ -878,6 +885,7 @@ function selectPcBuyMode(mode) {
     } else {
          // null，清除所有
         selectedCardId = null;
+        selectedCardNote = null; // [修改] 清除文本
         
         // 恢复PC端数量输入
         if(qtyInput) qtyInput.disabled = false;
@@ -897,11 +905,6 @@ function openPcCardPanel() {
     togglePcCardPanel(true); // 显示面板
 }
 
-// ==========================================================
-// [
-//   *** 关键修复点 3 ***
-// ]
-// ==========================================================
 /**
  * [修改] 切换PC端滑出面板的显示状态
  */
@@ -925,16 +928,11 @@ function togglePcCardPanel(show) {
     }
 }
 
-// ==========================================================
-// [
-//   *** 关键修复点 4 ***
-// ]
-// ==========================================================
 /**
  * [修改] PC端滑出面板 - 点击“确定”
  */
 function confirmPcCardSelection() {
-    // (selectedCardId 已经在 selectCard 时设置好了)
+    // (selectedCardId 和 selectedCardNote 已经在 selectCard 时设置好了)
     togglePcCardPanel(false); // 关闭面板
     updatePcSelectionText(); // 更新已选文本
     updatePrice(); // [新增] 确认选择时更新价格
@@ -991,6 +989,9 @@ async function submitAddToCart() {
     try {
         let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
         
+        // [修改] 使用 selectedCardNote
+        const noteToStore = (buyMode === 'select') ? (selectedCardNote || document.querySelector('#card-list .card-option.active')?.innerText) : null;
+        
         const cartItem = {
             productId: currentProduct.id,
             productName: currentProduct.name,
@@ -1001,7 +1002,7 @@ async function submitAddToCart() {
             img: document.getElementById('sku-img').src,
             buyMode: buyMode,
             selectedCardId: (buyMode === 'select') ? selectedCardId : null,
-            selectedCardNote: (buyMode === 'select') ? document.querySelector('#card-list .card-option.active')?.innerText : null
+            selectedCardNote: noteToStore
         };
 
         const existingItemIndex = cart.findIndex(item => 
