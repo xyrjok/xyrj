@@ -1046,7 +1046,7 @@ async function submitOrderPc() {
     const passwordInput = document.getElementById('query-password-pc');
     const password = passwordInput.value;
     // =============================================
-    // [修改] 密码验证 (Req 1)
+    // [修改] PC端密码验证 (Req 2)
     // =============================================
     if (!password || password.length < 1) { 
         alert('请设置1位以上的查单密码'); 
@@ -1246,11 +1246,16 @@ async function submitOrder() {
     }
     const passwordInput = document.getElementById('query-password');
     const password = passwordInput.value;
-    if (!password || password.length < 6) {
-        alert('请设置6位以上密码, 用于查询订单');
+    
+    // =============================================
+    // [修改] 移动端密码验证 (Req 2)
+    // =============================================
+    if (!password || password.length < 1) {
+        alert('请设置1位以上的查单密码');
         if (typeof highlightAndScroll === 'function') highlightAndScroll('query-password-container');
         return;
     }
+    
     const paymentMethod = document.querySelector('input[name="payment"]:checked');
     if (!paymentMethod) {
         alert('请选择支付方式');
