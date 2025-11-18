@@ -777,7 +777,7 @@ a:hover { color: var(--tb-orange); }
     height: 43px;
     padding: 0 12px 0 16px;
     border-radius: 22px 0 0 22px; /* 左侧圆角 */
-    background: linear-gradient(90deg, #ffbf00, #ffa502) /* 浅橙色渐变 */
+    background: linear-gradient(90deg, #ffbf00, #ffa502); /* 浅橙色渐变 */
     color: #fff;
     font-weight: bold;
     border: none;
@@ -791,7 +791,7 @@ a:hover { color: var(--tb-orange); }
     height: 43px;
     padding: 0 16px 0 12px;
     border-radius: 0 22px 22px 0; /* 右侧圆角 */
-    background: linear-gradient(90deg, #ff8400, #ff5000) /* 深橙色渐变 */
+    background: linear-gradient(90deg, #ff8400, #ff5000); /* 深橙色渐变 */
     color: #fff;
     font-weight: bold;
     border: none;
