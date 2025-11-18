@@ -937,13 +937,26 @@ function selectPcBuyMode(mode) {
     // updatePrice() 会在 validateQty() 或上面新增的地方被调用
 }
 
+// ==========================================================
+// [
+//   *** 关键修改点 (再次点击取消) ***
+// ]
+// ==========================================================
 /**
- * [修改] 打开PC端的自选滑出面板
+ * [修改] 打开PC端的自选滑出面板 (增加“再次点击取消”功能)
  */
 function openPcCardPanel() {
-    selectPcBuyMode('select'); // 激活"自选"按钮 (这也会处理数量输入框和价格)
-    loadCardNotes('card-list-pc'); // 加载卡密到PC面板
-    togglePcCardPanel(true); // 显示面板
+    // [修改] 检查当前是否已经处于 'select' 模式
+    if (buyMode === 'select') {
+        // 如果是，则取消选择
+        selectPcBuyMode(null); // (此函数会重置状态、价格和文本)
+        togglePcCardPanel(false); // (此函数会关闭面板)
+    } else {
+        // 如果不是，则执行原有的打开逻辑
+        selectPcBuyMode('select'); // 激活"自选"按钮 (这也会处理数量输入框和价格)
+        loadCardNotes('card-list-pc'); // 加载卡密到PC面板
+        togglePcCardPanel(true); // 显示面板
+    }
 }
 
 /**
