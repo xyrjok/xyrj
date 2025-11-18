@@ -786,6 +786,7 @@ function updatePrice() {
 
 /**
  * [新增] 更新PC端的“已选”提示文本 (实现要求2)
+ * [已按您的要求修正]
  */
 function updatePcSelectionText() {
     const noteEl = document.getElementById('pc-selected-card-note');
@@ -798,11 +799,15 @@ function updatePcSelectionText() {
     
     // [新增] 检查父容器是否可见
     const modeContainerPc = document.getElementById('buy-mode-container-pc');
+    
+    // [修正] 检查父容器是否可见
     if (modeContainerPc && modeContainerPc.classList.contains('d-none')) {
-        // 如果父容器是隐藏的 (即不支持自选), 则不显示任何文本
-        noteEl.innerText = '';
+        // [修正] 如果父容器是隐藏的 (即不支持自选), 则只显示规格
+        noteEl.innerText = `已选: ${selectedVariant.name}`; 
         return;
     }
+
+    // --- 以下逻辑处理支持自选的情况 ---
 
     let text = `已选: ${selectedVariant.name}`;
 
