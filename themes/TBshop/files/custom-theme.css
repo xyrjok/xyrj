@@ -774,28 +774,28 @@ a:hover { color: var(--tb-orange); }
 
 /* 按钮左半部分：加入购物车 (浅橙色渐变) */
 .btn-buy-split-left {
-    height: 45px;
-    padding: 0 25px;
+    height: 43px;
+    padding: 0 13px 0 16px;
     border-radius: 22px 0 0 22px; /* 左侧圆角 */
-    background: linear-gradient(90deg, #ffcb00, #ff9402); /* 浅橙色渐变 */
+    background: linear-gradient(90deg, #ffbf00, #ffa502) /* 浅橙色渐变 */
     color: #fff;
     font-weight: bold;
     border: none;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
     transition: opacity 0.2s;
 }
 
 /* 按钮右半部分：立即购买 (深橙色渐变) */
 .btn-buy-split-right {
-    height: 45px;
-    padding: 0 25px;
+    height: 43px;
+    padding: 0 16px 0 13px;
     border-radius: 0 22px 22px 0; /* 右侧圆角 */
-    background: linear-gradient(90deg, #ff9000, #ff5000); /* 深橙色渐变 */
+    background: linear-gradient(90deg, #ff8400, #ff5000) /* 深橙色渐变 */
     color: #fff;
     font-weight: bold;
     border: none;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
     transition: opacity 0.2s;
 }
@@ -803,12 +803,4 @@ a:hover { color: var(--tb-orange); }
 /* 悬停效果 */
 .btn-buy-split-left:hover, .btn-buy-split-right:hover {
     opacity: 0.9;
-}
-
-/* 购物车图标悬停 */
-#pc-buy-bar .fa-shopping-cart {
-    transition: transform 0.2s;
-}
-#pc-buy-bar a:hover .fa-shopping-cart {
-    transform: scale(1.1);
 }
