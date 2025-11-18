@@ -110,9 +110,7 @@
                 background-color: #fff;
             }
 
-            /* ======================================================= */
             /* PC端卡密列表 (UNCHANGED) */
-            /* ======================================================= */
             .card-select-list-pc {
                 display: flex; 
                 flex-wrap: wrap; 
@@ -124,7 +122,6 @@
                 border-radius: 4px;
                 border: 1px solid #f0f0f0; 
             }
-            
             .card-select-list-pc .card-option {
                 padding: 8px;
                 border: 1px solid #eee;
@@ -140,7 +137,6 @@
                 background: #ffefe7;
                 color: #ff5000;
             }
-            
             .pc-card-footer {
                 padding: 10px 16px;
                 display: flex;
@@ -164,14 +160,14 @@
             }
 
             /* ============================================= */
-            /* [新增] PC端支付方式 (Req 2) */
+            /* [修改] PC端支付方式 (Req 3) */
             /* ============================================= */
             .pc-payment-label {
                 position: relative;
                 cursor: pointer;
                 margin-left: 10px;
                 padding: 5px;
-                border: 2px solid transparent;
+                border: 2px solid transparent; /* 边框透明 */
                 border-radius: 8px;
                 opacity: 0.6;
                 transition: all 0.2s ease;
@@ -186,8 +182,39 @@
                 opacity: 1;
             }
             .pc-payment-label.active {
-                border-color: #ff5000;
+                /* border-color: #ff5000; */ /* [移除] 移除边框 */
                 opacity: 1;
+            }
+            
+            /* [新增] 支付方式 "对号" (Req 3) */
+            .pc-payment-label::after {
+                content: '\f00c'; /* FontAwesome check icon */
+                font-family: 'Font Awesome 5 Free';
+                font-weight: 900; /* Solid */
+                font-size: 14px;
+                color: #ff5000;
+                background-color: #fff;
+                border-radius: 50%;
+                padding: 1px;
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                display: none; /* 默认隐藏 */
+                line-height: 1;
+            }
+            .pc-payment-label.active::after {
+                display: block; /* 激活时显示 */
+            }
+            /* ============================================= */
+            /* [新增] 联系/密码框 字体 (Req 1) */
+            /* ============================================= */
+            #pc-contact-query-container .cell-label {
+                font-size: 13px;
+                min-width: 75px; /* 调整宽度以适应13px字体 */
+            }
+            #pc-contact-query-container .form-control-custom {
+                font-size: 13px;
+                padding: 8px 10px; /* 调整内边距 */
             }
             /* ============================================= */
             /* [新增] 结束 */
@@ -383,14 +410,14 @@
                                     <div class="row g-3">
                                         <div class="col-lg-6">
                                             <div class="d-flex align-items-center">
-                                                <span class="cell-label" style="min-width: 70px; font-weight: 500; color: #666;">联系方式<span class="text-danger">*</span></span>
+                                                <span class="cell-label" style="font-weight: 500; color: #666;">联系方式<span class="text-danger">*</span></span>
                                                 <input type="text" id="contact-info-pc" class="form-control form-control-sm form-control-custom" placeholder="邮箱或QQ">
                                             </div>
                                         </div>
                                         <div class="col-lg-6">
                                             <div class="d-flex align-items-center">
-                                                <span class="cell-label" style="min-width: 70px; font-weight: 500; color: #666;">查单密码<span class="text-danger">*</span></span>
-                                                <input type="password" id="query-password-pc" class="form-control form-control-sm form-control-custom" placeholder="6位以上">
+                                                <span class="cell-label" style="font-weight: 500; color: #666;">查单密码<span class="text-danger">*</span></span>
+                                                <input type="password" id="query-password-pc" class="form-control form-control-sm form-control-custom" placeholder="1位以上">
                                             </div>
                                         </div>
                                     </div>
@@ -398,13 +425,16 @@
 
 
                                 <div class="mt-auto pt-4 d-flex align-items-center" id="pc-buy-bar">
-                                    <button class="btn-buy" id="btn-buy-pc" onclick="submitOrderPc()" style="flex-shrink: 0; padding-left: 25px; padding-right: 25px;">立即购买</button>
-                                    <div class="d-flex align-items-center ps-3" id="payment-method-container-pc">
+                                    
+                                    <div class="d-flex align-items-center" id="payment-method-container-pc">
                                         <label class="pc-payment-label active">
                                             <input type="radio" name="payment-pc" value="alipay_f2f" checked>
                                             <i class="fab fa-alipay text-primary fs-3"></i>
                                         </label>
                                         </div>
+
+                                    <button class="btn-buy" id="btn-buy-pc" onclick="submitOrderPc()" style="flex: 0 0 auto; width: auto; padding-left: 25px; padding-right: 25px; margin-left: auto;">立即购买</button>
+
                                 </div>
 
                                 <div id="pc-card-selector-panel">
