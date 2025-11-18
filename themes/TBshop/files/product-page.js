@@ -789,7 +789,7 @@ function changeQty(delta, inputId) {
 
 // ==========================================================
 // [
-//   *** 价格显示 (UNCHANGED) ***
+//   *** 价格显示 (MODIFIED) ***
 // ]
 // ==========================================================
 function updatePrice() {
@@ -843,6 +843,9 @@ function updatePrice() {
             pPricePc.innerText = finalUnitPriceStr; 
         }
     }
+    
+    // [新增] 将计算后的单价存储到全局变量，供 PC端加入购物车使用
+    window.currentCalculatedPrice = price; 
 }
 
 // ==========================================================
@@ -1330,6 +1333,103 @@ async function submitOrder() {
         window.location.href = `pay.html?order_id=${order.order_id}`;
     } catch (e) { alert(e.message); } 
     finally { btn.disabled = false; btn.innerText = oldText; }
+}
+
+/**
+ * [新增] PC端加入购物车逻辑
+ */
+function handlePcAddToCart() {
+    // 1. 验证规格
+    if (!selectedVariant) {
+        alert('请选择规格');
+        try {
+            const vList = document.getElementById('variant-list-pc');
+            vList.style.border = '1px solid red';
+            setTimeout(() => { vList.style.border = 'none'; }, 2000);
+        } catch(e){}
+        return;
+    }
+    
+    // 2. 验证购买方式
+    const modeContainerPc = document.getElementById('buy-mode-container-pc');
+    if (modeContainerPc && !modeContainerPc.classList.contains('d-none')) {
+        if (!buyMode) {
+            alert('请选择购买方式 (随机或自选)');
+            return;
+        }
+        if (buyMode === 'select' && !selectedCardId) {
+            alert('请选择号码');
+            handlePcBuyModeClick('select'); // 自动打开面板
+            return;
+        }
+    }
+    
+    // 3. 验证数量
+    const quantity = parseInt(document.getElementById('buy-qty-pc').value) || 1;
+    if (buyMode !== 'select') {
+        if (selectedVariant.stock < quantity) {
+            alert('库存不足');
+            return;
+        }
+    }
+    
+    // 4. 执行加入购物车
+    try {
+        let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
+        
+        // 使用全局存储的文本或备用逻辑
+        const noteToStore = (buyMode === 'select') ? (selectedCardNote || selectedCardId) : null;
+        // 使用 updatePrice 中计算好的价格
+        const finalPrice = window.currentCalculatedPrice || selectedVariant.price;
+
+        const cartItem = {
+            productId: currentProduct.id,
+            productName: currentProduct.name,
+            variantId: selectedVariant.id,
+            variantName: selectedVariant.name,
+            price: finalPrice,
+            quantity: quantity,
+            img: selectedVariant.image_url || currentProduct.image_url || '',
+            buyMode: buyMode,
+            selectedCardId: (buyMode === 'select') ? selectedCardId : null,
+            selectedCardNote: noteToStore
+        };
+
+        // 检查购物车中是否已存在相同的商品配置
+        const existingItemIndex = cart.findIndex(item => 
+            item.variantId === cartItem.variantId && 
+            item.buyMode !== 'select' && // 自选卡密通常不合并数量，或者你可以根据需求修改
+            cartItem.buyMode !== 'select' &&
+            item.buyMode === cartItem.buyMode
+        );
+
+        if (existingItemIndex > -1) {
+            cart[existingItemIndex].quantity += cartItem.quantity;
+        } else {
+            cart.push(cartItem);
+        }
+
+        localStorage.setItem('tbShopCart', JSON.stringify(cart));
+        
+        // 5. 更新所有角标
+        if (typeof updateCartBadge === 'function') {
+            updateCartBadge(cart.length);
+        }
+        
+        // 6. 成功动画/提示
+        const btn = document.querySelector('.btn-buy-split-left');
+        const originalText = btn.innerText;
+        btn.innerText = '已加入 ✔';
+        btn.style.opacity = '0.8';
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.opacity = '1';
+        }, 1500);
+
+    } catch (e) {
+        console.error('PC Add to cart failed', e);
+        alert('添加失败，请重试');
+    }
 }
 
 // 启动页面加载
