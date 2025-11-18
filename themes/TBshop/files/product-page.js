@@ -755,11 +755,18 @@ function changeQty(delta, inputId) {
     validateQty(input); // 传递元素本身
 }
 
+// ==========================================================
+// [
+//   *** 关键修复点 1 ***
+// ]
+// ==========================================================
 function updatePrice() {
     if (!selectedVariant) return;
     
     let price = selectedVariant.price;
-    const qty = parseInt(document.getElementById('buy-qty').value);
+    // [修改] 两个输入框是同步的，任何一个都可以用作数量基准
+    const qtyInput = document.getElementById('buy-qty');
+    const qty = qtyInput ? parseInt(qtyInput.value) : 1;
     
     // [修改] 价格计算统一使用全局 buyMode
     if (buyMode === 'select') {
@@ -777,7 +784,16 @@ function updatePrice() {
         }
     }
     
-    document.getElementById('sku-price-text').innerText = price.toFixed(2);
+    const finalPriceStr = price.toFixed(2);
+
+    // 更新SKU价格
+    document.getElementById('sku-price-text').innerText = finalPriceStr;
+
+    // [新增] 同步更新PC端价格
+    const pPricePc = document.getElementById('p-price-pc');
+    if (pPricePc) {
+        pPricePc.innerText = finalPriceStr;
+    }
 }
 
 // ==========================================================
@@ -822,6 +838,11 @@ function updatePcSelectionText() {
 }
 
 
+// ==========================================================
+// [
+//   *** 关键修复点 2 ***
+// ]
+// ==========================================================
 /**
  * [修改] 选择PC端的购买方式 (随机/自选)
  */
@@ -864,6 +885,7 @@ function selectPcBuyMode(mode) {
     }
 
     updatePcSelectionText(); // [修改] 统一调用
+    updatePrice(); // [新增] 切换模式时立即更新价格
 }
 
 /**
@@ -875,6 +897,11 @@ function openPcCardPanel() {
     togglePcCardPanel(true); // 显示面板
 }
 
+// ==========================================================
+// [
+//   *** 关键修复点 3 ***
+// ]
+// ==========================================================
 /**
  * [修改] 切换PC端滑出面板的显示状态
  */
@@ -884,19 +911,33 @@ function togglePcCardPanel(show) {
         panel.classList.add('show');
     } else {
         panel.classList.remove('show');
-        // 如果关闭时没有确认选择 (selectedCardId 为空)，则取消"自选"模式
+        
+        // [修改] 如果关闭时没有确认选择 (selectedCardId 为空)，则取消"自选"模式
+        // 这是为了处理用户点击 "︽ 收取" 按钮，而不是 "确定" 按钮的情况
         if (!selectedCardId) {
-            selectPcBuyMode(null); // This will re-enable qty and update text
+            selectPcBuyMode(null); // 这会重置模式、启用数量、更新文本和价格
+        } else {
+            // [新增] 如果用户选了卡密，但点了"收取"
+            // 我们假定"收取"等于"确定"，以防止状态不一致
+            updatePcSelectionText();
+            updatePrice();
         }
     }
 }
 
+// ==========================================================
+// [
+//   *** 关键修复点 4 ***
+// ]
+// ==========================================================
 /**
  * [修改] PC端滑出面板 - 点击“确定”
  */
 function confirmPcCardSelection() {
+    // (selectedCardId 已经在 selectCard 时设置好了)
     togglePcCardPanel(false); // 关闭面板
-    updatePcSelectionText(); // [修改] 统一调用
+    updatePcSelectionText(); // 更新已选文本
+    updatePrice(); // [新增] 确认选择时更新价格
 }
 
 
