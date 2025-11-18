@@ -190,7 +190,13 @@ function updatePcElements(product, variant, priceStr) {
     
     if (pImgPc) pImgPc.src = targetImg;
     if (pTitlePc) pTitlePc.innerText = p.name;
-    if (pPricePc) pPricePc.innerText = priceDisplay;
+    
+    // [修改] 仅在 updatePrice 被调用前设置初始价格
+    // updatePrice() 将接管后续的价格显示
+    if (pPricePc && !selectedVariant) {
+         pPricePc.innerText = priceDisplay;
+    }
+
     if (pStockPc) pStockPc.innerText = `库存: ${totalStock}`;
     if (pSalesPc) pSalesPc.innerText = `已售: ${totalSales}`;
     if (pDescPc) pDescPc.innerText = p.description || '暂无详细介绍';
@@ -462,7 +468,7 @@ function renderPage() {
     document.getElementById('buy-qty-pc').value = 1;
     selectPcBuyMode(null); // [修改] 重置PC端按钮状态并更新文本
     
-    updatePcElements(p, null);
+    updatePcElements(p, null, priceDisplay); // [修改] 传入 priceDisplay
 
     // 立即为PC端计算并渲染规格
     if (!pcHasCalculatedPages && currentProduct) {
@@ -764,20 +770,22 @@ function changeQty(delta, inputId) {
 
 // ==========================================================
 // [
-//   *** 关键修复点 1 ***
+//   *** 关键修复点 1 (价格显示) ***
 // ]
 // ==========================================================
 function updatePrice() {
     if (!selectedVariant) return;
     
     let price = selectedVariant.price;
-    // [修改] 两个输入框是同步的，任何一个都可以用作数量基准
     const qtyInput = document.getElementById('buy-qty');
     const qty = qtyInput ? parseInt(qtyInput.value) : 1;
     
-    // [修改] 价格计算统一使用全局 buyMode
+    const basePrice = selectedVariant.price; // [新增] 存储规格基础价
+    let markup = 0; // [新增] 存储加价
+
     if (buyMode === 'select') {
-        price += (selectedVariant.custom_markup || 0);
+        markup = selectedVariant.custom_markup || 0;
+        price += markup; // price 是自选后的单价
     } else if (buyMode === 'random') {
         if (selectedVariant.wholesale_config) {
             try {
@@ -785,21 +793,39 @@ function updatePrice() {
                 if (typeof ws === 'string') ws = JSON.parse(ws);
                 if (Array.isArray(ws)) {
                     ws.sort((a,b) => b.qty - a.qty);
-                    for(let rule of ws) { if(qty >= rule.qty) { price = rule.price; break; } }
+                    for(let rule of ws) { 
+                        if(qty >= rule.qty) { 
+                            price = rule.price; // price 变成批发单价
+                            break; 
+                        } 
+                    }
                 }
             } catch(e) {}
         }
     }
     
-    const finalPriceStr = price.toFixed(2);
+    // 'price' 变量现在是最终的 *单位价格*
+    const finalUnitPriceStr = price.toFixed(2);
 
-    // 更新SKU价格
-    document.getElementById('sku-price-text').innerText = finalPriceStr;
+    // 更新SKU价格 (SKU面板总是显示最终单价)
+    document.getElementById('sku-price-text').innerText = finalUnitPriceStr;
 
-    // [新增] 同步更新PC端价格
+    // --- [修改] PC端价格显示逻辑 ---
     const pPricePc = document.getElementById('p-price-pc');
     if (pPricePc) {
-        pPricePc.innerText = finalPriceStr;
+        if (buyMode === 'select' && markup > 0) {
+            // 模式: 自选 + 有加价
+            const basePriceStr = basePrice.toFixed(2);
+            const markupStr = markup.toFixed(2);
+            const totalStr = (basePrice + markup).toFixed(2); // 总单价
+            
+            // 格式: 规格价+卡密自选=加起来的价
+            pPricePc.innerHTML = `<span style="font-size: 16px; font-weight: normal; color: #555;">${basePriceStr} (规格价) + ${markupStr} (自选) = </span>${totalStr}`;
+        } else {
+            // 模式: 随机, 或 自选无加价
+            // 此时 'price' (即 finalUnitPriceStr) 是正确的单价
+            pPricePc.innerText = finalUnitPriceStr; 
+        }
     }
 }
 
@@ -809,7 +835,7 @@ function updatePrice() {
 
 // ==========================================================
 // [
-//   *** 关键修复点 2 ***
+//   *** 关键修复点 2 (已选 + 号) ***
 // ]
 // ==========================================================
 /**
@@ -835,20 +861,15 @@ function updatePcSelectionText() {
     // --- 以下逻辑处理支持自选的情况 ---
     let text = `已选: ${selectedVariant.name}`;
 
-    // [修改] 使用全局变量 selectedCardNote
+    // [修改] 使用全局变量 selectedCardNote 并添加 "+"
     if (buyMode === 'select' && selectedCardId && selectedCardNote) {
-        text += ` ${selectedCardNote}`;
+        text += ` + ${selectedCardNote}`;
     }
     
     noteEl.innerText = text;
 }
 
 
-// ==========================================================
-// [
-//   *** 关键修复点 3 ***
-// ]
-// ==========================================================
 /**
  * [修改] 选择PC端的购买方式 (随机/自选)
  */
@@ -872,7 +893,7 @@ function selectPcBuyMode(mode) {
         if(qtyInput) qtyInput.disabled = false;
         if(stepper) stepper.style.opacity = '1';
         
-        validateQty(qtyInput);
+        validateQty(qtyInput); // 验证数量，会触发 updatePrice
     } else if (mode === 'select') {
         selectBtn.classList.add('active');
         
@@ -882,6 +903,7 @@ function selectPcBuyMode(mode) {
             qtyInput.disabled = true;
         }
         if(stepper) stepper.style.opacity = '0.5';
+        updatePrice(); // [新增] 确保切换到select时价格更新
     } else {
          // null，清除所有
         selectedCardId = null;
@@ -890,17 +912,18 @@ function selectPcBuyMode(mode) {
         // 恢复PC端数量输入
         if(qtyInput) qtyInput.disabled = false;
         if(stepper) stepper.style.opacity = '1';
+        updatePrice(); // [新增] 确保清除时价格复位
     }
 
     updatePcSelectionText(); // [修改] 统一调用
-    updatePrice(); // [新增] 切换模式时立即更新价格
+    // updatePrice() 会在 validateQty() 或上面新增的地方被调用
 }
 
 /**
  * [修改] 打开PC端的自选滑出面板
  */
 function openPcCardPanel() {
-    selectPcBuyMode('select'); // 激活"自选"按钮 (这也会处理数量输入框)
+    selectPcBuyMode('select'); // 激活"自选"按钮 (这也会处理数量输入框和价格)
     loadCardNotes('card-list-pc'); // 加载卡密到PC面板
     togglePcCardPanel(true); // 显示面板
 }
@@ -997,7 +1020,7 @@ async function submitAddToCart() {
             productName: currentProduct.name,
             variantId: selectedVariant.id,
             variantName: selectedVariant.name,
-            price: parseFloat(document.getElementById('sku-price-text').innerText),
+            price: parseFloat(document.getElementById('sku-price-text').innerText), // 存储单价
             quantity: quantity,
             img: document.getElementById('sku-img').src,
             buyMode: buyMode,
