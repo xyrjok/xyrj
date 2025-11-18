@@ -3,6 +3,7 @@
  * 包含：文章系统、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
  * [已合并] 增加查单密码、订单管理、规格自选标签
  * [购物车-升级版] 增加购物车合并下单接口、支付回调支持合并订单处理
+ * [已修改] 将查单密码验证从6位改为1位
  */
 
 // === 工具函数 ===
@@ -596,16 +597,18 @@ async function handleApi(request, env, url) {
 
         // --- 订单与支付 API (Shop) ---
 
-        // 创建订单 (支持自选卡密 card_id 和 查单密码 query_password)
+        // =======================================================
+        // [修改] 修复点 1： /api/shop/order/create
+        // =======================================================
         if (path === '/api/shop/order/create' && method === 'POST') {
             // 1. 接收 query_password
             const { variant_id, quantity, contact, payment_method, card_id, query_password } = await request.json();
             const variant = await db.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
             if (!variant) return errRes('规格不存在');
 
-            // [新增] 验证查单密码
-            if (!query_password || query_password.length < 6) {
-                return errRes('请设置6位以上的查单密码');
+            // [修改] 验证查单密码 (6位 -> 1位)
+            if (!query_password || query_password.length < 1) {
+                return errRes('请设置1位以上的查单密码');
             }
 
             // === 库存检查 ===
@@ -669,14 +672,17 @@ async function handleApi(request, env, url) {
             return jsonRes({ order_id, total_amount, payment_method });
         }
 
-        // ===================================
-        // --- [新增] 合并购物车下单 API ---
-        // ===================================
+        // =======================================================
+        // [修改] 修复点 2： /api/shop/cart/checkout
+        // =======================================================
         if (path === '/api/shop/cart/checkout' && method === 'POST') {
             const { items, contact, query_password, payment_method } = await request.json();
             
             if (!items || items.length === 0) return errRes('购物车为空');
-            if (!query_password || query_password.length < 6) return errRes('请设置6位以上的查单密码');
+            // [修改] 验证查单密码 (6位 -> 1位)
+            if (!query_password || query_password.length < 1) {
+                return errRes('请设置1位以上的查单密码');
+            }
 
             let total_amount = 0;
             const validatedItems = []; // 存储后端验证过的商品信息
