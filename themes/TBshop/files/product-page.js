@@ -92,7 +92,7 @@ skuSheetEl.addEventListener('show.bs.offcanvas', () => {
 });
 
 // =============================================
-// [新增] PC端支付方式UI切换 (Req 3)
+// [新增] PC端支付方式UI切换 (UNCHANGED)
 // =============================================
 document.addEventListener('change', function(e) {
     if (e.target.name === 'payment-pc') {
@@ -209,8 +209,6 @@ function updatePcElements(product, variant, priceStr) {
     if (pImgPc) pImgPc.src = targetImg;
     if (pTitlePc) pTitlePc.innerText = p.name;
     
-    // [修改] 仅在 updatePrice 被调用前设置初始价格
-    // updatePrice() 将接管后续的价格显示
     if (pPricePc && !selectedVariant) {
          pPricePc.innerText = priceDisplay;
     }
@@ -791,7 +789,7 @@ function changeQty(delta, inputId) {
 
 // ==========================================================
 // [
-//   *** 价格显示 (UNCHANGED from last turn) ***
+//   *** 价格显示 (UNCHANGED) ***
 // ]
 // ==========================================================
 function updatePrice() {
@@ -853,7 +851,7 @@ function updatePrice() {
 
 // ==========================================================
 // [
-//   *** “已选”文本 (UNCHANGED from last turn) ***
+//   *** “已选”文本 (UNCHANGED) ***
 // ]
 // ==========================================================
 /**
@@ -937,27 +935,59 @@ function selectPcBuyMode(mode) {
     // updatePrice() 会在 validateQty() 或上面新增的地方被调用
 }
 
+
 // ==========================================================
 // [
-//   *** 关键修改点 (再次点击取消) ***
+//   *** 关键修改点 1 (PC端) ***
 // ]
 // ==========================================================
 /**
- * [修改] 打开PC端的自选滑出面板 (增加“再次点击取消”功能)
+ * [新增] PC端购买方式点击处理器 (支持切换/取消)
  */
-function openPcCardPanel() {
-    // [修改] 检查当前是否已经处于 'select' 模式
-    if (buyMode === 'select') {
-        // 如果是，则取消选择
-        selectPcBuyMode(null); // (此函数会重置状态、价格和文本)
-        togglePcCardPanel(false); // (此函数会关闭面板)
+function handlePcBuyModeClick(mode) {
+    if (buyMode === mode) {
+        // 1. 已经激活，再次点击 -> 取消
+        selectPcBuyMode(null);
+        if (mode === 'select') {
+            togglePcCardPanel(false); // 如果是自选，关闭面板
+        }
     } else {
-        // 如果不是，则执行原有的打开逻辑
-        selectPcBuyMode('select'); // 激活"自选"按钮 (这也会处理数量输入框和价格)
-        loadCardNotes('card-list-pc'); // 加载卡密到PC面板
-        togglePcCardPanel(true); // 显示面板
+        // 2. 未激活 -> 激活
+        selectPcBuyMode(mode);
+        if (mode === 'select') {
+            // 激活自选
+            loadCardNotes('card-list-pc');
+            togglePcCardPanel(true);
+        } else {
+            // 激活随机
+            togglePcCardPanel(false); // 关闭自选面板
+        }
     }
 }
+
+// ==========================================================
+// [
+//   *** 关键修改点 2 (Mobile端) ***
+// ]
+// ==========================================================
+/**
+ * [新增] 移动端SKU购买方式点击处理器 (支持切换/取消)
+ */
+function handleMobileBuyModeClick(event, mode) {
+    const radio = document.getElementById(mode === 'select' ? 'mode_select' : 'mode_random');
+    
+    if (radio.checked) {
+        // 1. 已经激活，再次点击 -> 取消
+        event.preventDefault(); // 阻止 label 再次选中 radio
+        radio.checked = false;
+        buyMode = null;
+        toggleBuyMode(); // 调用 toggleBuyMode 来更新UI (隐藏卡密列表)
+    }
+    // 2. 未激活 -> 正常点击
+    // label的默认行为会选中 radio, 触发 onchange, onchange 会调用 toggleBuyMode()
+    // 所以这里不需要写 else
+}
+
 
 /**
  * [修改] 切换PC端滑出面板的显示状态
@@ -998,14 +1028,12 @@ function confirmPcCardSelection() {
 // ==========================================================
 
 /**
- * [修改] PC端提交订单 (Req 1: 密码验证)
- * 直接读取PC页面的输入框并提交，不打开SKU面板
+ * [修改] PC端提交订单 (UNCHANGED)
  */
 async function submitOrderPc() {
     // 1. 验证规格
     if (!selectedVariant) {
         alert('请选择规格');
-        // 可以在PC端高亮规格区域
         try {
             document.getElementById('variant-list-pc').style.border = '1px solid red';
             setTimeout(() => { 
@@ -1029,7 +1057,8 @@ async function submitOrderPc() {
         
         if (buyMode === 'select' && !selectedCardId) {
             alert('请选择号码');
-            document.getElementById('mode_select_pc').click(); // 提示打开面板
+            // [修改] 触发新的点击处理器
+            handlePcBuyModeClick('select');
             return;
         }
     }
@@ -1058,9 +1087,8 @@ async function submitOrderPc() {
 
     const passwordInput = document.getElementById('query-password-pc');
     const password = passwordInput.value;
-    // =============================================
-    // [修改] PC端密码验证 (Req 2)
-    // =============================================
+    
+    // PC端密码验证 (1位)
     if (!password || password.length < 1) { 
         alert('请设置1位以上的查单密码'); 
         passwordInput.focus();
@@ -1109,7 +1137,6 @@ async function submitOrderPc() {
         const order = await res.json();
         if(order.error) throw new Error(order.error);
         
-        // 不隐藏 skuSheet，直接跳转
         window.location.href = `pay.html?order_id=${order.order_id}`;
     
     } catch (e) { 
@@ -1138,11 +1165,16 @@ async function submitAddToCart() {
     if (modeContainer.offsetHeight > 0 || modeContainer.offsetWidth > 0) {
         const buyModeRadio = document.querySelector('input[name="buy_mode"]:checked');
         if (!buyModeRadio) {
-            alert('请选择购买方式');
-            if (typeof highlightAndScroll === 'function') highlightAndScroll('buy-mode-container');
-            return;
+            // [修改] 如果 radio 没选中 (因为被新逻辑取消了)，则使用全局 buyMode
+            // 但加入购物车必须选一个模式
+            if (!buyMode) {
+                 alert('请选择购买方式');
+                 if (typeof highlightAndScroll === 'function') highlightAndScroll('buy-mode-container');
+                 return;
+            }
+        } else {
+             buyMode = buyModeRadio.value; // 确保全局模式与SKU面板同步
         }
-        buyMode = buyModeRadio.value; // 确保全局模式与SKU面板同步
         
         if (buyMode === 'select' && !selectedCardId) {
             alert('请选择号码');
@@ -1229,11 +1261,15 @@ async function submitOrder() {
     if (modeContainer.offsetHeight > 0 || modeContainer.offsetWidth > 0) {
         const buyModeRadio = document.querySelector('input[name="buy_mode"]:checked');
         if (!buyModeRadio) {
-            alert('请选择购买方式');
-            if (typeof highlightAndScroll === 'function') highlightAndScroll('buy-mode-container');
-            return;
+            // [修改] 检查全局 buyMode
+             if (!buyMode) {
+                alert('请选择购买方式');
+                if (typeof highlightAndScroll === 'function') highlightAndScroll('buy-mode-container');
+                return;
+            }
+        } else {
+            buyMode = buyModeRadio.value; 
         }
-        buyMode = buyModeRadio.value; 
         
         if (buyMode === 'select' && !selectedCardId) {
             alert('请选择号码');
@@ -1260,9 +1296,7 @@ async function submitOrder() {
     const passwordInput = document.getElementById('query-password');
     const password = passwordInput.value;
     
-    // =============================================
-    // [修改] 移动端密码验证 (Req 2)
-    // =============================================
+    // 移动端密码验证 (1位)
     if (!password || password.length < 1) {
         alert('请设置1位以上的查单密码');
         if (typeof highlightAndScroll === 'function') highlightAndScroll('query-password-container');
