@@ -111,13 +111,11 @@
             }
 
             /* ======================================================= */
-            /* [修改] PC端卡密列表 (实现要求1) */
+            /* PC端卡密列表 (UNCHANGED) */
             /* ======================================================= */
             .card-select-list-pc {
-                display: flex; /* [修改] 改为flex布局 */
-                flex-wrap: wrap; /* [新增] 允许换行 */
-                /* [移除] display: grid; */
-                /* [移除] grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); */
+                display: flex; 
+                flex-wrap: wrap; 
                 gap: 8px;
                 max-height: 300px; 
                 overflow-y: auto;
@@ -135,19 +133,14 @@
                 font-size: 12px;
                 text-align: center;
                 cursor: pointer;
-                white-space: nowrap; /* [修改] 强制不换行 */
-                /* [移除] white-space: normal; */
-                /* [移除] word-break: break-all; */
+                white-space: nowrap; 
             }
             .card-select-list-pc .card-option.active {
                 border-color: #ff5000;
                 background: #ffefe7;
                 color: #ff5000;
             }
-            /* ======================================================= */
-            /* [修改] 结束 */
-            /* ======================================================= */
-
+            
             .pc-card-footer {
                 padding: 10px 16px;
                 display: flex;
@@ -169,6 +162,36 @@
                 color: #fff;
                 border-color: transparent;
             }
+
+            /* ============================================= */
+            /* [新增] PC端支付方式 (Req 2) */
+            /* ============================================= */
+            .pc-payment-label {
+                position: relative;
+                cursor: pointer;
+                margin-left: 10px;
+                padding: 5px;
+                border: 2px solid transparent;
+                border-radius: 8px;
+                opacity: 0.6;
+                transition: all 0.2s ease;
+            }
+            .pc-payment-label input {
+                position: absolute;
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .pc-payment-label:hover {
+                opacity: 1;
+            }
+            .pc-payment-label.active {
+                border-color: #ff5000;
+                opacity: 1;
+            }
+            /* ============================================= */
+            /* [新增] 结束 */
+            /* ============================================= */
         }
 
         /* ============================================= */
@@ -356,8 +379,32 @@
                                     </div>
                                 </div>
 
+                                <div id="pc-contact-query-container" class="mt-3">
+                                    <div class="row g-3">
+                                        <div class="col-lg-6">
+                                            <div class="d-flex align-items-center">
+                                                <span class="cell-label" style="min-width: 70px; font-weight: 500; color: #666;">联系方式<span class="text-danger">*</span></span>
+                                                <input type="text" id="contact-info-pc" class="form-control form-control-sm form-control-custom" placeholder="邮箱或QQ">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6">
+                                            <div class="d-flex align-items-center">
+                                                <span class="cell-label" style="min-width: 70px; font-weight: 500; color: #666;">查单密码<span class="text-danger">*</span></span>
+                                                <input type="password" id="query-password-pc" class="form-control form-control-sm form-control-custom" placeholder="6位以上">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                <div class="mt-auto pt-4"> <button class="btn-buy" onclick="handleBuyNow()">立即购买</button>
+
+                                <div class="mt-auto pt-4 d-flex align-items-center" id="pc-buy-bar">
+                                    <button class="btn-buy" id="btn-buy-pc" onclick="submitOrderPc()" style="flex-shrink: 0; padding-left: 25px; padding-right: 25px;">立即购买</button>
+                                    <div class="d-flex align-items-center ps-3" id="payment-method-container-pc">
+                                        <label class="pc-payment-label active">
+                                            <input type="radio" name="payment-pc" value="alipay_f2f" checked>
+                                            <i class="fab fa-alipay text-primary fs-3"></i>
+                                        </label>
+                                        </div>
                                 </div>
 
                                 <div id="pc-card-selector-panel">
