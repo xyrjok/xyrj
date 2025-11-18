@@ -92,7 +92,7 @@ skuSheetEl.addEventListener('show.bs.offcanvas', () => {
 });
 
 // =============================================
-// [新增] PC端支付方式UI切换 (Req 2)
+// [新增] PC端支付方式UI切换 (Req 3)
 // =============================================
 document.addEventListener('change', function(e) {
     if (e.target.name === 'payment-pc') {
@@ -791,7 +791,7 @@ function changeQty(delta, inputId) {
 
 // ==========================================================
 // [
-//   *** 关键修改点 1 (价格显示) ***
+//   *** 价格显示 (UNCHANGED from last turn) ***
 // ]
 // ==========================================================
 function updatePrice() {
@@ -801,12 +801,12 @@ function updatePrice() {
     const qtyInput = document.getElementById('buy-qty');
     const qty = qtyInput ? parseInt(qtyInput.value) : 1;
     
-    const basePrice = selectedVariant.price; // [新增] 存储规格基础价
-    let markup = 0; // [新增] 存储加价
+    const basePrice = selectedVariant.price; 
+    let markup = 0; 
 
     if (buyMode === 'select') {
         markup = selectedVariant.custom_markup || 0;
-        price += markup; // price 是自选后的单价
+        price += markup; 
     } else if (buyMode === 'random') {
         if (selectedVariant.wholesale_config) {
             try {
@@ -816,7 +816,7 @@ function updatePrice() {
                     ws.sort((a,b) => b.qty - a.qty);
                     for(let rule of ws) { 
                         if(qty >= rule.qty) { 
-                            price = rule.price; // price 变成批发单价
+                            price = rule.price; 
                             break; 
                         } 
                     }
@@ -825,26 +825,23 @@ function updatePrice() {
         }
     }
     
-    // 'price' 变量现在是最终的 *单位价格*
     const finalUnitPriceStr = price.toFixed(2);
 
-    // 更新SKU价格 (SKU面板总是显示最终单价)
+    // 更新SKU价格
     document.getElementById('sku-price-text').innerText = finalUnitPriceStr;
 
-    // --- [修改] PC端价格显示逻辑 ---
+    // --- PC端价格显示逻辑 ---
     const pPricePc = document.getElementById('p-price-pc');
     if (pPricePc) {
         if (buyMode === 'select' && markup > 0) {
             // 模式: 自选 + 有加价
             const basePriceStr = basePrice.toFixed(2);
             const markupStr = markup.toFixed(2);
-            const totalStr = (basePrice + markup).toFixed(2); // 总单价
+            const totalStr = (basePrice + markup).toFixed(2); 
             
-            // 格式: 规格价+卡密自选=加起来的价
             pPricePc.innerHTML = `<span style="font-size: 16px; font-weight: normal; color: #555;">${basePriceStr} (规格价) + ${markupStr} (自选) = </span>${totalStr}`;
         } else {
             // 模式: 随机, 或 自选无加价
-            // 此时 'price' (即 finalUnitPriceStr) 是正确的单价
             pPricePc.innerText = finalUnitPriceStr; 
         }
     }
@@ -856,7 +853,7 @@ function updatePrice() {
 
 // ==========================================================
 // [
-//   *** 关键修改点 2 (已选 + 号) ***
+//   *** “已选”文本 (UNCHANGED from last turn) ***
 // ]
 // ==========================================================
 /**
@@ -988,7 +985,7 @@ function confirmPcCardSelection() {
 // ==========================================================
 
 /**
- * [新增] PC端提交订单 (Req 3)
+ * [修改] PC端提交订单 (Req 1: 密码验证)
  * 直接读取PC页面的输入框并提交，不打开SKU面板
  */
 async function submitOrderPc() {
@@ -1048,8 +1045,11 @@ async function submitOrderPc() {
 
     const passwordInput = document.getElementById('query-password-pc');
     const password = passwordInput.value;
-    if (!password || password.length < 6) {
-        alert('请设置6位以上的查单密码');
+    // =============================================
+    // [修改] 密码验证 (Req 1)
+    // =============================================
+    if (!password || password.length < 1) { 
+        alert('请设置1位以上的查单密码'); 
         passwordInput.focus();
         try { passwordInput.style.border = '1px solid red'; } catch(e){}
         return;
@@ -1247,7 +1247,7 @@ async function submitOrder() {
     const passwordInput = document.getElementById('query-password');
     const password = passwordInput.value;
     if (!password || password.length < 6) {
-        alert('请设置6位以上的查单密码');
+        alert('请设置6位以上密码, 用于查询订单');
         if (typeof highlightAndScroll === 'function') highlightAndScroll('query-password-container');
         return;
     }
