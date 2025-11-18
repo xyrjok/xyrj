@@ -302,8 +302,8 @@ function renderGlobalHeaders(config) {
     const headerRight = document.querySelector('.tb-header .header-right');
     if (headerRight && !document.getElementById('cart-btn-pc')) { // 检查是否已存在
         const cartBtnHtml = `
-        <a href="/cart.html" class="icon-btn-pc" id="cart-btn-pc" style="position: relative; margin-left: 15px; color: #333; text-decoration: none;">
-            <i class="fa fa-shopping-cart" style="font-size: 20px;"></i>
+        <a href="/cart.html" class="icon-btn-pc" id="cart-btn-pc" style="position: relative; margin-left: 15px; color: #ff0036; text-decoration: none;">
+            <i class="far fa-shopping-cart" style="font-size: 20px;"></i>
             <span id="cart-badge-pc" class="badge bg-danger rounded-pill" style="position: absolute; top: -8px; right: -10px; font-size: 9px; padding: 2px 4px; display: none;">0</span>
         </a>`;
         
