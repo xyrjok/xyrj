@@ -91,8 +91,26 @@ skuSheetEl.addEventListener('show.bs.offcanvas', () => {
     }
 });
 
+// =============================================
+// [新增] PC端支付方式UI切换 (Req 2)
+// =============================================
+document.addEventListener('change', function(e) {
+    if (e.target.name === 'payment-pc') {
+        // 移除所有 active
+        document.querySelectorAll('.pc-payment-label').forEach(label => {
+            label.classList.remove('active');
+        });
+        // 添加 active 到被选中的
+        const activeLabel = e.target.closest('.pc-payment-label');
+        if (activeLabel) {
+            activeLabel.classList.add('active');
+        }
+    }
+});
+
+
 /**
- * [新增] 处理“立即购买”点击
+ * [新增] 处理“立即购买”点击 (移动端)
  */
 function handleBuyNow() {
     currentAction = 'buy';
@@ -100,7 +118,7 @@ function handleBuyNow() {
 }
 
 /**
- * [新增] 处理“加入购物车”点击
+ * [新增] 处理“加入购物车”点击 (移动端)
  */
 function handleAddToCart() {
     currentAction = 'cart';
@@ -234,7 +252,7 @@ function updatePcElements(product, variant, priceStr) {
 }
 
 // ==========================================================
-// PC 端页内规格函数 (来自上一步)
+// PC 端页内规格函数 (UNCHANGED)
 // ==========================================================
 function calculatePCSpecPages() {
     const vList = document.getElementById('variant-list-pc');
@@ -323,7 +341,7 @@ function changePCSpecPage(page) {
 
 
 // ==========================================================
-// SKU 弹出面板函数 (来自上一步)
+// SKU 弹出面板函数 (UNCHANGED)
 // ==========================================================
 function calculateSpecPages() {
     const vList = document.getElementById('variant-list');
@@ -411,7 +429,7 @@ function changeSpecPage(page) {
 }
 
 // ==========================================================
-// 共享函数
+// 共享函数 (UNCHANGED)
 // ==========================================================
 
 function renderPage() {
@@ -512,6 +530,9 @@ function renderExtraInfo(selectedV) {
     }
 }
 
+/**
+ * [修改] 此函数现在专用于移动端打开SKU面板
+ */
 function openSkuSheet() { 
     handleBuyNow(); 
 }
@@ -770,7 +791,7 @@ function changeQty(delta, inputId) {
 
 // ==========================================================
 // [
-//   *** 关键修复点 1 (价格显示) ***
+//   *** 关键修改点 1 (价格显示) ***
 // ]
 // ==========================================================
 function updatePrice() {
@@ -830,12 +851,12 @@ function updatePrice() {
 }
 
 // ==========================================================
-// [新增] PC端 购买方式/卡密选择 面板控制
+// PC端 购买方式/卡密选择 面板控制
 // ==========================================================
 
 // ==========================================================
 // [
-//   *** 关键修复点 2 (已选 + 号) ***
+//   *** 关键修改点 2 (已选 + 号) ***
 // ]
 // ==========================================================
 /**
@@ -967,7 +988,129 @@ function confirmPcCardSelection() {
 // ==========================================================
 
 /**
- * [新增] 提交到购物车
+ * [新增] PC端提交订单 (Req 3)
+ * 直接读取PC页面的输入框并提交，不打开SKU面板
+ */
+async function submitOrderPc() {
+    // 1. 验证规格
+    if (!selectedVariant) {
+        alert('请选择规格');
+        // 可以在PC端高亮规格区域
+        try {
+            document.getElementById('variant-list-pc').style.border = '1px solid red';
+            setTimeout(() => { 
+                document.getElementById('variant-list-pc').style.border = 'none'; 
+            }, 2000);
+        } catch(e){}
+        return;
+    }
+    
+    // 2. 验证购买方式 (全局变量)
+    const modeContainerPc = document.getElementById('buy-mode-container-pc');
+    if (modeContainerPc && !modeContainerPc.classList.contains('d-none')) { // 检查是否启用了购买方式
+        if (!buyMode) {
+            alert('请选择购买方式 (随机或自选)');
+            try {
+                modeContainerPc.style.border = '1px solid red';
+                setTimeout(() => { modeContainerPc.style.border = 'none'; }, 2000);
+            } catch(e){}
+            return;
+        }
+        
+        if (buyMode === 'select' && !selectedCardId) {
+            alert('请选择号码');
+            document.getElementById('mode_select_pc').click(); // 提示打开面板
+            return;
+        }
+    }
+    
+    // 3. 验证数量
+    const quantity = parseInt(document.getElementById('buy-qty-pc').value);
+    if (buyMode !== 'select') {
+        if (selectedVariant.stock < quantity) {
+            alert('库存不足');
+            document.getElementById('buy-qty-pc').focus();
+            return;
+        }
+    }
+
+    // 4. 验证PC端的联系方式和密码
+    const contactInput = document.getElementById('contact-info-pc');
+    const contact = contactInput.value;
+    if (!contact) {
+        alert('请填写联系方式');
+        contactInput.focus();
+        try { contactInput.style.border = '1px solid red'; } catch(e){}
+        return;
+    } else {
+        try { contactInput.style.border = 'none'; } catch(e){}
+    }
+
+    const passwordInput = document.getElementById('query-password-pc');
+    const password = passwordInput.value;
+    if (!password || password.length < 6) {
+        alert('请设置6位以上的查单密码');
+        passwordInput.focus();
+        try { passwordInput.style.border = '1px solid red'; } catch(e){}
+        return;
+    } else {
+        try { passwordInput.style.border = 'none'; } catch(e){}
+    }
+
+    // 5. 验证PC端的支付方式
+    const paymentMethod = document.querySelector('input[name="payment-pc"]:checked');
+    if (!paymentMethod) {
+        alert('请选择支付方式');
+        try {
+            document.getElementById('payment-method-container-pc').style.border = '1px solid red';
+            setTimeout(() => { 
+                document.getElementById('payment-method-container-pc').style.border = 'none'; 
+            }, 2000);
+        } catch(e){}
+        return;
+    }
+    
+    const btn = document.getElementById('btn-buy-pc');
+    const oldText = btn.innerText;
+    btn.disabled = true; btn.innerText = '正在创建...';
+    
+    try {
+        const payload = { 
+            variant_id: selectedVariant.id, 
+            quantity, 
+            contact, 
+            query_password: password, 
+            payment_method: paymentMethod.value
+        };
+        // 使用全局变量
+        if (buyMode === 'select' && selectedCardId) {
+            payload.card_id = selectedCardId;
+        }
+        
+        const res = await fetch('/api/shop/order/create', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+        });
+        
+        const order = await res.json();
+        if(order.error) throw new Error(order.error);
+        
+        // 不隐藏 skuSheet，直接跳转
+        window.location.href = `pay.html?order_id=${order.order_id}`;
+    
+    } catch (e) { 
+        alert(e.message); 
+    } 
+    finally { 
+        btn.disabled = false; 
+        btn.innerText = oldText; 
+    }
+}
+
+
+/**
+ * [新增] 提交到购物车 (此功能依赖SKU面板)
  */
 async function submitAddToCart() {
     // 1. 验证 (基于SKU面板)
@@ -1059,7 +1202,7 @@ async function submitAddToCart() {
 }
 
 /**
- * 提交订单 (基于SKU面板)
+ * 提交订单 (此函数专用于SKU面板)
  */
 async function submitOrder() {
     if (!selectedVariant) {
