@@ -163,7 +163,8 @@
             .pc-payment-label {
                 position: relative;
                 cursor: pointer;
-                padding: 5px 7px;
+                margin-left: 10px;
+                padding: 5px;
                 border: 2px solid #eee; 
                 border-radius: 8px;
                 opacity: 0.6;
@@ -184,9 +185,9 @@
             
             /* 支付方式 "对号" (UNCHANGED) */
             .pc-payment-label::after {
-                content: '\f00c'; /* FontAwesome check icon */
+                content: '\f00c';
                 font-family: 'Font Awesome 5 Free';
-                font-weight: 900; /* Solid */
+                font-weight: 900; 
                 font-size: 12px;
                 color: #fff; 
                 background-color: #888; 
@@ -194,7 +195,7 @@
                 border-radius: 50%;
                 width: 18px;
                 height: 18px;
-                display: none; /* 默认隐藏 */
+                display: none; 
                 align-items: center;
                 justify-content: center;
                 position: absolute;
@@ -206,21 +207,16 @@
                 display: flex; 
             }
 
-            /* ============================================= */
-            /* [修改] 联系/密码框 字体和间距 (Req 2) */
-            /* ============================================= */
+            /* 联系/密码框 字体和间距 (UNCHANGED) */
             #pc-contact-query-container .cell-label {
                 font-size: 13px;
-                min-width: 65px; /* [修改] 调小宽度 */
-                margin-right: 5px; /* [修改] 调小间距 */
+                min-width: 65px; 
+                margin-right: 5px; 
             }
             #pc-contact-query-container .form-control-custom {
                 font-size: 13px;
                 padding: 8px 10px; 
             }
-            /* ============================================= */
-            /* [新增] 结束 */
-            /* ============================================= */
         }
 
         /* ============================================= */
@@ -383,11 +379,11 @@
                                     <div class="d-flex align-items-center">
                                         <span class="cell-label" style="min-width: 30px; font-weight: bold; color: #999; margin-right: 10px;">方式</span>
                                         <div class="buy-mode-group-pc" style="flex: 1;">
-                                            <label id="mode_random_pc" class="mode-label-pc" onclick="selectPcBuyMode('random')">
+                                            <label id="mode_random_pc" class="mode-label-pc" onclick="handlePcBuyModeClick('random')">
                                                 随机发货
                                                 <small id="random-mode-desc-pc">享受批发优惠</small>
                                             </label>
-                                            <label id="mode_select_pc" class="mode-label-pc" onclick="openPcCardPanel()">
+                                            <label id="mode_select_pc" class="mode-label-pc" onclick="handlePcBuyModeClick('select')">
                                                 <span id="selection-label-text-pc">自选卡密/号码</span> 
                                                 <small>加价 <span id="markup-amount-pc">0</span> 元</small>
                                             </label>
@@ -541,12 +537,12 @@
                 <div class="section-title">购买方式 <small class="text-muted fw-normal ms-2">(自选与批发互斥)</small></div>
                 <div class="buy-mode-group">
                     <input type="radio" name="buy_mode" id="mode_random" class="mode-radio" value="random" onchange="toggleBuyMode()">
-                    <label for="mode_random" class="mode-label">
+                    <label for="mode_random" class="mode-label" onclick="handleMobileBuyModeClick(event, 'random')">
                         随机发货
                         <small id="random-mode-desc">享受批发优惠</small>
                     </label>
                     <input type="radio" name="buy_mode" id="mode_select" class="mode-radio" value="select" onchange="toggleBuyMode()">
-                    <label for="mode_select" class="mode-label">
+                    <label for="mode_select" class="mode-label" onclick="handleMobileBuyModeClick(event, 'select')">
                         <span id="selection-label-text">自选卡密/号码</span> <small>加价 <span id="markup-amount">0</span> 元</small>
                     </label>
                 </div>
