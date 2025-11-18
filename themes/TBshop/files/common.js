@@ -519,8 +519,9 @@ function loadCartBadge() {
 function updateCartBadge(count) {
     const badgeMobile = document.getElementById('cart-badge-mobile'); // 商品页
     const badgePC = document.getElementById('cart-badge-pc'); // PC 头部
+    const badgePcBuyBar = document.getElementById('cart-badge-pc-bar'); // [新增] PC 购买栏图标
     
-    const badges = [badgeMobile, badgePC];
+    const badges = [badgeMobile, badgePC, badgePcBuyBar];
     
     badges.forEach(badge => {
         if (badge) {
