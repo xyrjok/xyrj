@@ -160,14 +160,14 @@
             }
 
             /* ============================================= */
-            /* [修改] PC端支付方式 (Req 3) */
+            /* [修改] PC端支付方式 (Req 1) */
             /* ============================================= */
             .pc-payment-label {
                 position: relative;
                 cursor: pointer;
                 margin-left: 10px;
                 padding: 5px;
-                border: 2px solid transparent; /* 边框透明 */
+                border: 2px solid #eee; /* [修改] 浅灰色边框 */
                 border-radius: 8px;
                 opacity: 0.6;
                 transition: all 0.2s ease;
@@ -182,39 +182,42 @@
                 opacity: 1;
             }
             .pc-payment-label.active {
-                /* border-color: #ff5000; */ /* [移除] 移除边框 */
-                opacity: 1;
+                opacity: 1; /* [修改] 移除边框变色 */
             }
             
-            /* [新增] 支付方式 "对号" (Req 3) */
+            /* [修改] 支付方式 "对号" (Req 1) */
             .pc-payment-label::after {
                 content: '\f00c'; /* FontAwesome check icon */
                 font-family: 'Font Awesome 5 Free';
                 font-weight: 900; /* Solid */
-                font-size: 14px;
-                color: #ff5000;
-                background-color: #fff;
+                font-size: 12px;
+                color: #fff; /* [修改] 白色对号 */
+                background-color: #888; /* [修改] 灰色圆圈背景 */
+                border: 1px solid #fff;
                 border-radius: 50%;
-                padding: 1px;
-                position: absolute;
-                top: -5px;
-                right: -5px;
+                width: 18px;
+                height: 18px;
                 display: none; /* 默认隐藏 */
+                align-items: center;
+                justify-content: center;
+                position: absolute;
+                top: -8px;
+                right: -8px;
                 line-height: 1;
             }
             .pc-payment-label.active::after {
-                display: block; /* 激活时显示 */
+                display: flex; /* [修改] 激活时显示 (用flex居中) */
             }
             /* ============================================= */
-            /* [新增] 联系/密码框 字体 (Req 1) */
+            /* [修改] 联系/密码框 字体 (Req 2) */
             /* ============================================= */
             #pc-contact-query-container .cell-label {
                 font-size: 13px;
-                min-width: 75px; /* 调整宽度以适应13px字体 */
+                min-width: 75px; 
             }
             #pc-contact-query-container .form-control-custom {
                 font-size: 13px;
-                padding: 8px 10px; /* 调整内边距 */
+                padding: 8px 10px; 
             }
             /* ============================================= */
             /* [新增] 结束 */
@@ -415,9 +418,9 @@
                                             </div>
                                         </div>
                                         <div class="col-lg-6">
-                                            <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items: center">
                                                 <span class="cell-label" style="font-weight: 500; color: #666;">查单密码<span class="text-danger">*</span></span>
-                                                <input type="password" id="query-password-pc" class="form-control form-control-sm form-control-custom" placeholder="1位以上">
+                                                <input type="password" id="query-password-pc" class="form-control form-control-sm form-control-custom" placeholder="用于查询订单">
                                             </div>
                                         </div>
                                     </div>
@@ -570,7 +573,7 @@
             </div>
             <div class="mb-4" id="query-password-container">
                 <div class="section-title">查单密码 <span class="text-danger">*</span></div>
-                <input type="password" id="query-password" class="form-control form-control-custom" placeholder="请设置6位以上密码, 用于查询订单">
+                <input type="password" id="query-password" class="form-control form-control-custom" placeholder="用于查询订单">
             </div>
             <div class="mb-4" id="payment-method-container">
                 <div class="section-title">支付方式</div>
