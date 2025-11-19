@@ -994,10 +994,39 @@ function handleMobileBuyModeClick(event, mode) {
 
 /**
  * [修改] 切换PC端滑出面板的显示状态
+ * 实现：面板高度自动，从分隔线向上生长，最大不超过商品标题
  */
 function togglePcCardPanel(show) {
     const panel = document.getElementById('pc-card-selector-panel');
+    
+    // 获取关键元素
+    const container = document.querySelector('#main-content-row-pc .col-lg-9 .col-md-7');
+    const buyModeContainer = document.getElementById('buy-mode-container-pc');
+    const titleElement = document.getElementById('p-title-pc'); // 商品标题
+
+    // 找到购买方式上方的“灰线” (HR)
+    const divider = buyModeContainer ? buyModeContainer.previousElementSibling : null;
+
     if (show) {
+        if (container && divider && titleElement) {
+            // 1. 计算底部定位 (bottom)
+            // 公式：容器总高度 - 分隔线的offsetTop = 距离底部的像素值
+            // 这样面板的底部就会刚好贴在分隔线上
+            const bottomPos = container.offsetHeight - divider.offsetTop;
+            panel.style.bottom = bottomPos + 'px';
+            
+            // 2. 计算最大高度 (max-height)
+            // 公式：分隔线的位置 - (标题的位置 + 标题的高度) - 间距缓冲
+            // 这样面板最高只能长到标题的下面
+            const titleBottom = titleElement.offsetTop + titleElement.offsetHeight;
+            // 减去 15px 是为了留一点呼吸空间，不要紧贴着标题
+            const availableHeight = divider.offsetTop - titleBottom - 15;
+            
+            panel.style.maxHeight = availableHeight + 'px';
+            
+            // 3. 确保高度自动
+            panel.style.height = 'auto';
+        }
         panel.classList.add('show');
     } else {
         panel.classList.remove('show');
