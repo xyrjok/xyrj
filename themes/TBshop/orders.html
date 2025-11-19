@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>订单查询 - TB Shop</title>
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/css/all.min.css" rel="stylesheet">
+    <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
+    <style>
+        /* 订单查询页面特定样式 */
+        .order-query-box {
+            padding: 40px 20px;
+            text-align: center;
+            min-height: 300px;
+        }
+        .query-input-group {
+            max-width: 500px;
+            margin: 0 auto 30px;
+            position: relative;
+            display: flex;
+        }
+        .query-input-group input {
+            border-radius: 30px 0 0 30px;
+            border: 2px solid #ff0036;
+            border-right: none;
+            padding-left: 20px;
+            height: 48px;
+        }
+        .query-input-group button {
+            border-radius: 0 30px 30px 0;
+            background: linear-gradient(to right, #ff5000, #ff0036);
+            color: white;
+            border: none;
+            padding: 0 30px;
+            font-weight: bold;
+            height: 48px;
+            transition: opacity 0.2s;
+        }
+        .query-input-group button:hover {
+            opacity: 0.9;
+        }
+        .result-card {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: left;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f9f9f9;
+            display: none; /* 默认隐藏 */
+        }
+        .result-card.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        .kami-box {
+            background: #fff;
+            border: 1px dashed #ccc;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: monospace;
+            color: #333;
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            font-size: 12px;
+            background: #eee;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .copy-btn:hover {
+            background: #ddd;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="mobile-header d-lg-none">
+        <div class="mh-left" id="mobile-menu-btn">
+            <i class="fa fa-bars"></i>
+        </div>
+        <div class="mh-center">
+            <a href="/" class="d-flex align-items-center justify-content-center h-100">
+                <img id="mobile-logo-img" class="d-none" alt="Logo">
+                <span id="mobile-site-name-wrap" class="d-none">
+                    <i class="fa fa-shopping-bag"></i>
+                    <span id="mobile-header-site-name">TB Shop</span>
+                </span>
+            </a>
+        </div>
+        <div class="mh-right" id="mobile-search-btn">
+            <i class="fa fa-search"></i>
+        </div>
+    </header>
+
+    <div class="mobile-search-dropdown d-lg-none">
+        <div class="tb-search-group">
+            <input type="text" id="mobile-search-input" class="tb-search-input" placeholder="搜索商品...">
+            <button class="tb-search-btn" onclick="doSearch('mobile')">搜索</button>
+        </div>
+    </div>
+    <div class="mobile-search-overlay d-lg-none" id="mobile-search-overlay"></div>
+
+    <div class="mobile-sidebar d-lg-none" id="mobile-sidebar">
+        <div class="mobile-sidebar-header">
+            <h5 class="mobile-sidebar-title">分类菜单</h5>
+            <i class="fa fa-times mobile-sidebar-close" id="mobile-sidebar-close-btn"></i>
+        </div>
+        <div class="mobile-sidebar-content">
+            <div id="mobile-category-list">
+                <a href="/">全部商品</a>
+                </div>
+        </div>
+        <div class="mobile-sidebar-footer">
+            <a href="/admin/" class="mobile-sidebar-login-link">
+                <i class="fa fa-user-circle"></i> 登录
+            </a>
+        </div>
+    </div>
+    <div class="mobile-overlay d-lg-none" id="mobile-overlay"></div>
+
+    <header class="tb-header d-none d-lg-block">
+        <div class="container header-inner">
+            <a href="/" class="site-brand">
+                <img id="site-logo" class="d-none" style="max-height: 45px; width: auto; margin-right: 10px;" alt="Logo">
+                <span id="site-name-wrap" class="d-flex align-items-center d-none">
+                    <i class="fa fa-shopping-bag"></i>
+                    <span id="header-site-name">TB Shop</span>
+                </span>
+            </a>
+
+            <nav class="main-nav d-none d-md-flex">
+                <a href="/" class="nav-link-item">首页</a>
+                <a href="/articles.html" class="nav-link-item">教程文章</a>
+                <a href="/orders.html" class="nav-link-item active">查询订单</a>
+            </nav>
+
+            <div class="header-right">
+                <div class="tb-search-group">
+                    <input type="text" id="search-input" class="tb-search-input" placeholder="搜索商品...">
+                    <button class="tb-search-btn" onclick="doSearch('pc')">搜索</button>
+                </div>
+                <a href="/admin/" class="btn-login">登录</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mt-4">
+        <div class="row gx-3" id="main-content-row">
+            
+            <div class="col-lg-9">
+                
+                <div class="module-box">
+                    <div class="module-title">
+                        <i class="fa fa-search me-2"></i>订单查询
+                    </div>
+                    
+                    <div class="order-query-box">
+                        <h4 class="mb-4">查询您的订单状态及卡密</h4>
+                        <div class="query-input-group input-group">
+                            <input type="text" id="order-id-input" class="form-control" placeholder="请输入订单号 (Order ID)">
+                            <button onclick="queryOrder()">查询</button>
+                        </div>
+                        <div class="text-muted small mb-4">
+                            <i class="fa fa-info-circle"></i> 请输入购买时获取的订单号查询发货内容
+                        </div>
+
+                        <div id="query-result" class="result-card">
+                            <h5 class="border-bottom pb-2 mb-3">查询结果</h5>
+                            <div id="result-content">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-lg-3 d-none d-lg-block">
+                <div id="sidebar-wrapper"> 
+                    <div class="sidebar-inner">
+
+                        <div class="module-box" id="notice-module-box">
+                            <div class="module-title">店铺公告</div>
+                            <div class="notice-content" id="notice-box">
+                                暂无公告
+                            </div>
+                        </div>
+
+                        <div class="module-box" id="contact-module-box">
+                            <div class="module-title">联系客服</div>
+                            <div class="notice-content" id="contact-box">
+                                暂无联系方式
+                            </div>
+                        </div>
+                        
+                        <div class="module-box">
+                            <div class="module-title">销量排行</div>
+                            <div id="top-sales-list">
+                                </div>
+                        </div>
+
+                        <div class="module-box">
+                            <div class="module-title">教程分类</div>
+                            <div class="art-cat-list" id="article-cat-list">
+                                </div>
+                        </div>
+                        
+                        <div class="module-box">
+                            <div class="module-title">热门标签</div>
+                            <div class="tag-cloud" id="tag-cloud-list">
+                                </div>
+                        </div>
+
+                    </div> 
+                </div> 
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-links">
+                <a href="/">首页</a>
+                <a href="/articles.html">教程文章</a>
+                <a href="#">关于我们</a>
+                <a href="#">联系客服</a>
+            </div>
+            <div class="copyright">
+                &copy; <span id="year"></span> <span id="footer-name">TB Shop</span>. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+
+    <nav class="mobile-bottom-nav d-lg-none">
+        <a href="/" class="mbn-item">
+            <i class="fa fa-home"></i>
+            <span>首页</span>
+        </a>
+        <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-sidebar', 'mobile-overlay');">
+            <i class="fa fa-th-large"></i>
+            <span>商品分类</span>
+        </a>
+        <a href="/orders.html" class="mbn-item active">
+            <i class="fa fa-file-alt"></i>
+            <span>订单查询</span>
+        </a>
+        <a href="/articles.html" class="mbn-item">
+            <i class="fa fa-book-open"></i>
+            <span>教程文章</span>
+        </a>
+        <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-contact-sheet', 'mobile-contact-overlay');">
+            <i class="fa fa-headset"></i>
+            <span>客服</span>
+        </a>
+    </nav>
+
+    <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
+    <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
+        <div class="mcs-header">
+            <span class="mcs-title">联系客服</span>
+            <i class="fa fa-times mcs-close" id="mobile-contact-close-btn"></i>
+        </div>
+        <div class="mcs-content" id="mobile-contact-content">
+            <p>加载中...</p>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="/themes/TBshop/files/common.js"></script>
+
+    <script>
+        // 页面初始化：加载公共配置（侧边栏、公告等）
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/shop/config');
+                const config = await res.json();
+                
+                renderGlobalHeaders(config);
+                renderSidebarNoticeContact(config);
+
+                // 加载侧边栏数据 (商品和文章)
+                const [prodRes, artRes] = await Promise.all([
+                    fetch('/api/shop/products'),
+                    fetch('/api/shop/articles/list')
+                ]);
+                
+                const products = await prodRes.json();
+                const articles = await artRes.json();
+
+                renderSidebarTopSales(products);
+                renderSidebarArticleCats(articles);
+                renderSidebarTagCloud(products);
+                
+                // 移动端分类菜单填充
+                if(document.getElementById('mobile-category-list')) {
+                     const catsRes = await fetch('/api/shop/categories');
+                     const cats = await catsRes.json();
+                     const catList = document.getElementById('mobile-category-list');
+                     cats.forEach(c => {
+                         catList.innerHTML += `<a href="/?cat=${c.id}">${c.name}</a>`;
+                     });
+                }
+                
+                // 如果URL有 order_id 参数，自动查询
+                const urlParams = new URLSearchParams(window.location.search);
+                const oid = urlParams.get('order_id') || urlParams.get('id');
+                if(oid) {
+                    document.getElementById('order-id-input').value = oid;
+                    queryOrder();
+                }
+
+            } catch (e) {
+                console.error(e);
+            }
+        });
+
+        // 核心：查询订单逻辑
+        async function queryOrder() {
+            const input = document.getElementById('order-id-input');
+            const orderId = input.value.trim();
+            const resultBox = document.getElementById('query-result');
+            const contentBox = document.getElementById('result-content');
+
+            if (!orderId) {
+                alert('请输入订单号');
+                return;
+            }
+
+            // 显示加载状态
+            contentBox.innerHTML = '<div class="text-center py-3"><i class="fa fa-spinner fa-spin"></i> 查询中...</div>';
+            resultBox.classList.add('show');
+
+            try {
+                const res = await fetch(`/api/shop/order/status?order_id=${orderId}`);
+                const data = await res.json();
+
+                if (data.status >= 1) {
+                    // 已支付，显示卡密
+                    let cardsHtml = '';
+                    if (data.cards && data.cards.length > 0) {
+                        data.cards.forEach((card, idx) => {
+                            cardsHtml += `
+                                <div class="kami-box">
+                                    <button class="copy-btn" onclick="copyText(this)">复制</button>
+                                    <span class="kami-text">${escapeHtml(card)}</span>
+                                </div>`;
+                        });
+                    } else {
+                        cardsHtml = '<div class="alert alert-info">该订单已支付，但未找到自动发货内容，请联系客服处理。</div>';
+                    }
+
+                    contentBox.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fa fa-check-circle"></i> 订单已支付
+                        </div>
+                        <div class="mb-2"><strong>订单号：</strong>${orderId}</div>
+                        <div><strong>发货内容：</strong></div>
+                        ${cardsHtml}
+                    `;
+                } else {
+                    // 未支付或不存在
+                    // 注意：API 返回 status:0 可能表示未支付，也可能表示订单不存在（如果后端没做区分）
+                    // 建议提示用户检查或去支付
+                    contentBox.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-circle"></i> 订单未支付或不存在
+                        </div>
+                        <p>如果您已下单但未支付，请返回首页重新下单。</p>
+                        <p>如果您确信已支付，请联系客服并提供订单号：${orderId}</p>
+                    `;
+                }
+
+            } catch (e) {
+                contentBox.innerHTML = `<div class="alert alert-danger">查询出错：${e.message}</div>`;
+            }
+        }
+
+        // 复制功能工具函数
+        function copyText(btn) {
+            const text = btn.parentElement.querySelector('.kami-text').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '已复制';
+                setTimeout(() => btn.innerText = originalText, 2000);
+            }).catch(err => {
+                alert('复制失败，请手动复制');
+            });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
