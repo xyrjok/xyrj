@@ -225,34 +225,64 @@ function loadGlobalConfig() {
 }
 
 // =============================================
-// === 2. 共享逻辑 (搜索、侧栏、角标等)
+// === 2. UI交互逻辑：Sticky Sidebar (全自动版)
 // =============================================
-
-// UI: Sticky Sidebar
 let sidebar = null;
+const sidebarOptions = {
+    topSpacing: 80,
+    bottomSpacing: 20,
+    containerSelector: '#main-content-row', 
+    innerWrapperSelector: '.sidebar-inner'
+};
+
 function checkSidebarStatus() {
     const sidebarWrapper = document.getElementById('sidebar-wrapper');
     const sidebarInner = sidebarWrapper ? sidebarWrapper.querySelector('.sidebar-inner') : null;
     const productArea = document.querySelector('.col-lg-9'); 
+    
     if (!sidebarInner || !productArea) return;
 
+    // 1. 设置最小高度，防止加载中塌陷
     productArea.style.minHeight = '400px';
+
     const sbHeight = sidebarInner.offsetHeight;
     const contentHeight = productArea.offsetHeight;
+    const isWideScreen = window.innerWidth >= 992;
 
-    if (contentHeight < sbHeight || window.innerWidth < 992) {
-        if (sidebar) { sidebar.destroy(); sidebar = null; }
+    // 2. 判断是否激活
+    if (contentHeight < sbHeight || !isWideScreen) {
+        if (sidebar) {
+            sidebar.destroy();
+            sidebar = null;
+        }
     } else {
-        if (!sidebar && typeof StickySidebar !== 'undefined') {
-            sidebar = new StickySidebar('#sidebar-wrapper', {
-                topSpacing: 80, bottomSpacing: 20, 
-                containerSelector: '#main-content-row', innerWrapperSelector: '.sidebar-inner'
-            });
-        } else if(sidebar) { sidebar.updateSticky(); }
+        if (!sidebar) {
+            if (typeof StickySidebar !== 'undefined') {
+                sidebar = new StickySidebar('#sidebar-wrapper', sidebarOptions);
+            }
+        } else {
+            sidebar.updateSticky();
+        }
     }
 }
-window.addEventListener('load', checkSidebarStatus);
+
+// 自动监听
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(checkSidebarStatus, 100);
+    const contentEl = document.querySelector('.col-lg-9');
+    const sidebarInner = document.querySelector('.sidebar-inner');
+    
+    if (typeof ResizeObserver !== 'undefined') {
+        if(contentEl) new ResizeObserver(() => checkSidebarStatus()).observe(contentEl);
+        if(sidebarInner) new ResizeObserver(() => checkSidebarStatus()).observe(sidebarInner);
+    }
+});
 window.addEventListener('resize', checkSidebarStatus);
+
+
+// =============================================
+// === 3. 共享逻辑 (搜索、侧栏、角标等)
+// =============================================
 
 // UI: Search
 function doSearch(source = 'pc') {
@@ -302,7 +332,6 @@ window.addEventListener('scroll', () => {
 function renderGlobalHeaders(config) {
     if (!document.title.includes("商品详情")) document.title = config.site_name || '商店首页';
     
-    // 设置 Logo 和名称
     const setText = (id, txt) => { const el = document.getElementById(id); if(el) el.innerText = txt; };
     setText('header-site-name', config.site_name);
     setText('mobile-header-site-name', config.site_name);
@@ -329,7 +358,6 @@ function renderSidebarNoticeContact(config) {
     setHtml('contact-box', contact);
     setHtml('mobile-contact-content', contact);
 
-    // 移动端首页：公告置顶
     if (window.innerWidth < 992 && document.getElementById('products-list-area')) {
         const noticeModule = document.getElementById('notice-module-box');
         const mainContent = document.querySelector('.col-lg-9');
@@ -341,7 +369,7 @@ function renderSidebarNoticeContact(config) {
 }
 
 // Data: Helpers
-function renderSidebarTopSales(allProducts) { // 销量排行
+function renderSidebarTopSales(allProducts) { 
     const el = document.getElementById('top-sales-list');
     if(!el || !allProducts) return;
     const list = [...allProducts].sort((a,b) => (b.variants[0]?.sales_count||0) - (a.variants[0]?.sales_count||0)).slice(0,5);
@@ -351,7 +379,7 @@ function renderSidebarTopSales(allProducts) { // 销量排行
             <div class="top-info"><div class="top-title">${p.name}</div><div class="top-price">¥${p.variants[0]?.price}</div></div>
         </a>`).join('') : '<div class="text-muted small text-center">暂无数据</div>';
 }
-function renderSidebarTagCloud(products) { // 标签云
+function renderSidebarTagCloud(products) {
     const el = document.getElementById('tag-cloud-list');
     if(!el) return;
     const tags = new Set();
@@ -363,7 +391,7 @@ function renderSidebarTagCloud(products) { // 标签云
         `<span class="tag-cloud-item" ${typeof filterByTag === 'function' ? `onclick="filterByTag('${t}')"` : ''}>${t}</span>`
     ).join('') : '<div class="text-muted small text-center">暂无标签</div>';
 }
-function renderSidebarArticleCats(articles) { // 文章分类
+function renderSidebarArticleCats(articles) {
     const el = document.getElementById('article-cat-list');
     if(el && articles?.length) {
         const cats = [...new Set(articles.map(a=>a.category_name).filter(Boolean))];
