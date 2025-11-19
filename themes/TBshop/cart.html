@@ -6,189 +6,94 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-    <title>我的购物车</title>
+    <title>购物车 - TB Shop</title>
     
     <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="/assets/css/all.min.css" rel="stylesheet">
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
-    <style>
-        body { background-color: #f5f5f5; padding-bottom: 120px; }
-        .cart-header {
-            background: #fff;
-            padding: 10px 16px;
-            font-size: 16px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        /* --- 移动端样式 --- */
-        .cart-item {
-            display: flex;
-            background: #fff;
-            padding: 12px 16px;
-            margin-bottom: 10px;
-            align-items: center;
-        }
-        .cart-item-check { width: 30px; }
-        .cart-item-img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; margin-right: 10px; }
-        .cart-item-info { flex: 1; min-width: 0; }
-        .cart-item-title { font-size: 14px; font-weight: 500; margin-bottom: 5px; }
-        .cart-item-sku { font-size: 12px; color: #999; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; display: inline-block; }
-        .cart-item-note { font-size: 11px; color: #ff5000; }
-        .cart-item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
-        .cart-item-price { color: #ff5000; font-size: 16px; font-weight: bold; }
-        .stepper { display: flex; align-items: center; background: #f5f5f5; border-radius: 4px; }
-        .stepper-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #666; cursor: pointer; }
-        .stepper-input { width: 35px; text-align: center; border: none; background: transparent; font-size: 14px; padding: 0; }
 
-        .checkout-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #fff;
-            display: flex;
-            align-items: center;
-            padding: 10px 16px;
-            box-shadow: 0 -1px 5px rgba(0,0,0,0.05);
-            z-index: 900;
-        }
-        .checkout-total { flex: 1; text-align: right; margin-right: 10px; }
-        .checkout-total span { color: #ff5000; font-size: 18px; font-weight: bold; }
-        .btn-checkout {
-            height: 40px;
-            border-radius: 20px;
-            background: linear-gradient(90deg, #ff9000, #ff5000);
-            color: #fff;
-            font-weight: bold;
-            font-size: 14px;
-            border: none;
-            padding: 0 25px;
-        }
-        
-        /* --- PC端样式 --- */
-        @media (min-width: 992px) {
-            body { padding-bottom: 60px; }
-            .cart-table { background: #fff; border-radius: 8px; }
-            .cart-table th { font-weight: 500; color: #666; font-size: 13px; }
-            .cart-table td { vertical-align: middle; }
-            .pc-item-info { display: flex; align-items: center; }
-            .pc-item-info img { width: 70px; height: 70px; }
-            .pc-item-info .cart-item-info { margin-left: 10px; }
-            .checkout-bar { padding: 10px 0; }
-            .checkout-bar-pc {
-                background: #fff;
-                box-shadow: 0 -1px 5px rgba(0,0,0,0.05);
-                padding: 15px 20px;
-            }
-        }
-    </style>
+    <script src="/themes/TBshop/files/common.js" defer></script>
+    <script src="/themes/TBshop/files/cart-page.js" defer></script>
 </head>
 <body>
 
-    <header class="tb-header d-none d-lg-block">
-        <div class="container header-inner">
-            <a href="/" class="site-brand">
-                <img id="site-logo" class="d-none" style="max-height: 45px; width: auto; margin-right: 10px;" alt="Logo">
-                <span id="site-name-wrap" class="d-flex align-items-center d-none">
-                    <i class="fa fa-shopping-bag"></i>
-                    <span id="header-site-name">TB Shop</span>
-                </span>
-            </a>
-            <nav class="main-nav d-none d-md-flex">
-                <a href="/" class="nav-link-item">首页</a>
-                <a href="/articles.html" class="nav-link-item">教程文章</a>
-                <a href="/admin/orders.html" target="_blank" class="nav-link-item">查询订单</a>
-            </nav>
-            <div class="header-right">
-                <div class="tb-search-group">
-                    <input type="text" id="search-input" class="tb-search-input" placeholder="搜索商品...">
-                    <button class="tb-search-btn" onclick="doSearch('pc')">搜索</button>
+    <header class="mobile-header d-lg-none" id="global-mobile-header"></header>
+    
+    <div class="mobile-search-dropdown d-lg-none">
+        <div class="tb-search-group">
+            <input type="text" id="mobile-search-input" class="tb-search-input" placeholder="搜索商品...">
+            <button class="tb-search-btn" onclick="doSearch('mobile')">搜索</button>
+        </div>
+    </div>
+    <div class="mobile-search-overlay d-lg-none" id="mobile-search-overlay" onclick="toggleMobileSearch()"></div>
+
+    <div class="mobile-sidebar d-lg-none" id="mobile-sidebar"></div>
+    <div class="mobile-overlay d-lg-none" id="mobile-overlay" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></div>
+    
+    <header class="tb-header d-none d-lg-block" id="global-pc-header"></header>
+
+
+    <div class="container mt-4">
+        <div class="row gx-3" id="main-content-row">
+            
+            <div class="col-lg-9">
+                
+                <div class="module-box" style="min-height: 500px;">
+                    <div class="module-title">
+                        <i class="fa fa-shopping-cart text-danger"></i> 我的购物车
+                    </div>
+
+                    <div id="cart-content-area">
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa fa-spinner fa-spin fa-2x"></i><br>
+                            <span class="mt-2 d-block">加载购物车中...</span>
+                        </div>
+                    </div>
+
                 </div>
-                <a href="/cart.html" class="icon-btn-pc" id="cart-btn-pc" style="position: relative; margin-left: 15px;">
-                    <i class="fa fa-shopping-cart" style="font-size: 20px;"></i>
-                    <span id="cart-badge-pc" class="badge bg-danger rounded-pill" style="position: absolute; top: -8px; right: -10px; font-size: 9px; padding: 2px 4px; display: none;">0</span>
-                </a>
-                <a href="/admin/" class="btn-login" style="margin-left: 15px;">登录</a>
+
+            </div>
+
+            <div class="col-lg-3 d-none d-lg-block">
+                <div id="sidebar-wrapper"> 
+                    <div id="global-sidebar-right"></div>
+                </div> 
             </div>
         </div>
-    </header>
-
-    <div class="cart-header d-lg-none">
-        <span>我的购物车 ( <span id="cart-count-mobile">0</span> )</span>
-        <button class="btn btn-sm btn-outline-secondary" id="edit-btn-mobile" onclick="toggleEdit('mobile')">管理</button>
     </div>
 
-    <div class="container d-none d-lg-block mt-4">
-        <div class="module-box" style="padding: 24px;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">我的购物车</h4>
-                <button class="btn btn-sm btn-outline-secondary" id="edit-btn-pc" onclick="toggleEdit('pc')">管理</button>
-            </div>
-            <table class="table cart-table align-middle">
-                <thead>
-                    <tr>
-                        <th style="width: 50px;"><input class="form-check-input" type="checkbox" id="check-all-pc" onchange="toggleCheckAll(this)"></th>
-                        <th>商品信息</th>
-                        <th style="width: 150px;">单价</th>
-                        <th style="width: 150px;">数量</th>
-                        <th style="width: 150px;">小计</th>
-                        <th style="width: 100px;">操作</th>
-                    </tr>
-                </thead>
-                <tbody id="cart-list-pc">
-                    </tbody>
-            </table>
+
+    <footer class="site-footer" id="global-footer"></footer>
+
+    <nav class="mobile-bottom-nav d-lg-none" id="global-mobile-nav"></nav>
+
+    <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
+    <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
+        <div class="mcs-header">
+            <span class="mcs-title">联系客服</span>
+            <i class="fa fa-times mcs-close" id="mobile-contact-close-btn" onclick="togglePanel('mobile-contact-sheet', 'mobile-contact-overlay')"></i>
+        </div>
+        <div class="mcs-content" id="mobile-contact-content">
+            <p>加载中...</p>
         </div>
     </div>
     
-    <div class="container-fluid d-lg-none" id="cart-list-mobile" style="padding: 10px;">
-        </div>
 
-    <div class="container mt-3">
-        <div class="module-box" style="padding: 24px;">
-            <h5>结算信息</h5>
-            <div class="mb-3">
-                <label for="contact-info" class="form-label">联系方式 <span class="text-danger">*</span></label>
-                <input type="text" id="contact-info" class="form-control" placeholder="请输入邮箱或QQ (用于接收卡密)">
-            </div>
-            <div class="mb-3">
-                <label for="query-password" class="form-label">查单密码 <span class="text-danger">*</span></label>
-                <input type="password" id="query-password" class="form-control" placeholder="请设置6位以上密码, 用于查询订单">
-            </div>
-            <div id="payment-method-container">
-                <label class="form-label">支付方式</label>
-                <div class="d-flex align-items-center p-2 border rounded bg-light">
-                    <i class="fab fa-alipay text-primary fs-4 me-2"></i><span class="flex-grow-1 font-size-14">支付宝</span>
-                    <input type="radio" name="payment" value="alipay_f2f" checked>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="checkout-bar d-none d-lg-block"> <div class="container checkout-bar-pc d-flex justify-content-between align-items-center">
-            <div>
-                <input class="form-check-input" type="checkbox" id="check-all-pc-footer" onchange="toggleCheckAll(this)">
-                <label class="form-check-label ms-2" for="check-all-pc-footer">全选</label>
-            </div>
-            <div class="d-flex align-items-center">
-                <div class="checkout-total">合计: <span>¥</span><span id="total-price-pc">0.00</span></div>
-                <button class="btn-checkout" id="checkout-btn-pc" onclick="handleCheckout()">结算 ( <span id="checkout-count-pc">0</span> )</button>
-            </div>
-        </div>
-    </div>
-    <div class="checkout-bar d-lg-none"> <div>
-            <input class="form-check-input" type="checkbox" id="check-all-mobile-footer" onchange="toggleCheckAll(this)">
-            <label class="form-check-label ms-2" for="check-all-mobile-footer">全选</label>
-        </div>
-        <div class="checkout-total">合计: <span>¥</span><span id="total-price-mobile">0.00</span></div>
-        <button class="btn-checkout" id="checkout-btn-mobile" onclick="handleCheckout()">结算 ( <span id="checkout-count-mobile">0</span> )</button>
-    </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/themes/TBshop/files/common.js"></script>
-    <script src="/themes/TBshop/files/cart-page.js"></script>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. 渲染公共布局 (传入 'cart' 激活相关高亮)
+            if (typeof renderCommonLayout === 'function') {
+                renderCommonLayout('cart');
+            }
+
+            // 2. 购物车逻辑通常由 cart-page.js 自动接管 (监听 DOMContentLoaded)
+            // 如果您的 cart-page.js 需要手动初始化，可以在这里调用，例如：
+            // if (typeof initCartPage === 'function') initCartPage();
+        });
+    </script>
+    
 </body>
 </html>
