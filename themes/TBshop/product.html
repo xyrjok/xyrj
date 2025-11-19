@@ -71,31 +71,43 @@
             .stepper-pc .stepper-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #666; cursor: pointer; }
             .stepper-pc .stepper-input { width: 40px; text-align: center; border: none; background: transparent; font-size: 14px; padding: 0; }
 
-            /* PC端自选号码滑出面板 */
+            /* ===========================================================
+               [修改] PC端自选号码滑出面板 - 向上滑出 + 自动高度 
+               ===========================================================
+            */
             #pc-card-selector-panel {
                 position: absolute;
-                top: 0;
                 left: 0;
                 width: 100%;
-                max-height: 100%; 
-                overflow-y: auto; 
-                background-color: #ffffff;
                 z-index: 10;
-                transform: translateY(-100%);
+                background-color: #ffffff;
+                
+                /* 位置和高度由 JS 动态控制 (bottom 和 max-height) */
+                top: auto;        
+                height: auto;     /* 高度自动，随内容撑开 */
+
+                /* 动画设置：初始向下偏移 100% (藏在分隔线下面) */
+                transform: translateY(100%);
                 opacity: 0;
                 transition: transform 0.3s ease, opacity 0.3s ease;
+                
                 display: flex;
                 flex-direction: column;
-                border-radius: 8px; 
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                
+                /* 外观样式 */
+                border-radius: 8px 8px 0 0; /* 上方圆角 */
+                box-shadow: 0 -4px 15px rgba(0,0,0,0.15); /* 向上阴影 */
                 visibility: hidden;
-                border: 1px solid #dcdcdc; 
+                border: 1px solid #dcdcdc;
+                border-bottom: none; /* 下方无边框，看起来像从线里长出来的 */
             }
             #pc-card-selector-panel.show {
                 transform: translateY(0);
                 opacity: 1;
                 visibility: visible;
             }
+            /* =========================================================== */
+
             .pc-card-header {
                 padding: 12px 16px;
                 font-size: 14px;
@@ -103,6 +115,7 @@
                 color: #333;
                 border-bottom: 1px solid #f0f0f0;
                 background: #fafafa;
+                border-radius: 8px 8px 0 0;
             }
             .pc-card-content {
                 overflow-y: auto;
@@ -110,14 +123,14 @@
                 background-color: #fff;
             }
 
-            /* PC端卡密列表 (UNCHANGED) */
+            /* PC端卡密列表 */
             .card-select-list-pc {
                 display: flex; 
                 flex-wrap: wrap; 
                 gap: 8px;
                 max-height: 300px; 
                 overflow-y: auto;
-                background-color: #f_a_f_a_f_a; 
+                background-color: #fafafa; 
                 padding: 8px;
                 border-radius: 4px;
                 border: 1px solid #f0f0f0; 
@@ -159,54 +172,7 @@
                 border-color: transparent;
             }
 
-            /* PC端支付方式 (UNCHANGED) */
-            .pc-payment-label {
-                position: relative;
-                cursor: pointer;
-                padding: 5px 7px;
-                border: 2px solid #eee; 
-                border-radius: 8px;
-                opacity: 0.6;
-                transition: all 0.2s ease;
-            }
-            .pc-payment-label input {
-                position: absolute;
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
-            .pc-payment-label:hover {
-                opacity: 1;
-            }
-            .pc-payment-label.active {
-                opacity: 1; 
-            }
-            
-            /* 支付方式 "对号" (UNCHANGED) */
-            .pc-payment-label::after {
-                content: '\f00c';
-                font-family: 'Font Awesome 5 Pro';
-                font-weight: 400; 
-                font-size: 12px;
-                color: #fff; 
-                background-color: #888; 
-                border: 1px solid #fff;
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                display: none; 
-                align-items: center;
-                justify-content: center;
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                line-height: 1;
-            }
-            .pc-payment-label.active::after {
-                display: flex; 
-            }
-
-            /* 联系/密码框 字体和间距 (UNCHANGED) */
+            /* 联系/密码框 字体和间距 */
             #pc-contact-query-container .cell-label {
                 font-size: 13px;
                 min-width: 65px; 
@@ -343,7 +309,7 @@
                                 <img id="p-img-pc" src="" class="img-fluid rounded border" alt="Product Image" style="width: 100%; aspect-ratio: 1 / 1; object-fit: cover;">
                             </div>
                             
-                            <div class="col-md-7 d-flex flex-column position-relative" style="overflow: hidden;">
+                            <div class="col-md-7 d-flex flex-column position-relative" style="overflow: hidden; padding: 2px;">
                                 <h2 id="p-title-pc" style="font-size: 20px; font-weight: 600; line-height: 1.4;">加载中...</h2>
                                 <div class="prod-meta d-flex justify-content-between text-muted small mt-2">
                                     <span>自动发货</span>
@@ -430,7 +396,7 @@
 
                                     <div class="d-flex align-items-center">
                                         <a href="/cart.html" class="position-relative me-4 text-decoration-none" style="color: #ff5000; cursor: pointer;">
-                                            <i class="far fa-shopping-cart" style="font-size: 1.7em;"></i>
+                                            <i class="fa fa-shopping-cart fa-2x"></i>
                                             <span id="cart-badge-pc-product" class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size: 10px; display: none;">0</span>
                                         </a>
 
