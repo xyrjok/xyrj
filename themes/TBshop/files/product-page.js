@@ -7,10 +7,11 @@
 let currentProduct = null;   // 当前商品数据
 let currentVariant = null;   // 当前选中的 SKU
 let quantity = 1;            // 购买数量
-let buyMethod = 'random';    // [新增] 购买方式: 'random' (默认随机) | 'select' (自选)
-let selfSelectPrice = 0.00;  // [新增] 自选加价金额 (可根据后端配置动态修改)
+let buyMethod = 'random';    // 购买方式
+let selfSelectPrice = 0.00;  // 自选加价
+let paymentMethod = 'alipay'; // [新增] 默认支付方式
 
-// 页面启动入口 (由 product.html 的 DOMContentLoaded 事件触发)
+// 页面启动入口
 async function initProductPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const productId = urlParams.get('id');
@@ -20,7 +21,6 @@ async function initProductPage() {
         return;
     }
 
-    // 1. 加载商品详情
     try {
         const res = await fetch(`/api/shop/product?id=${productId}`);
         const data = await res.json();
@@ -29,12 +29,8 @@ async function initProductPage() {
             showError(data.error);
         } else {
             currentProduct = data;
-            renderProductDetail(data); // 渲染主内容
-            
-            // 更新页面标题
+            renderProductDetail(data);
             document.title = `${data.name} - TB Shop`;
-            
-            // 加载侧边栏推荐数据 (复用 common.js 的渲染函数)
             loadSidebarRecommendations();
         }
     } catch (e) {
@@ -43,30 +39,24 @@ async function initProductPage() {
     }
 }
 
-// 自动启动 (如果 HTML 中没有显式调用 initProductPage，这里作为兜底)
 document.addEventListener('DOMContentLoaded', () => {
     if (!currentProduct) initProductPage();
 });
-
 
 // =============================================
 // === 核心渲染逻辑
 // =============================================
 
-/**
- * 渲染商品详情主视图
- */
 function renderProductDetail(p) {
     const container = document.getElementById('product-content');
     const loading = document.getElementById('product-loading');
     
     if (!container) return;
 
-    // 默认选中第一个 SKU
     const mainVariant = p.variants && p.variants.length > 0 ? p.variants[0] : {};
     currentVariant = mainVariant;
 
-    // 1. 构建 HTML 结构
+    // 构建 HTML
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -102,7 +92,7 @@ function renderProductDetail(p) {
                             <div id="spec-pagination-area" class="spec-pagination-container"></div>
                         </div>
 
-                        <div class="mb-4 d-flex align-items-center flex-wrap">
+                        <div class="mb-3 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">购买方式：</span>
                             <div class="d-flex align-items-center flex-wrap">
                                 <button class="btn btn-sm btn-danger me-2 mb-1 method-btn" 
@@ -116,12 +106,32 @@ function renderProductDetail(p) {
                             </div>
                         </div>
 
-                        <div class="mb-4 d-flex align-items-center">
+                        <div class="mb-3 d-flex align-items-center">
                             <span class="text-secondary small me-3">数量：</span>
                             <div class="input-group" style="width: 120px;">
                                 <button class="btn btn-outline-secondary btn-sm" type="button" onclick="changeQty(-1)">-</button>
                                 <input type="text" class="form-control form-control-sm text-center" id="buy-qty" value="1" readonly>
                                 <button class="btn btn-outline-secondary btn-sm" type="button" onclick="changeQty(1)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 d-flex align-items-center flex-wrap">
+                            <span class="text-secondary small me-3 text-nowrap">支付方式：</span>
+                            <div class="d-flex align-items-center flex-wrap" id="payment-method-list">
+                                
+                                <div class="payment-option active" onclick="selectPayment('alipay', this)">
+                                    <i class="fab fa-alipay" style="color:#1678ff;"></i> <div class="payment-check-mark"><i class="fa fa-check"></i></div>
+                                </div>
+
+                                <div class="payment-option" onclick="selectPayment('wxpay', this)">
+                                    <i class="fab fa-weixin" style="color:#09bb07;"></i> <div class="payment-check-mark"><i class="fa fa-check"></i></div>
+                                </div>
+                                
+                                <div class="payment-option" onclick="selectPayment('usdt', this)">
+                                    <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
+                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
+                                </div>
+
                             </div>
                         </div>
 
@@ -148,15 +158,12 @@ function renderProductDetail(p) {
         </div>
     `;
 
-    // 2. 注入页面并切换显示
     container.innerHTML = html;
     if(loading) loading.style.display = 'none';
     container.style.display = 'block';
 
-    // 3. 强制更新侧栏高度 (common.js 功能)
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
-
-    // 4. 初始化规格分页 (延时确保DOM渲染完成)
+    
     setTimeout(() => {
          if (typeof initSpecPagination === 'function') {
              initSpecPagination('#sku-btn-list', '.sku-btn', 6);
@@ -164,73 +171,58 @@ function renderProductDetail(p) {
     }, 100);
 }
 
-/**
- * 生成 SKU 按钮 HTML
- */
 function renderSkuButtons(variants) {
     if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
-    
     return variants.map((v, index) => {
         const activeClass = index === 0 ? 'btn-danger' : 'btn-outline-secondary';
         const name = v.name || v.specs || `规格${index+1}`;
-        return `
-            <button class="btn btn-sm ${activeClass} me-2 mb-2 sku-btn" 
-                data-idx="${index}" 
-                onclick="selectSku(${index}, this)">
-                ${name}
-            </button>
-        `;
+        return `<button class="btn btn-sm ${activeClass} me-2 mb-2 sku-btn" data-idx="${index}" onclick="selectSku(${index}, this)">${name}</button>`;
     }).join('');
 }
 
-/**
- * 加载侧边栏推荐
- */
 async function loadSidebarRecommendations() {
     try {
         const res = await fetch('/api/shop/products');
         const allProducts = await res.json();
-        if (typeof renderSidebarTopSales === 'function') {
-            renderSidebarTopSales(allProducts);
-        }
+        if (typeof renderSidebarTopSales === 'function') renderSidebarTopSales(allProducts);
         if (typeof checkSidebarStatus === 'function') checkSidebarStatus();
-    } catch(e) { console.warn('Sidebar data load failed', e); }
+    } catch(e) { console.warn('Sidebar load failed', e); }
 }
-
 
 // =============================================
 // === 交互逻辑
 // =============================================
 
 /**
- * [新增] 切换购买方式
- * @param {string} type 'random' | 'select'
- * @param {HTMLElement} btn 点击的按钮元素
+ * [新增] 切换支付方式
  */
+function selectPayment(type, el) {
+    paymentMethod = type;
+    
+    // 移除所有 active
+    const list = document.getElementById('payment-method-list');
+    list.querySelectorAll('.payment-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    
+    // 给当前点击的添加 active
+    el.classList.add('active');
+    
+    console.log('当前支付方式:', paymentMethod);
+}
+
 function selectBuyMethod(type, btn) {
     buyMethod = type;
-    
-    // 1. 切换按钮样式
     document.querySelectorAll('.method-btn').forEach(b => {
         b.classList.remove('btn-danger');
         b.classList.add('btn-outline-secondary');
     });
     btn.classList.remove('btn-outline-secondary');
     btn.classList.add('btn-danger');
-
-    // 2. 可在此处添加额外逻辑 (例如自选时弹出选号窗口，或者更新总价显示)
-    console.log('当前购买方式:', buyMethod);
-    
-    // 如果需要根据购买方式调整价格逻辑，可以在这里调用 animateValue 更新价格
-    // 例如：if (type === 'select') updatePriceWithExtra();
 }
 
-/**
- * 切换 SKU
- */
 function selectSku(index, btn) {
     if (!currentProduct) return;
-    
     document.querySelectorAll('.sku-btn').forEach(b => {
         b.classList.remove('btn-danger');
         b.classList.add('btn-outline-secondary');
@@ -240,18 +232,11 @@ function selectSku(index, btn) {
 
     const variant = currentProduct.variants[index];
     currentVariant = variant;
-
     animateValue('p-display-price', variant.price);
     document.getElementById('p-stock').innerText = variant.stock;
-    
-    if (variant.image_url && variant.image_url !== '') {
-        document.getElementById('p-main-img').src = variant.image_url;
-    }
+    if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
 }
 
-/**
- * 修改数量
- */
 function changeQty(delta) {
     let newQty = quantity + delta;
     if (newQty < 1) newQty = 1;
@@ -263,18 +248,12 @@ function changeQty(delta) {
     document.getElementById('buy-qty').value = quantity;
 }
 
-/**
- * 加入购物车
- */
 function addToCart() {
     if (!currentVariant) return;
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
 
     let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
     const existingItem = cart.find(item => item.variant_id === currentVariant.id);
-    
-    // [注意] 这里目前只保存了 SKU 信息，如果需要保存“自选”信息，需要扩展购物车数据结构
-    // 例如增加字段 method: buyMethod
     
     if (existingItem) {
         existingItem.quantity += quantity;
@@ -286,8 +265,7 @@ function addToCart() {
             variant_name: currentVariant.name || currentVariant.specs,
             price: currentVariant.price,
             image: currentVariant.image_url || currentProduct.image_url,
-            quantity: quantity,
-            // buy_method: buyMethod // 如需记录购买方式可解开此注释
+            quantity: quantity
         });
     }
 
@@ -304,9 +282,6 @@ function addToCart() {
     }, 1500);
 }
 
-/**
- * 立即购买
- */
 function buyNow() {
     addToCart();
     setTimeout(() => {
@@ -314,30 +289,23 @@ function buyNow() {
     }, 200);
 }
 
-// 辅助：简单的数字动画
 function animateValue(id, end) {
     const el = document.getElementById(id);
     if(el) el.innerText = end; 
 }
 
-// 辅助：显示错误
 function showError(msg) {
     const container = document.getElementById('product-loading');
     if (container) container.innerHTML = `<div class="text-danger py-5"><i class="fa fa-exclamation-triangle"></i> ${msg}</div>`;
 }
 
-/**
- * 规格分页功能 - 6行为一页 (含首页/尾页)
- */
 function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
     const container = document.querySelector(containerSelector);
     const paginationArea = document.getElementById('spec-pagination-area');
-    
     if (!container || !paginationArea) return;
 
     let items = Array.from(container.querySelectorAll(itemSelector));
     if (items.length === 0) return;
-
     let currentPage = 1;
     let totalPages = 1;
     
@@ -357,18 +325,15 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
         });
         if (currentRow.length > 0) rows.push(currentRow);
         totalPages = Math.ceil(rows.length / rowsPerPage);
-
         if (totalPages <= 1) {
             paginationArea.style.display = 'none';
             items.forEach(item => item.style.display = ''); 
             return;
         }
-
         paginationArea.style.display = 'block';
         renderPage(rows);
         renderControls(rows);
     }
-
     function renderPage(rows) {
         const startRow = (currentPage - 1) * rowsPerPage;
         const endRow = startRow + rowsPerPage;
@@ -379,7 +344,6 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
             });
         });
     }
-
     function renderControls(rows) {
         let html = '';
         html += `<span class="spec-pagination-btn ${currentPage === 1 ? 'disabled' : ''}" onclick="goToSpecPage(1)">首页</span>`;
@@ -388,7 +352,6 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
         html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${currentPage + 1})">下一页</span>`;
         html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${totalPages})">尾页</span>`;
         paginationArea.innerHTML = html;
-
         window.goToSpecPage = function(page) {
             if (page >= 1 && page <= totalPages) {
                 currentPage = page;
@@ -397,7 +360,6 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
             }
         };
     }
-
     calculatePages();
     let resizeTimer;
     window.addEventListener('resize', () => {
