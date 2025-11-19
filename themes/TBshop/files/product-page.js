@@ -7,6 +7,8 @@
 let currentProduct = null;   // 当前商品数据
 let currentVariant = null;   // 当前选中的 SKU
 let quantity = 1;            // 购买数量
+let buyMethod = 'random';    // [新增] 购买方式: 'random' (默认随机) | 'select' (自选)
+let selfSelectPrice = 0.00;  // [新增] 自选加价金额 (可根据后端配置动态修改)
 
 // 页面启动入口 (由 product.html 的 DOMContentLoaded 事件触发)
 async function initProductPage() {
@@ -43,8 +45,6 @@ async function initProductPage() {
 
 // 自动启动 (如果 HTML 中没有显式调用 initProductPage，这里作为兜底)
 document.addEventListener('DOMContentLoaded', () => {
-    // 检查是否已经由 HTML 里的 script 触发过，避免重复
-    // 这里直接运行即可，因为它是 defer 加载的
     if (!currentProduct) initProductPage();
 });
 
@@ -67,7 +67,6 @@ function renderProductDetail(p) {
     currentVariant = mainVariant;
 
     // 1. 构建 HTML 结构
-    // [修改] 在 .sku-section 内增加 id="spec-pagination-area"
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -101,6 +100,20 @@ function renderProductDetail(p) {
                                 ${renderSkuButtons(p.variants)}
                             </div>
                             <div id="spec-pagination-area" class="spec-pagination-container"></div>
+                        </div>
+
+                        <div class="mb-4 d-flex align-items-center flex-wrap">
+                            <span class="text-secondary small me-3 text-nowrap">购买方式：</span>
+                            <div class="d-flex align-items-center flex-wrap">
+                                <button class="btn btn-sm btn-danger me-2 mb-1 method-btn" 
+                                    data-type="random" onclick="selectBuyMethod('random', this)">
+                                    默认随机
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary mb-1 method-btn" 
+                                    data-type="select" onclick="selectBuyMethod('select', this)">
+                                    自选卡密/号码 (加价<span id="self-select-price">${selfSelectPrice.toFixed(2)}</span>元)
+                                </button>
+                            </div>
                         </div>
 
                         <div class="mb-4 d-flex align-items-center">
@@ -143,11 +156,9 @@ function renderProductDetail(p) {
     // 3. 强制更新侧栏高度 (common.js 功能)
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
 
-    // 4. [新增] 初始化规格分页
-    // 延时确保DOM渲染完成，特别是图片和布局
+    // 4. 初始化规格分页 (延时确保DOM渲染完成)
     setTimeout(() => {
          if (typeof initSpecPagination === 'function') {
-             // 容器ID: #sku-btn-list, 子项选择器: .sku-btn, 每页6行
              initSpecPagination('#sku-btn-list', '.sku-btn', 6);
          }
     }, 100);
@@ -160,11 +171,8 @@ function renderSkuButtons(variants) {
     if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
     
     return variants.map((v, index) => {
-        // 默认选中第一个
         const activeClass = index === 0 ? 'btn-danger' : 'btn-outline-secondary';
-        // 构造名称
         const name = v.name || v.specs || `规格${index+1}`;
-        
         return `
             <button class="btn btn-sm ${activeClass} me-2 mb-2 sku-btn" 
                 data-idx="${index}" 
@@ -176,22 +184,16 @@ function renderSkuButtons(variants) {
 }
 
 /**
- * 加载侧边栏推荐 (调用 common.js 的 renderSidebarTopSales)
+ * 加载侧边栏推荐
  */
 async function loadSidebarRecommendations() {
     try {
-        // 我们需要获取所有商品来计算销量排行
-        // 如果有专门的 recommend API 更好，这里复用 products 列表
         const res = await fetch('/api/shop/products');
         const allProducts = await res.json();
-        
-        // 调用 common.js 里的公共渲染函数
         if (typeof renderSidebarTopSales === 'function') {
             renderSidebarTopSales(allProducts);
         }
-        // 再次检查侧栏高度
         if (typeof checkSidebarStatus === 'function') checkSidebarStatus();
-
     } catch(e) { console.warn('Sidebar data load failed', e); }
 }
 
@@ -201,12 +203,34 @@ async function loadSidebarRecommendations() {
 // =============================================
 
 /**
+ * [新增] 切换购买方式
+ * @param {string} type 'random' | 'select'
+ * @param {HTMLElement} btn 点击的按钮元素
+ */
+function selectBuyMethod(type, btn) {
+    buyMethod = type;
+    
+    // 1. 切换按钮样式
+    document.querySelectorAll('.method-btn').forEach(b => {
+        b.classList.remove('btn-danger');
+        b.classList.add('btn-outline-secondary');
+    });
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('btn-danger');
+
+    // 2. 可在此处添加额外逻辑 (例如自选时弹出选号窗口，或者更新总价显示)
+    console.log('当前购买方式:', buyMethod);
+    
+    // 如果需要根据购买方式调整价格逻辑，可以在这里调用 animateValue 更新价格
+    // 例如：if (type === 'select') updatePriceWithExtra();
+}
+
+/**
  * 切换 SKU
  */
 function selectSku(index, btn) {
     if (!currentProduct) return;
     
-    // 1. 样式切换
     document.querySelectorAll('.sku-btn').forEach(b => {
         b.classList.remove('btn-danger');
         b.classList.add('btn-outline-secondary');
@@ -214,11 +238,9 @@ function selectSku(index, btn) {
     btn.classList.remove('btn-outline-secondary');
     btn.classList.add('btn-danger');
 
-    // 2. 数据更新
     const variant = currentProduct.variants[index];
     currentVariant = variant;
 
-    // 3. UI 更新 (价格、库存、图片)
     animateValue('p-display-price', variant.price);
     document.getElementById('p-stock').innerText = variant.stock;
     
@@ -233,7 +255,6 @@ function selectSku(index, btn) {
 function changeQty(delta) {
     let newQty = quantity + delta;
     if (newQty < 1) newQty = 1;
-    // 如果有库存限制
     if (currentVariant && newQty > currentVariant.stock) {
         alert('库存不足');
         newQty = currentVariant.stock;
@@ -249,11 +270,11 @@ function addToCart() {
     if (!currentVariant) return;
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
 
-    // 读取现有购物车
     let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
-    
-    // 检查是否已存在相同 SKU
     const existingItem = cart.find(item => item.variant_id === currentVariant.id);
+    
+    // [注意] 这里目前只保存了 SKU 信息，如果需要保存“自选”信息，需要扩展购物车数据结构
+    // 例如增加字段 method: buyMethod
     
     if (existingItem) {
         existingItem.quantity += quantity;
@@ -265,15 +286,14 @@ function addToCart() {
             variant_name: currentVariant.name || currentVariant.specs,
             price: currentVariant.price,
             image: currentVariant.image_url || currentProduct.image_url,
-            quantity: quantity
+            quantity: quantity,
+            // buy_method: buyMethod // 如需记录购买方式可解开此注释
         });
     }
 
-    // 保存并更新角标 (common.js 中的 updateCartBadge)
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
     if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
     
-    // 简单提示效果
     const btn = event.target;
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fa fa-check"></i> 已加入';
@@ -288,7 +308,6 @@ function addToCart() {
  * 立即购买
  */
 function buyNow() {
-    // 先加入购物车逻辑，然后跳转
     addToCart();
     setTimeout(() => {
         window.location.href = '/cart.html';
@@ -299,7 +318,6 @@ function buyNow() {
 function animateValue(id, end) {
     const el = document.getElementById(id);
     if(el) el.innerText = end; 
-    // 如需更复杂的滚动动画可在此扩展
 }
 
 // 辅助：显示错误
@@ -309,10 +327,7 @@ function showError(msg) {
 }
 
 /**
- * [新增] 规格分页功能 - 6行为一页 (含首页/尾页)
- * @param {string} containerSelector 规格父容器的选择器
- * @param {string} itemSelector 每一个规格项的选择器
- * @param {number} rowsPerPage 每页显示的行数
+ * 规格分页功能 - 6行为一页 (含首页/尾页)
  */
 function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
     const container = document.querySelector(containerSelector);
@@ -320,38 +335,29 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
     
     if (!container || !paginationArea) return;
 
-    // 获取所有可见的规格项
     let items = Array.from(container.querySelectorAll(itemSelector));
     if (items.length === 0) return;
 
     let currentPage = 1;
     let totalPages = 1;
     
-    // 核心逻辑：根据 offsetTop 计算视觉上的“行”
     function calculatePages() {
-        // 重置显示以便重新计算布局
         items.forEach(item => item.style.display = '');
-        
         let rows = [];
         let lastTop = -1;
         let currentRow = [];
-
         items.forEach(item => {
             let currentTop = item.offsetTop;
-            // 允许 5px 误差，处理可能的对齐微差
             if (lastTop !== -1 && Math.abs(currentTop - lastTop) > 5) {
-                rows.push(currentRow); // 结束上一行
-                currentRow = [];       // 开始新的一行
+                rows.push(currentRow);
+                currentRow = [];
             }
             currentRow.push(item);
             lastTop = currentTop;
         });
-        // 添加最后一行
         if (currentRow.length > 0) rows.push(currentRow);
-
         totalPages = Math.ceil(rows.length / rowsPerPage);
 
-        // 如果只有1页，隐藏控件，确保内容全部显示
         if (totalPages <= 1) {
             paginationArea.style.display = 'none';
             items.forEach(item => item.style.display = ''); 
@@ -363,11 +369,9 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
         renderControls(rows);
     }
 
-    // 渲染指定页面的内容（显示当前页行，隐藏其他行）
     function renderPage(rows) {
         const startRow = (currentPage - 1) * rowsPerPage;
         const endRow = startRow + rowsPerPage;
-
         rows.forEach((row, index) => {
             const shouldShow = index >= startRow && index < endRow;
             row.forEach(item => {
@@ -376,28 +380,15 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
         });
     }
 
-    // 渲染分页控制按钮
     function renderControls(rows) {
         let html = '';
-        
-        // 首页
         html += `<span class="spec-pagination-btn ${currentPage === 1 ? 'disabled' : ''}" onclick="goToSpecPage(1)">首页</span>`;
-
-        // 上一页
         html += `<span class="spec-pagination-btn ${currentPage === 1 ? 'disabled' : ''}" onclick="goToSpecPage(${currentPage - 1})">上一页</span>`;
-        
-        // 页码显示
         html += `<span style="margin:0 8px; color:#666; font-size:14px;">${currentPage} / ${totalPages}</span>`;
-        
-        // 下一页
         html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${currentPage + 1})">下一页</span>`;
-
-        // 尾页
         html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${totalPages})">尾页</span>`;
-        
         paginationArea.innerHTML = html;
 
-        // 绑定全局跳转函数 (挂载到window以便onclick调用)
         window.goToSpecPage = function(page) {
             if (page >= 1 && page <= totalPages) {
                 currentPage = page;
@@ -407,10 +398,7 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
         };
     }
 
-    // 初始化执行
     calculatePages();
-
-    // 监听窗口调整，防止屏幕旋转或缩放导致行数变化
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
