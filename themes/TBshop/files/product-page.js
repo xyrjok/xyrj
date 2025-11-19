@@ -67,7 +67,7 @@ function renderProductDetail(p) {
     currentVariant = mainVariant;
 
     // 1. 构建 HTML 结构
-    // (左图右文布局 + 下方详情 tab)
+    // [修改] 在 .sku-section 内增加 id="spec-pagination-area"
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -100,6 +100,7 @@ function renderProductDetail(p) {
                             <div class="sku-list d-flex flex-wrap" id="sku-btn-list">
                                 ${renderSkuButtons(p.variants)}
                             </div>
+                            <div id="spec-pagination-area" class="spec-pagination-container"></div>
                         </div>
 
                         <div class="mb-4 d-flex align-items-center">
@@ -141,6 +142,15 @@ function renderProductDetail(p) {
 
     // 3. 强制更新侧栏高度 (common.js 功能)
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
+
+    // 4. [新增] 初始化规格分页
+    // 延时确保DOM渲染完成，特别是图片和布局
+    setTimeout(() => {
+         if (typeof initSpecPagination === 'function') {
+             // 容器ID: #sku-btn-list, 子项选择器: .sku-btn, 每页6行
+             initSpecPagination('#sku-btn-list', '.sku-btn', 6);
+         }
+    }, 100);
 }
 
 /**
@@ -296,4 +306,114 @@ function animateValue(id, end) {
 function showError(msg) {
     const container = document.getElementById('product-loading');
     if (container) container.innerHTML = `<div class="text-danger py-5"><i class="fa fa-exclamation-triangle"></i> ${msg}</div>`;
+}
+
+/**
+ * [新增] 规格分页功能 - 6行为一页 (含首页/尾页)
+ * @param {string} containerSelector 规格父容器的选择器
+ * @param {string} itemSelector 每一个规格项的选择器
+ * @param {number} rowsPerPage 每页显示的行数
+ */
+function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
+    const container = document.querySelector(containerSelector);
+    const paginationArea = document.getElementById('spec-pagination-area');
+    
+    if (!container || !paginationArea) return;
+
+    // 获取所有可见的规格项
+    let items = Array.from(container.querySelectorAll(itemSelector));
+    if (items.length === 0) return;
+
+    let currentPage = 1;
+    let totalPages = 1;
+    
+    // 核心逻辑：根据 offsetTop 计算视觉上的“行”
+    function calculatePages() {
+        // 重置显示以便重新计算布局
+        items.forEach(item => item.style.display = '');
+        
+        let rows = [];
+        let lastTop = -1;
+        let currentRow = [];
+
+        items.forEach(item => {
+            let currentTop = item.offsetTop;
+            // 允许 5px 误差，处理可能的对齐微差
+            if (lastTop !== -1 && Math.abs(currentTop - lastTop) > 5) {
+                rows.push(currentRow); // 结束上一行
+                currentRow = [];       // 开始新的一行
+            }
+            currentRow.push(item);
+            lastTop = currentTop;
+        });
+        // 添加最后一行
+        if (currentRow.length > 0) rows.push(currentRow);
+
+        totalPages = Math.ceil(rows.length / rowsPerPage);
+
+        // 如果只有1页，隐藏控件，确保内容全部显示
+        if (totalPages <= 1) {
+            paginationArea.style.display = 'none';
+            items.forEach(item => item.style.display = ''); 
+            return;
+        }
+
+        paginationArea.style.display = 'block';
+        renderPage(rows);
+        renderControls(rows);
+    }
+
+    // 渲染指定页面的内容（显示当前页行，隐藏其他行）
+    function renderPage(rows) {
+        const startRow = (currentPage - 1) * rowsPerPage;
+        const endRow = startRow + rowsPerPage;
+
+        rows.forEach((row, index) => {
+            const shouldShow = index >= startRow && index < endRow;
+            row.forEach(item => {
+                item.style.display = shouldShow ? '' : 'none';
+            });
+        });
+    }
+
+    // 渲染分页控制按钮
+    function renderControls(rows) {
+        let html = '';
+        
+        // 首页
+        html += `<span class="spec-pagination-btn ${currentPage === 1 ? 'disabled' : ''}" onclick="goToSpecPage(1)">首页</span>`;
+
+        // 上一页
+        html += `<span class="spec-pagination-btn ${currentPage === 1 ? 'disabled' : ''}" onclick="goToSpecPage(${currentPage - 1})">上一页</span>`;
+        
+        // 页码显示
+        html += `<span style="margin:0 8px; color:#666; font-size:14px;">${currentPage} / ${totalPages}</span>`;
+        
+        // 下一页
+        html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${currentPage + 1})">下一页</span>`;
+
+        // 尾页
+        html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${totalPages})">尾页</span>`;
+        
+        paginationArea.innerHTML = html;
+
+        // 绑定全局跳转函数 (挂载到window以便onclick调用)
+        window.goToSpecPage = function(page) {
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                renderPage(rows);
+                renderControls(rows);
+            }
+        };
+    }
+
+    // 初始化执行
+    calculatePages();
+
+    // 监听窗口调整，防止屏幕旋转或缩放导致行数变化
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(calculatePages, 300);
+    });
 }
