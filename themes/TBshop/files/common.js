@@ -532,3 +532,48 @@ function updateCartBadge(count) {
         }
     });
 }
+
+// =============================================
+// === [新增] 返回顶部功能逻辑
+// =============================================
+
+/**
+ * 初始化返回顶部按钮
+ * - 自动插入 HTML 结构
+ * - 绑定滚动与点击事件
+ */
+function initBackToTop() {
+    // 1. 检查是否已存在，避免重复创建
+    if (document.getElementById('back-to-top-btn')) return;
+
+    // 2. 创建按钮元素
+    const btn = document.createElement('div');
+    btn.id = 'back-to-top-btn';
+    btn.className = 'back-to-top-btn';
+    // 使用 FontAwesome 的向上箭头图标
+    btn.innerHTML = '<i class="fas fa-arrow-up"></i>'; 
+    document.body.appendChild(btn);
+
+    // 3. 绑定点击事件：平滑滚动回顶部
+    btn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // 平滑滚动
+        });
+    });
+
+    // 4. 绑定滚动监听：控制按钮显示/隐藏
+    window.addEventListener('scroll', () => {
+        // 当滚动超过 300px 时显示按钮
+        if (window.scrollY > 300) {
+            btn.classList.add('show');
+        } else {
+            btn.classList.remove('show');
+        }
+    }, { passive: true }); // passive 优化滚动性能
+}
+
+// 页面加载完成后启动功能
+document.addEventListener('DOMContentLoaded', () => {
+    initBackToTop();
+});
