@@ -861,3 +861,51 @@ a:hover { color: var(--tb-orange); }
         /*border-color: var(--tb-orange);*/
     }
 }
+
+/* ============================================= */
+/* === [新增] 规格分页控件样式 (New) === */
+/* ============================================= */
+
+.spec-pagination-container {
+    margin-top: 12px;
+    text-align: left; /* 根据布局偏好，可改为 center */
+    display: none; /* 默认隐藏，JS计算后决定是否显示 */
+    padding-top: 8px;
+    border-top: 1px dashed #eee; /* 增加分割线，更清晰 */
+}
+
+.spec-pagination-btn {
+    display: inline-block;
+    padding: 4px 10px;
+    margin: 0 4px;
+    border: 1px solid #ddd;
+    background-color: #f8f9fa;
+    color: #333;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+    user-select: none;
+    transition: all 0.2s;
+}
+
+.spec-pagination-btn:hover {
+    background-color: #e2e6ea;
+    border-color: #ccc;
+}
+
+.spec-pagination-btn.active {
+    background-color: var(--tb-orange);
+    color: #fff;
+    border-color: var(--tb-orange);
+}
+
+.spec-pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f1f1f1;
+}
+
+/* 确保规格按钮容器能正确换行，方便JS计算行高 */
+#sku-btn-list {
+    align-content: flex-start; 
+}
