@@ -72,7 +72,8 @@
             .stepper-pc .stepper-input { width: 40px; text-align: center; border: none; background: transparent; font-size: 14px; padding: 0; }
 
             /* ===========================================================
-               [修改] PC端自选号码滑出面板 - 向上滑出 + 自动高度 
+               [修改] PC端自选号码滑出面板 - 向上生长动画版
+               位置：底部钉在灰线，高度向上变大
                ===========================================================
             */
             #pc-card-selector-panel {
@@ -82,29 +83,35 @@
                 z-index: 10;
                 background-color: #ffffff;
                 
-                /* 位置和高度由 JS 动态控制 (bottom 和 max-height) */
-                top: auto;        
-                height: auto;     /* 高度自动，随内容撑开 */
-
-                /* 动画设置：初始向下偏移 100% (藏在分隔线下面) */
-                transform: translateY(100%);
-                opacity: 0;
-                transition: transform 0.3s ease, opacity 0.3s ease;
+                /* 定位：bottom 由 JS 动态计算，钉在灰线位置 */
+                bottom: 0; 
+                top: auto;
+                
+                /* 动画核心：利用 max-height 实现向上展开 */
+                max-height: 0;    /* 初始高度为0 */
+                opacity: 0;       /* 初始透明 */
+                overflow: hidden; /* 必须隐藏溢出 */
+                
+                transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
                 
                 display: flex;
                 flex-direction: column;
                 
-                /* 外观样式 */
-                border-radius: 8px 8px 0 0; /* 上方圆角 */
-                box-shadow: 0 -4px 15px rgba(0,0,0,0.15); /* 向上阴影 */
-                visibility: hidden;
-                border: 1px solid #dcdcdc;
-                border-bottom: none; /* 下方无边框，看起来像从线里长出来的 */
+                /* 外观 */
+                border-radius: 8px 8px 0 0;
+                box-shadow: 0 -4px 15px rgba(0,0,0,0.15);
+                
+                /* 边框处理：初始无边框 */
+                border: 0 solid #dcdcdc; 
             }
+
             #pc-card-selector-panel.show {
-                transform: translateY(0);
                 opacity: 1;
-                visibility: visible;
+                /* max-height 由 JS 设置为具体像素值，触发动画 */
+                
+                /* 展开时显示边框 */
+                border-width: 1px;
+                border-bottom: none; /* 底部贴合灰线，不显示边框 */
             }
             /* =========================================================== */
 
@@ -170,6 +177,62 @@
                 background: linear-gradient(90deg, #ff9000, #ff5000);
                 color: #fff;
                 border-color: transparent;
+            }
+
+            /* PC端支付方式 */
+            .pc-payment-label {
+                position: relative;
+                cursor: pointer;
+                padding: 5px 7px;
+                border: 2px solid #eee; 
+                border-radius: 8px;
+                opacity: 0.6;
+                transition: all 0.2s ease;
+            }
+            .pc-payment-label input {
+                position: absolute;
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .pc-payment-label:hover {
+                opacity: 1;
+            }
+            .pc-payment-label.active {
+                opacity: 1; 
+            }
+            
+            /* [关键修改] 支付方式 "对号" 
+               添加了 font-weight: 900 和 font-style: normal 以防止显示方框 
+            */
+            .pc-payment-label::after {
+                content: '\f00c';
+                font-family: "Font Awesome 5 Free"; /* 确保使用双引号 */
+                font-weight: 900; /* 必须是900 */
+                font-style: normal; /* 必须是 normal */
+                font-variant: normal;
+                text-rendering: auto;
+                line-height: 1;
+                -webkit-font-smoothing: antialiased;
+
+                font-size: 12px;
+                color: #fff; 
+                background-color: #888; 
+                border: 1px solid #fff;
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
+                display: none; /* active时才显示 */
+                align-items: center;
+                justify-content: center;
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                z-index: 10;
+            }
+            .pc-payment-label.active::after {
+                display: flex; 
+                background-color: #ff5000; /* 选中时颜色 */
             }
 
             /* 联系/密码框 字体和间距 */
