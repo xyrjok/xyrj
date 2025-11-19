@@ -993,48 +993,45 @@ function handleMobileBuyModeClick(event, mode) {
 
 
 /**
- * [修改] 切换PC端滑出面板的显示状态
- * 实现：面板高度自动，从分隔线向上生长，最大不超过商品标题
+ * [修改] 切换PC端滑出面板 - 向上生长效果
+ * 修正：面板底部钉在灰线，高度从0向上增加，避免遮挡下方按钮
  */
 function togglePcCardPanel(show) {
     const panel = document.getElementById('pc-card-selector-panel');
     
-    // 获取关键元素
+    // 获取关键定位元素
     const container = document.querySelector('#main-content-row-pc .col-lg-9 .col-md-7');
     const buyModeContainer = document.getElementById('buy-mode-container-pc');
-    const titleElement = document.getElementById('p-title-pc'); // 商品标题
-
+    const titleElement = document.getElementById('p-title-pc'); 
     // 找到购买方式上方的“灰线” (HR)
     const divider = buyModeContainer ? buyModeContainer.previousElementSibling : null;
 
     if (show) {
         if (container && divider && titleElement) {
-            // 1. 计算底部定位 (bottom)
-            // 公式：容器总高度 - 分隔线的offsetTop = 距离底部的像素值
-            // 这样面板的底部就会刚好贴在分隔线上
+            // 1. 计算底部定位 (钉在灰线上)
+            // 容器高度 - 灰线offsetTop = 灰线距离底部的距离
             const bottomPos = container.offsetHeight - divider.offsetTop;
             panel.style.bottom = bottomPos + 'px';
             
-            // 2. 计算最大高度 (max-height)
-            // 公式：分隔线的位置 - (标题的位置 + 标题的高度) - 间距缓冲
-            // 这样面板最高只能长到标题的下面
+            // 2. 计算允许的最大展开高度
+            // 灰线位置 - 标题底部位置 - 间距(15px)
             const titleBottom = titleElement.offsetTop + titleElement.offsetHeight;
-            // 减去 15px 是为了留一点呼吸空间，不要紧贴着标题
             const availableHeight = divider.offsetTop - titleBottom - 15;
             
+            // 3. 设置 max-height 触发动画
+            // 这里设置一个具体的像素值，CSS transition 就会负责产生"长高"的动画
+            // 面板实际高度会是 min(内容高度, availableHeight)
             panel.style.maxHeight = availableHeight + 'px';
-            
-            // 3. 确保高度自动
-            panel.style.height = 'auto';
         }
         panel.classList.add('show');
     } else {
+        // 关闭时
         panel.classList.remove('show');
+        panel.style.maxHeight = '0px'; // 高度缩回0
         
-        // [Fix] 只有当前是"自选(select)"模式，且没选卡密时，才重置为 null。
-        // 如果当前是"随机(random)"模式，selectedCardId 本来就是空，不应该重置模式。
+        // 逻辑保持不变：如果自选模式没选号码，则重置
         if (buyMode === 'select' && !selectedCardId) {
-            selectPcBuyMode(null); 
+            selectPcBuyMode(null);
         } else {
             updatePcSelectionText();
             updatePrice();
