@@ -4,6 +4,7 @@
  * [已合并] 增加查单密码、订单管理、规格自选标签
  * [购物车-升级版] 增加购物车合并下单接口、支付回调支持合并订单处理
  * [已修改] 将查单密码验证从6位改为1位
+ * [新增] 支持联系方式+查单密码查询历史订单接口
  */
 
 // === 工具函数 ===
@@ -11,6 +12,14 @@ const jsonRes = (data, status = 200) => new Response(JSON.stringify(data), { sta
 const errRes = (msg, status = 400) => jsonRes({ error: msg }, status);
 const time = () => Math.floor(Date.now() / 1000);
 const uuid = () => crypto.randomUUID().replace(/-/g, '');
+
+// 简单的北京时间格式化工具 (UTC+8)
+const formatTime = (ts) => {
+    if (!ts) return '';
+    // 补时差 +8小时 (8 * 3600 * 1000毫秒)
+    const d = new Date(ts * 1000 + 28800000);
+    return d.toISOString().replace('T', ' ').substring(0, 19);
+};
 
 // === 支付宝签名与验签核心 (Web Crypto API) ===
 
@@ -596,6 +605,28 @@ async function handleApi(request, env, url) {
         }
 
         // --- 订单与支付 API (Shop) ---
+        
+        // [新增] 联系方式查单接口 (配合 orders.html)
+        if (path === '/api/shop/orders/query' && method === 'POST') {
+            const { contact, query_password } = await request.json();
+            if (!contact || !query_password) return errRes('参数不完整');
+            
+            // 查找匹配的订单
+            const results = await db.prepare(`
+                SELECT id, product_name, variant_name, total_amount, status, created_at, cards_sent 
+                FROM orders 
+                WHERE contact = ? AND query_password = ? 
+                ORDER BY created_at DESC LIMIT 20
+            `).bind(contact, query_password).all();
+            
+            // 格式化时间给前端
+            const orders = results.results.map(o => {
+                o.created_at_str = formatTime(o.created_at);
+                return o;
+            });
+
+            return jsonRes(orders);
+        }
 
         // =======================================================
         // [修改] 修复点 1： /api/shop/order/create
