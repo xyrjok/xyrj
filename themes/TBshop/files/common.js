@@ -1,353 +1,335 @@
 // =============================================
 // === themes/TBshop/files/common.js
-// === (全局共享JS)
-// === [购物车-升级版]
+// === (全局共享JS + 公共布局渲染)
 // =============================================
 
-// --- 1. UI交互逻辑：Sticky Sidebar ---
-let sidebar = null;
-const sidebarOptions = {
-    topSpacing: 80,
-    bottomSpacing: 20,
-    // 匹配首页和商品页的侧边栏容器
-    containerSelector: '#main-content-row, #main-content-row-pc', 
-    innerWrapperSelector: '.sidebar-inner'
+// ============================================================
+// === 1. 公共布局模版系统
+// ============================================================
+
+const TB_LAYOUT = {
+    // 移动端头部
+    mobileHeader: `
+        <div class="mh-left" id="mobile-menu-btn" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')">
+            <i class="fa fa-bars"></i>
+        </div>
+        <div class="mh-center">
+            <a href="/" class="d-flex align-items-center justify-content-center h-100">
+                <img id="mobile-logo-img" class="d-none" alt="Logo" style="height: 32px;">
+                <span id="mobile-site-name-wrap" class="d-none">
+                    <i class="fa fa-shopping-bag"></i>
+                    <span id="mobile-header-site-name">TB Shop</span>
+                </span>
+            </a>
+        </div>
+        <div class="mh-right" id="mobile-search-btn" onclick="toggleMobileSearch()">
+            <i class="fa fa-search"></i>
+        </div>
+    `,
+
+    // PC端头部
+    pcHeader: (activePage) => `
+        <div class="container header-inner">
+            <a href="/" class="site-brand">
+                <img id="site-logo" class="d-none" style="max-height: 45px; width: auto; margin-right: 10px;" alt="Logo">
+                <span id="site-name-wrap" class="d-flex align-items-center d-none">
+                    <i class="fa fa-shopping-bag"></i>
+                    <span id="header-site-name">TB Shop</span>
+                </span>
+            </a>
+
+            <nav class="main-nav d-none d-md-flex">
+                <a href="/" class="nav-link-item ${activePage === 'home' ? 'active' : ''}" style="${activePage==='home'?'color:var(--tb-orange);':''}">首页</a>
+                <a href="/articles.html" class="nav-link-item ${activePage === 'articles' ? 'active' : ''}" style="${activePage==='articles'?'color:var(--tb-orange);':''}">教程文章</a>
+                <a href="/orders.html" class="nav-link-item ${activePage === 'orders' ? 'active' : ''}" style="${activePage==='orders'?'color:var(--tb-orange);font-weight:bold;':''}">查询订单</a>
+            </nav>
+
+            <div class="header-right">
+                <div class="tb-search-group">
+                    <input type="text" id="search-input" class="tb-search-input" placeholder="搜索商品...">
+                    <button class="tb-search-btn" onclick="doSearch('pc')">搜索</button>
+                </div>
+                <a href="/admin/" class="btn-login">登录</a>
+            </div>
+        </div>
+    `,
+
+    // 移动端侧滑菜单
+    mobileSidebar: (activePage) => `
+        <div class="mobile-sidebar-header">
+            <h5 class="mobile-sidebar-title">功能菜单</h5>
+            <i class="fa fa-times mobile-sidebar-close" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></i>
+        </div>
+        <div class="mobile-sidebar-content">
+            <div id="mobile-category-list">
+                <a href="/" class="${activePage === 'home' ? 'active' : ''}" style="${activePage === 'home' ? 'background:rgba(255,255,255,0.1);' : ''}">
+                    <i class="fa fa-home"></i> 首页
+                </a>
+                <a href="/orders.html" class="${activePage === 'orders' ? 'active' : ''}" style="${activePage === 'orders' ? 'background:rgba(255,255,255,0.1);' : ''}">
+                    <i class="fa fa-file-alt"></i> 订单查询
+                </a>
+                <a href="/articles.html" class="${activePage === 'articles' ? 'active' : ''}" style="${activePage === 'articles' ? 'background:rgba(255,255,255,0.1);' : ''}">
+                    <i class="fa fa-book"></i> 教程文章
+                </a>
+                 <a href="/cart.html" class="${activePage === 'cart' ? 'active' : ''}" style="${activePage === 'cart' ? 'background:rgba(255,255,255,0.1);' : ''}">
+                    <i class="fa fa-shopping-cart"></i> 购物车
+                </a>
+            </div>
+        </div>
+        <div class="mobile-sidebar-footer">
+            <a href="/admin/" class="mobile-sidebar-login-link">
+                <i class="fa fa-user-circle"></i> 管理员登录
+            </a>
+        </div>
+    `,
+
+    // 移动端底部导航
+    mobileBottomNav: (activePage) => `
+        <a href="/" class="mbn-item ${activePage === 'home' ? 'active' : ''}">
+            <i class="fa fa-home"></i>
+            <span>首页</span>
+        </a>
+        <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-sidebar', 'mobile-overlay');">
+            <i class="fa fa-th-large"></i>
+            <span>菜单</span>
+        </a>
+        <a href="/orders.html" class="mbn-item ${activePage === 'orders' ? 'active' : ''}">
+            <i class="fa fa-file-alt"></i>
+            <span>查单</span>
+        </a>
+        <a href="/cart.html" class="mbn-item ${activePage === 'cart' ? 'active' : ''}" style="position:relative;">
+            <i class="fa fa-shopping-cart"></i>
+            <span>购物车</span>
+             <span id="cart-badge-mobile" class="badge bg-danger rounded-pill" 
+                  style="position: absolute; top: 2px; right: 15px; font-size: 8px; padding: 2px 4px; display: none;">0</span>
+        </a>
+        <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-contact-sheet', 'mobile-contact-overlay');">
+            <i class="fa fa-headset"></i>
+            <span>客服</span>
+        </a>
+    `,
+
+    // 页脚
+    footer: `
+        <div class="container">
+            <div class="footer-links">
+                <a href="/">首页</a>
+                <a href="/articles.html">教程文章</a>
+                <a href="/orders.html">查询订单</a>
+                <a href="#" onclick="event.preventDefault(); togglePanel('mobile-contact-sheet', 'mobile-contact-overlay');">联系客服</a>
+            </div>
+            <div class="copyright">
+                &copy; <span id="year">${new Date().getFullYear()}</span> <span id="footer-name">TB Shop</span>. All Rights Reserved.
+            </div>
+        </div>
+    `,
+
+    // PC右侧栏 (标准框架)
+    pcSidebarStandard: `
+        <div class="sidebar-inner">
+            <div class="module-box" id="notice-module-box">
+                <div class="module-title">店铺公告</div>
+                <div class="notice-content" id="notice-box">
+                    <i class="fa fa-spinner fa-spin"></i> 加载中...
+                </div>
+            </div>
+
+            <div class="module-box" id="contact-module-box">
+                <div class="module-title">联系客服</div>
+                <div class="notice-content" id="contact-box">
+                    暂无联系方式
+                </div>
+            </div>
+            
+            <div id="sidebar-extras">
+                 <div class="module-box d-none" id="top-sales-box-container">
+                    <div class="module-title">销量排行</div>
+                    <div id="top-sales-list"></div>
+                </div>
+                <div class="module-box d-none" id="tag-cloud-box-container">
+                     <div class="module-title">热门标签</div>
+                     <div class="tag-cloud" id="tag-cloud-list"></div>
+                </div>
+                 <div class="module-box d-none" id="article-cat-box-container">
+                     <div class="module-title">教程分类</div>
+                     <div class="art-cat-list" id="article-cat-list"></div>
+                </div>
+            </div>
+        </div>
+    `
 };
 
 /**
- * 检查侧边栏高度并激活/销毁粘性滚动
+ * 核心函数：渲染页面公共布局
  */
-function checkSidebarStatus() {
-    const sidebarWrapper = document.getElementById('sidebar-wrapper');
-    const sidebarInner = sidebarWrapper ? sidebarWrapper.querySelector('.sidebar-inner') : null;
-    // 匹配首页或商品页的主要内容区域
-    const productArea = document.getElementById('products-list-area') || document.querySelector('.col-lg-9'); 
-    
-    if (!sidebarInner || !productArea) return;
+function renderCommonLayout(activePage) {
+    // 1. 注入 HTML
+    const els = {
+        'global-pc-header': TB_LAYOUT.pcHeader(activePage),
+        'global-mobile-header': TB_LAYOUT.mobileHeader,
+        'mobile-sidebar': TB_LAYOUT.mobileSidebar(activePage),
+        'global-mobile-nav': TB_LAYOUT.mobileBottomNav(activePage),
+        'global-footer': TB_LAYOUT.footer,
+        'global-sidebar-right': TB_LAYOUT.pcSidebarStandard
+    };
 
-    // 确保左侧有一个基础最小高度
-    productArea.style.minHeight = '400px';
-
-    const sbHeight = sidebarInner.offsetHeight;
-    const contentHeight = productArea.offsetHeight;
-    const isWideScreen = window.innerWidth >= 992;
-
-    // 如果内容高度不足或屏幕太窄，则销毁
-    if (contentHeight < sbHeight || !isWideScreen) {
-        if (sidebar) {
-            sidebar.destroy();
-            sidebar = null;
-        }
-    } else { // 否则，激活
-        if (!sidebar) {
-            if (typeof StickySidebar !== 'undefined') {
-                sidebar = new StickySidebar('#sidebar-wrapper', sidebarOptions);
-            }
-        } else {
-            sidebar.updateSticky();
-        }
-    }
-}
-
-// 页面加载与窗口调整时检查状态
-window.addEventListener('load', checkSidebarStatus);
-window.addEventListener('resize', checkSidebarStatus);
-
-
-// --- 2. UI交互逻辑：页脚年份 ---
-try {
-    const yearEl = document.getElementById('year');
-    if (yearEl) yearEl.innerText = new Date().getFullYear();
-} catch (e) {}
-
-
-// --- 3. UI交互逻辑：共享的搜索 ---
-/**
- * 执行搜索
- * @param {string} source 'pc' or 'mobile'
- */
-function doSearch(source = 'pc') {
-    const pcInput = document.getElementById('search-input');
-    const mobileInput = document.getElementById('mobile-search-input');
-    
-    let keyword = '';
-    if (source === 'mobile' && mobileInput) {
-        keyword = mobileInput.value.toLowerCase().trim();
-    } else if (pcInput) {
-        keyword = pcInput.value.toLowerCase().trim();
-    }
-    
-    // 检查是否在首页 (通过 allProducts 和 renderSingleGrid 是否存在来判断)
-    if (typeof renderSingleGrid === 'function' && typeof allProducts !== 'undefined') {
-        // 在首页：执行JS筛选
-        if (!keyword) { 
-            if (typeof renderCategorizedView === 'function') renderCategorizedView('all'); 
-            return; 
-        }
-        const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword) || (p.description && p.description.toLowerCase().includes(keyword)));
-        renderSingleGrid(filtered, `"${keyword}" 的搜索结果`);
-
-        if (source === 'mobile') {
-            toggleMobileSearch(false); 
-        }
-    } else {
-        // 不在首页：跳转到首页进行搜索
-        if (!keyword) return;
-        window.location.href = `/?search=${encodeURIComponent(keyword)}`;
-    }
-}
-
-// 绑定全局搜索事件
-document.addEventListener('DOMContentLoaded', () => {
-    const pcSearchInput = document.getElementById('search-input');
-    const mobileSearchInput = document.getElementById('mobile-search-input');
-    const pcSearchBtn = document.querySelector('.tb-search-btn'); // 电脑端搜索按钮
-    const mobileSearchExecBtn = document.getElementById('mobile-search-exec-btn'); // 移动端搜索按钮
-
-    if (pcSearchInput) {
-        pcSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') doSearch('pc');
-        });
-    }
-    if (pcSearchBtn) {
-        // 注意：您 HTML 中的 pc 按钮 onclick="doSearch('pc')" 已经绑定，
-        // 但使用 addEventListener 是更推荐的方式
-        pcSearchBtn.onclick = () => doSearch('pc');
-    }
-    
-    if (mobileSearchInput) {
-        mobileSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') doSearch('mobile');
-        });
-    }
-    if (mobileSearchExecBtn) { // 假设移动端搜索栏旁有个按钮
-         mobileSearchExecBtn.onclick = () => doSearch('mobile');
-    }
-});
-
-
-// --- 4. UI交互逻辑：移动端面板 ---
-/**
- * 通用面板开关
- * @param {string} panelId 
- * @param {string} overlayId 
- * @param {boolean} forceShow 
- */
-function togglePanel(panelId, overlayId, forceShow = null) {
-    const panel = document.getElementById(panelId);
-    const overlay = document.getElementById(overlayId);
-    if (!panel || !overlay) return;
-
-    let shouldShow = (typeof forceShow === 'boolean') ? forceShow : !panel.classList.contains('show');
-
-    if (shouldShow) {
-        panel.classList.add('show');
-        overlay.classList.add('show');
-    } else {
-        panel.classList.remove('show');
-        overlay.classList.remove('show');
-    }
-}
-
-/**
- * 移动端搜索栏开关
- * @param {boolean} forceShow 
- */
-function toggleMobileSearch(forceShow = null) {
-    const searchDropdown = document.querySelector('.mobile-search-dropdown');
-    const searchOverlay = document.getElementById('mobile-search-overlay');
-    if (!searchDropdown || !searchOverlay) return;
-    
-    let show = (forceShow === null) ? !searchDropdown.classList.contains('show') : forceShow;
-
-    if (show) {
-        searchDropdown.classList.add('show');
-        searchOverlay.classList.add('show');
-    } else {
-        searchDropdown.classList.remove('show');
-        searchOverlay.classList.remove('show');
-    }
-}
-
-// 绑定所有移动端面板事件
-document.addEventListener('DOMContentLoaded', () => {
-    // 侧边栏菜单
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    const mobileOverlay = document.getElementById('mobile-overlay');
-    const mobileSidebarCloseBtn = document.getElementById('mobile-sidebar-close-btn');
-    // 搜索
-    const mobileSearchBtn = document.getElementById('mobile-search-btn');
-    const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
-    // 联系方式 (假设首页有 mobile-contact-btn)
-    const mobileContactBtn = document.getElementById('mobile-contact-btn'); 
-    const mobileContactCloseBtn = document.getElementById('mobile-contact-close-btn');
-    const mobileContactOverlay = document.getElementById('mobile-contact-overlay');
-
-    if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay'));
-    if (mobileOverlay) mobileOverlay.addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay', false));
-    if (mobileSidebarCloseBtn) mobileSidebarCloseBtn.addEventListener('click', () => togglePanel('mobile-sidebar', 'mobile-overlay', false));
-
-    if (mobileSearchBtn) mobileSearchBtn.addEventListener('click', () => toggleMobileSearch());
-    if (mobileSearchOverlay) mobileSearchOverlay.addEventListener('click', () => toggleMobileSearch(false));
-
-    if (mobileContactBtn) mobileContactBtn.addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay'));
-    if (mobileContactCloseBtn) mobileContactCloseBtn.addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false));
-    if (mobileContactOverlay) mobileContactOverlay.addEventListener('click', () => togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false));
-
-    // 滚动时关闭弹窗
-    window.addEventListener('scroll', () => {
-        if (document.querySelector('.mobile-search-dropdown')?.classList.contains('show')) {
-            toggleMobileSearch(false);
-        }
-        if (document.getElementById('mobile-contact-sheet')?.classList.contains('show')) {
-            togglePanel('mobile-contact-sheet', 'mobile-contact-overlay', false);
-        }
-    }, { passive: true });
-});
-
-
-// --- 5. UI交互逻辑：高亮滚动 (用于SKU) ---
-/**
- * 辅助函数 - 高亮并滚动
- * @param {string | HTMLElement} elementId 
- */
-function highlightAndScroll(elementId) {
-    const el = (typeof elementId === 'string') ? document.getElementById(elementId) : elementId;
-    if (!el) return;
-    
-    const skuBody = el.closest('.sku-body');
-    if (skuBody) {
-        skuBody.scrollTo({
-            top: el.offsetTop - skuBody.offsetTop - 15,
-            behavior: 'smooth'
-        });
-    }
-    
-    const input = el.tagName === 'INPUT' ? el : el.querySelector('input');
-    if (input) input.focus();
-
-    el.style.transition = 'none';
-    el.style.backgroundColor = '#fff5f7';
-    setTimeout(() => {
-        el.style.transition = 'background-color 0.5s ease';
-        el.style.backgroundColor = 'transparent';
-        setTimeout(() => el.style.transition = 'none', 500);
-    }, 100);
-}
-
-
-// =============================================
-// === 共享数据渲染逻辑
-// =============================================
-
-/**
- * 渲染PC和移动端的Logo和名称
- * [修改] 增加PC端购物车图标
- * @param {object} config 
- */
-function renderGlobalHeaders(config) {
-    if (document.title.includes("商品详情") == false) {
-         document.title = config.site_name || '商店首页';
+    for (const [id, html] of Object.entries(els)) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
     }
 
-    // --- PC端Logo/名称 ---
-    const logoEl = document.getElementById('site-logo');
-    const nameWrapEl = document.getElementById('site-name-wrap');
-    const nameTextEl = document.getElementById('header-site-name');
-    
-    if (nameTextEl) nameTextEl.innerText = config.site_name || 'TB Shop';
-    if (document.getElementById('footer-name')) {
-        document.getElementById('footer-name').innerText = config.site_name || 'TB Shop';
-    }
-
-    const showName = config.show_site_name === '1';
-    const showLogo = config.show_site_logo === '1';
-
-    if (nameWrapEl) {
-        if (!showName && !showLogo) {
-            nameWrapEl.classList.remove('d-none');
-        } else {
-            if (showLogo && config.site_logo && logoEl) {
-                logoEl.src = config.site_logo;
-                logoEl.classList.remove('d-none');
-            }
-            if (showName) {
-                nameWrapEl.classList.remove('d-none');
-            }
+    // 2. 右侧栏特殊处理 (显示隐藏的模块)
+    if (document.getElementById('global-sidebar-right')) {
+        const extras = ['top-sales-box-container', 'tag-cloud-box-container', 'article-cat-box-container'];
+        // 只有首页、商品页、文章页需要显示这些
+        const showExtras = ['home', 'product', 'article', 'articles'].includes(activePage);
+        if(showExtras) {
+             extras.forEach(id => {
+                 const el = document.getElementById(id);
+                 if(el) el.classList.remove('d-none');
+             });
         }
     }
 
-    // --- 移动端Logo/名称 ---
-    const mobileLogoEl = document.getElementById('mobile-logo-img');
-    const mobileNameWrapEl = document.getElementById('mobile-site-name-wrap');
-    const mobileNameTextEl = document.getElementById('mobile-header-site-name');
-    
-    if (mobileNameTextEl) mobileNameTextEl.innerText = config.site_name || 'TB Shop';
-    
-    if (mobileNameWrapEl) {
-        if (!showName && !showLogo) {
-            mobileNameWrapEl.classList.remove('d-none');
-        } else {
-            if (showLogo && config.site_logo && mobileLogoEl) {
-                mobileLogoEl.src = config.site_logo;
-                mobileLogoEl.classList.remove('d-none');
-            }
-            if (showName) {
-                mobileNameWrapEl.classList.remove('d-none');
-            }
-        }
-    }
-
-    // --- [新增] 在PC端头部右侧添加购物车图标 ---
+    // 3. 注入购物车角标 (PC端)
     const headerRight = document.querySelector('.tb-header .header-right');
-    if (headerRight && !document.getElementById('cart-btn-pc')) { // 检查是否已存在
+    if (headerRight && !document.getElementById('cart-btn-pc')) {
         const cartBtnHtml = `
         <a href="/cart.html" class="icon-btn-pc" id="cart-btn-pc" style="position: relative; margin-left: 0px; color: #ff0036; text-decoration: none;">
-            <i class="far fa-shopping-cart" style="font-size: 20px;"></i>
+            <i class="fa fa-shopping-cart" style="font-size: 20px;"></i>
             <span id="cart-badge-pc" class="badge bg-danger rounded-pill" style="position: absolute; top: -8px; right: -10px; font-size: 9px; padding: 2px 4px; display: none;">0</span>
         </a>`;
-        
-        // 插入到“登录”按钮之前
         const loginBtn = headerRight.querySelector('.btn-login');
         if (loginBtn) {
             loginBtn.insertAdjacentHTML('beforebegin', cartBtnHtml);
-            loginBtn.style.marginLeft = "15px"; // 确保登录按钮也有间距
-        } else {
-            headerRight.innerHTML += cartBtnHtml; // 降级处理
+            loginBtn.style.marginLeft = "15px"; 
         }
     }
-    
-    // [新增] 页面加载时立即更新一次角标
+
+    // 4. 加载配置 & 更新角标
+    loadGlobalConfig();
     loadCartBadge();
 }
 
 /**
- * 渲染公告和联系方式 (PC侧边栏 + 移动端)
- * @param {object} config 
+ * 加载配置
  */
-function renderSidebarNoticeContact(config) {
-    // --- 公告 ---
-    const notice = config.notice_content || config.announce;
-    const noticeBox = document.getElementById('notice-box');
-    if (noticeBox && notice) {
-        noticeBox.innerHTML = notice;
-    }
+function loadGlobalConfig() {
+    fetch('/api/shop/config')
+        .then(res => res.json())
+        .then(config => {
+            renderGlobalHeaders(config);
+            renderSidebarNoticeContact(config);
+        })
+        .catch(e => console.warn('Config load failed:', e));
+}
 
-    // --- 联系方式 ---
-    const contactInfo = config.contact_info;
-    const contactModulePC = document.getElementById('contact-module-box');
-    const contactBoxPC = document.getElementById('contact-box');
-    const contactContentMobile = document.getElementById('mobile-contact-content');
+// =============================================
+// === 2. 共享逻辑 (搜索、侧栏、角标等)
+// =============================================
 
-    if (contactInfo) {
-        if (contactBoxPC) contactBoxPC.innerHTML = contactInfo;
-        if (contactContentMobile) contactContentMobile.innerHTML = contactInfo;
+// UI: Sticky Sidebar
+let sidebar = null;
+function checkSidebarStatus() {
+    const sidebarWrapper = document.getElementById('sidebar-wrapper');
+    const sidebarInner = sidebarWrapper ? sidebarWrapper.querySelector('.sidebar-inner') : null;
+    const productArea = document.querySelector('.col-lg-9'); 
+    if (!sidebarInner || !productArea) return;
+
+    productArea.style.minHeight = '400px';
+    const sbHeight = sidebarInner.offsetHeight;
+    const contentHeight = productArea.offsetHeight;
+
+    if (contentHeight < sbHeight || window.innerWidth < 992) {
+        if (sidebar) { sidebar.destroy(); sidebar = null; }
     } else {
-        if (contactModulePC) contactModulePC.style.display = 'none';
-        if (contactContentMobile) contactContentMobile.innerHTML = '<p>暂无联系方式</p>';
+        if (!sidebar && typeof StickySidebar !== 'undefined') {
+            sidebar = new StickySidebar('#sidebar-wrapper', {
+                topSpacing: 80, bottomSpacing: 20, 
+                containerSelector: '#main-content-row', innerWrapperSelector: '.sidebar-inner'
+            });
+        } else if(sidebar) { sidebar.updateSticky(); }
     }
+}
+window.addEventListener('load', checkSidebarStatus);
+window.addEventListener('resize', checkSidebarStatus);
 
-    // --- 移动端内容重排：移动公告到顶部 (仅在首页模板中) ---
+// UI: Search
+function doSearch(source = 'pc') {
+    const inputId = source === 'mobile' ? 'mobile-search-input' : 'search-input';
+    const val = document.getElementById(inputId)?.value.trim();
+    if (typeof renderSingleGrid === 'function' && typeof allProducts !== 'undefined') {
+        // 首页模式：本地筛选
+        if (!val) renderCategorizedView('all');
+        else {
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(val.toLowerCase()));
+            renderSingleGrid(filtered, `"${val}" 的搜索结果`);
+        }
+        if (source === 'mobile') toggleMobileSearch(false);
+    } else {
+        // 其他页面：跳转搜索
+        if (val) window.location.href = `/?q=${encodeURIComponent(val)}`;
+    }
+}
+document.addEventListener('keypress', (e) => {
+    if((e.target.id === 'search-input' || e.target.id === 'mobile-search-input') && e.key === 'Enter') {
+        doSearch(e.target.id === 'mobile-search-input' ? 'mobile' : 'pc');
+    }
+});
+
+// UI: Panels
+function togglePanel(panelId, overlayId, forceShow = null) {
+    const panel = document.getElementById(panelId);
+    const overlay = document.getElementById(overlayId);
+    if(!panel || !overlay) return;
+    const show = (forceShow === null) ? !panel.classList.contains('show') : forceShow;
+    panel.classList.toggle('show', show);
+    overlay.classList.toggle('show', show);
+}
+function toggleMobileSearch(forceShow = null) {
+    const d = document.querySelector('.mobile-search-dropdown');
+    const o = document.getElementById('mobile-search-overlay');
+    if(!d || !o) return;
+    const show = (forceShow === null) ? !d.classList.contains('show') : forceShow;
+    d.classList.toggle('show', show);
+    o.classList.toggle('show', show);
+}
+window.addEventListener('scroll', () => {
+    if(document.querySelector('.mobile-search-dropdown.show')) toggleMobileSearch(false);
+}, { passive: true });
+
+// Data: Config Render
+function renderGlobalHeaders(config) {
+    if (!document.title.includes("商品详情")) document.title = config.site_name || '商店首页';
+    
+    // 设置 Logo 和名称
+    const setText = (id, txt) => { const el = document.getElementById(id); if(el) el.innerText = txt; };
+    setText('header-site-name', config.site_name);
+    setText('mobile-header-site-name', config.site_name);
+    setText('footer-name', config.site_name);
+
+    const showName = config.show_site_name === '1';
+    const showLogo = config.show_site_logo === '1';
+    
+    ['site-logo', 'mobile-logo-img'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el && showLogo && config.site_logo) { el.src = config.site_logo; el.classList.remove('d-none'); }
+    });
+    ['site-name-wrap', 'mobile-site-name-wrap'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el && (showName || (!showName && !showLogo))) el.classList.remove('d-none');
+    });
+}
+
+function renderSidebarNoticeContact(config) {
+    const setHtml = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
+    setHtml('notice-box', config.notice_content || config.announce || '暂无公告');
+    
+    const contact = config.contact_info || '<p>暂无联系方式</p>';
+    setHtml('contact-box', contact);
+    setHtml('mobile-contact-content', contact);
+
+    // 移动端首页：公告置顶
     if (window.innerWidth < 992 && document.getElementById('products-list-area')) {
         const noticeModule = document.getElementById('notice-module-box');
         const mainContent = document.querySelector('.col-lg-9');
@@ -358,222 +340,53 @@ function renderSidebarNoticeContact(config) {
     }
 }
 
-/**
- * 渲染侧边栏 - 销量排行
- * @param {Array} allProducts 
- */
-function renderSidebarTopSales(allProducts) {
-    const topListEl = document.getElementById('top-sales-list');
-    if (!topListEl) return;
-
-    const topProducts = [...allProducts].sort((a, b) => {
-        const salesA = a.variants.reduce((s, v) => s + (v.sales_count||0), 0);
-        const salesB = b.variants.reduce((s, v) => s + (v.sales_count||0), 0);
-        return salesB - salesA;
-    }).slice(0, 5);
-
-    if (topProducts.length > 0) {
-        topListEl.innerHTML = topProducts.map(p => {
-            const mainImg = p.image_url || (p.variants[0] && p.variants[0].image_url) || 'https://via.placeholder.com/50';
-            const price = p.variants[0] ? p.variants[0].price : 0;
-            return `
-                <a href="/product.html?id=${p.id}" class="top-item">
-                    <img src="${mainImg}" class="top-img">
-                    <div class="top-info">
-                        <div class="top-title">${p.name}</div>
-                        <div class="top-price">¥${price}</div>
-                    </div>
-                </a>
-            `;
-        }).join('');
-    } else {
-        topListEl.innerHTML = '<div class="text-muted small text-center">暂无数据</div>';
+// Data: Helpers
+function renderSidebarTopSales(allProducts) { // 销量排行
+    const el = document.getElementById('top-sales-list');
+    if(!el || !allProducts) return;
+    const list = [...allProducts].sort((a,b) => (b.variants[0]?.sales_count||0) - (a.variants[0]?.sales_count||0)).slice(0,5);
+    el.innerHTML = list.length ? list.map(p => `
+        <a href="/product.html?id=${p.id}" class="top-item">
+            <img src="${p.image_url}" class="top-img">
+            <div class="top-info"><div class="top-title">${p.name}</div><div class="top-price">¥${p.variants[0]?.price}</div></div>
+        </a>`).join('') : '<div class="text-muted small text-center">暂无数据</div>';
+}
+function renderSidebarTagCloud(products) { // 标签云
+    const el = document.getElementById('tag-cloud-list');
+    if(!el) return;
+    const tags = new Set();
+    products.forEach(p => (p.tags||'').split(',').forEach(t => {
+        const clean = t.trim().split('#')[0].split(/\s+/)[0];
+        if(clean && !clean.startsWith('b1') && !clean.startsWith('b2')) tags.add(clean);
+    }));
+    el.innerHTML = tags.size ? Array.from(tags).map(t => 
+        `<span class="tag-cloud-item" ${typeof filterByTag === 'function' ? `onclick="filterByTag('${t}')"` : ''}>${t}</span>`
+    ).join('') : '<div class="text-muted small text-center">暂无标签</div>';
+}
+function renderSidebarArticleCats(articles) { // 文章分类
+    const el = document.getElementById('article-cat-list');
+    if(el && articles?.length) {
+        const cats = [...new Set(articles.map(a=>a.category_name).filter(Boolean))];
+        el.innerHTML = cats.length ? cats.map(c=>`<a href="#">${c}</a>`).join('') : '<div class="text-muted small">暂无分类</div>';
     }
 }
 
-/**
- * 辅助函数 - 解析Tags (被 main-index 和 common 调用)
- * @param {string} tagStr 
- */
-function parseTags(tagStr) {
-    if (!tagStr) return '';
-    const tags = tagStr.split(',').map(t => t.trim()).filter(t => t);
-    return tags.map(t => {
-        const parts = t.split(/\s+/); 
-        let borderColor = 'transparent';
-        let bgColor = '#f5f5f5';
-        let text = '';
-        let textColor = '#333';
-        parts.forEach(part => {
-            if (part.startsWith('b1')) borderColor = part.split('#')[1] ? '#' + part.split('#')[1] : borderColor;
-            else if (part.startsWith('b2')) bgColor = part.split('#')[1] ? '#' + part.split('#')[1] : bgColor;
-            else if (part.includes('#')) {
-                const txtParts = part.split('#');
-                text = txtParts[0];
-                textColor = '#' + txtParts[1];
-            } else {
-                text = part; 
-            }
-        });
-        if (!text) return '';
-        const style = `border-color:${borderColor}; background-color:${bgColor}; color:${textColor}`;
-        return `<span class="dynamic-tag" style="${style}">${text}</span>`;
-    }).join('');
-}
-
-/**
- * 渲染侧边栏 - 标签云
- * @param {Array} products 
- */
-function renderSidebarTagCloud(products) {
-    const listEl = document.getElementById('tag-cloud-list');
-    if (!listEl) return;
-
-    const tagSet = new Set();
-    products.forEach(p => {
-        if(p.tags) {
-            p.tags.split(',').forEach(tStr => {
-                const parts = tStr.trim().split(/\s+/);
-                let text = '';
-                parts.forEach(part => {
-                   if(!part.startsWith('b1') && !part.startsWith('b2')) {
-                       text = part.split('#')[0]; 
-                   }
-                });
-                if(text) tagSet.add(text);
-            });
-        }
-    });
-
-    if(tagSet.size === 0) {
-        listEl.innerHTML = '<div class="text-muted small w-100 text-center">暂无标签</div>';
-        return;
-    }
-    
-    listEl.innerHTML = Array.from(tagSet).map(tag => {
-        let clickHandler = '';
-        // 仅在 index 页面 (存在 filterByTag 函数) 时添加点击事件
-        if (typeof filterByTag === 'function') {
-             clickHandler = `onclick="filterByTag('${tag}')"`;
-        }
-        return `<span class="tag-cloud-item" ${clickHandler}>${tag}</span>`;
-    }).join('');
-}
-
-
-/**
- * 渲染侧边栏 - 教程分类和热门文章
- * @param {Array} articles 
- */
-function renderSidebarArticleCats(articles) {
-    // 热门文章 (仅首页有)
-    const hotListEl = document.getElementById('hot-articles-list');
-    if (hotListEl) {
-        if (articles.length > 0) {
-            hotListEl.innerHTML = articles.slice(0, 8).map((a, index) => `
-                <div class="hot-article-item">
-                    <a href="/article.html?id=${a.id}" class="text-truncate" style="flex:1">
-                        <span class="hot-rank ${index < 3 ? 'top-3' : ''}">${index + 1}</span>
-                        ${a.title}
-                    </a>
-                    <small class="text-muted ms-2">${new Date(a.created_at * 1000).toLocaleDateString()}</small>
-                </div>
-            `).join('');
-        }
-    }
-
-    // 教程分类 (首页和商品页共享)
-    const artCatListEl = document.getElementById('article-cat-list');
-    if (artCatListEl) {
-        const artCats = [...new Set(articles.map(a => a.category_name))].filter(Boolean);
-        if (artCats.length > 0) {
-            artCatListEl.innerHTML = artCats.map(c => `<a href="#">${c}</a>`).join('');
-        } else {
-            artCatListEl.innerHTML = '<div class="text-muted small">暂无分类</div>';
-        }
-    }
-}
-
-
-// =============================================
-// === [新增] 全局购物车角标函数 ===
-// =============================================
-
-/**
- * [新增] 从 localStorage 读取购物车信息并更新角标
- */
+// Cart & Top
 function loadCartBadge() {
-    try {
-        let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
-        updateCartBadge(cart.length);
-    } catch (e) {
-        console.error("Failed to load cart badge", e);
-    }
+    try { updateCartBadge(JSON.parse(localStorage.getItem('tbShopCart') || '[]').length); } catch(e){}
 }
-
-/**
- * [更新] 更新所有购物车角标（移动端、PC头部、PC商品页）
- */
-function updateCartBadge(count) {
-    const badgeMobile = document.getElementById('cart-badge-mobile'); // 移动端底部
-    const badgePC = document.getElementById('cart-badge-pc'); // PC 顶部导航
-    const badgePCProduct = document.getElementById('cart-badge-pc-product'); // [新增] PC 商品详情页
-    
-    const badges = [badgeMobile, badgePC, badgePCProduct];
-    
-    badges.forEach(badge => {
-        if (badge) {
-            if (count > 0) {
-                badge.innerText = count > 99 ? '99+' : count;
-                badge.style.display = 'block'; // Bootstrap badge 默认是 inline-block，这里强制显示
-            } else {
-                badge.style.display = 'none';
-            }
-        }
+function updateCartBadge(n) {
+    ['cart-badge-mobile', 'cart-badge-pc', 'cart-badge-pc-product'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) { el.innerText = n > 99 ? '99+' : n; el.style.display = n > 0 ? 'block' : 'none'; }
     });
 }
-
-// =============================================
-// === [新增] 返回顶部功能逻辑
-// =============================================
-
-/**
- * 初始化返回顶部按钮
- * - 自动插入 HTML 结构
- * - 绑定滚动与点击事件
- */
-function initBackToTop() {
-    // 1. 检查是否已存在，避免重复创建
-    if (document.getElementById('back-to-top-btn')) return;
-
-    // 2. 创建按钮元素
-    const btn = document.createElement('div');
-    btn.id = 'back-to-top-btn';
-    btn.className = 'back-to-top-btn';
-    // 使用 FontAwesome 的向上箭头图标
-    btn.innerHTML = '<i class="far fa-arrow-up"></i>'; 
-    document.body.appendChild(btn);
-
-    // 3. 绑定点击事件：平滑滚动回顶部
-    btn.addEventListener('click', () => {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth' // 平滑滚动
-        });
-    });
-
-    // 4. 绑定滚动监听：控制按钮显示/隐藏
-    window.addEventListener('scroll', () => {
-        // 当滚动超过 300px 时显示按钮
-        if (window.scrollY > 300) {
-            btn.classList.add('show');
-        } else {
-            btn.classList.remove('show');
-        }
-    }, { passive: true }); // passive 优化滚动性能
-}
-
-// 页面加载完成后启动功能
+// Back to Top
 document.addEventListener('DOMContentLoaded', () => {
-    initBackToTop();
+    if(document.getElementById('back-to-top-btn')) return;
+    const btn = document.createElement('div');
+    btn.id = 'back-to-top-btn'; btn.className = 'back-to-top-btn'; btn.innerHTML = '<i class="fa fa-arrow-up"></i>';
+    document.body.appendChild(btn);
+    btn.onclick = () => window.scrollTo({top:0, behavior:'smooth'});
+    window.onscroll = () => btn.classList.toggle('show', window.scrollY > 300);
 });
