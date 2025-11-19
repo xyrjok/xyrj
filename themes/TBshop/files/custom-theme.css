@@ -909,3 +909,64 @@ a:hover { color: var(--tb-orange); }
 #sku-btn-list {
     align-content: flex-start; 
 }
+/* ============================================= */
+/* === [新增] 支付方式图标样式 === */
+/* ============================================= */
+
+.payment-option {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px; /* 内边距，控制图标周围空间 */
+    height: 34px;      /* 固定高度 */
+    min-width: 60px;   /* 最小宽度 */
+    border: 1px solid #ddd; /* 默认灰色边框 */
+    border-radius: 4px;
+    margin-right: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: #fff;
+    transition: all 0.2s;
+}
+
+.payment-option:hover {
+    border-color: #bbb;
+}
+
+/* 选中状态：边框变红(可选)，显示对勾 */
+.payment-option.active {
+    border-color: #dc3545; 
+}
+
+/* 支付图标图片或字体大小 */
+.payment-option i { font-size: 20px; } 
+.payment-option img { height: 20px; width: auto; object-fit: contain; }
+
+/* 右上角圆底白对勾 */
+.payment-check-mark {
+    position: absolute;
+    top: -7px;    /* 控制垂直位置，负值让它浮出边框 */
+    right: -7px;  /* 控制水平位置 */
+    width: 16px;
+    height: 16px;
+    background-color: #dc3545; /* 红色背景 */
+    color: #fff;  /* 白色对勾 */
+    border-radius: 50%; /* 圆形 */
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* 动画效果：默认隐藏 */
+    opacity: 0;
+    transform: scale(0); 
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 1;
+}
+
+/* 选中时显示对勾 */
+.payment-option.active .payment-check-mark {
+    opacity: 1;
+    transform: scale(1);
+}
