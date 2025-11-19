@@ -1002,13 +1002,11 @@ function togglePcCardPanel(show) {
     } else {
         panel.classList.remove('show');
         
-        // [修改] 如果关闭时没有确认选择 (selectedCardId 为空)，则取消"自选"模式
-        // 这是为了处理用户点击 "︽ 收取" 按钮，而不是 "确定" 按钮的情况
-        if (!selectedCardId) {
-            selectPcBuyMode(null); // 这会重置模式、启用数量、更新文本和价格
+        // [Fix] 只有当前是"自选(select)"模式，且没选卡密时，才重置为 null。
+        // 如果当前是"随机(random)"模式，selectedCardId 本来就是空，不应该重置模式。
+        if (buyMode === 'select' && !selectedCardId) {
+            selectPcBuyMode(null); 
         } else {
-            // [新增] 如果用户选了卡密，但点了"收取"
-            // 我们假定"收取"等于"确定"，以防止状态不一致
             updatePcSelectionText();
             updatePrice();
         }
