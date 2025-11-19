@@ -551,7 +551,7 @@ function initBackToTop() {
     btn.id = 'back-to-top-btn';
     btn.className = 'back-to-top-btn';
     // 使用 FontAwesome 的向上箭头图标
-    btn.innerHTML = '<i class="fas fa-arrow-up"></i>'; 
+    btn.innerHTML = '<i class="far fa-arrow-up"></i>'; 
     document.body.appendChild(btn);
 
     // 3. 绑定点击事件：平滑滚动回顶部
