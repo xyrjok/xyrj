@@ -915,3 +915,4 @@ function addToCartLogic(qty, btn) {
         }
     } catch(e) { alert('添加失败'); }
 }
+document.addEventListener('DOMContentLoaded', init);
