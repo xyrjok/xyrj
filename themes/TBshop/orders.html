@@ -5,47 +5,128 @@
     <meta name="renderer" content="webkit">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+	<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>订单查询 - TB Shop</title>
     <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="/assets/css/all.min.css" rel="stylesheet">
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
     <style>
-        /* 查单页面专用样式 */
+        /* === 查单页面专用样式 (淘宝风格) === */
         .query-box {
             background: #fff;
             border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 30px;
+            min-height: 500px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        
+        /* 选项卡样式重写 */
+        .nav-tabs {
+            border-bottom: 2px solid #f5f5f5;
         }
         .nav-tabs .nav-link {
+            border: none;
             color: #666;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 12px 25px;
+            margin-bottom: -2px;
             cursor: pointer;
+            background: transparent;
+        }
+        .nav-tabs .nav-link:hover {
+            color: var(--tb-orange);
         }
         .nav-tabs .nav-link.active {
-            color: var(--primary-color);
+            color: var(--tb-orange);
+            border-bottom: 2px solid var(--tb-orange);
+            background: transparent;
             font-weight: bold;
         }
+
+        /* 表单控件 */
+        .form-label {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-control {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-control:focus {
+            border-color: var(--tb-orange);
+            box-shadow: 0 0 0 0.2rem rgba(255, 80, 0, 0.1);
+        }
+
+        /* 淘宝风按钮 */
+        .btn-tb-submit {
+            background: var(--tb-grad); /* 使用CSS变量定义的渐变 */
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+            transition: opacity 0.2s;
+        }
+        .btn-tb-submit:hover {
+            opacity: 0.9;
+            color: #fff;
+        }
+        .btn-tb-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 结果卡片 */
         .result-card {
-            background: #f8f9fa;
-            border: 1px solid #eee;
+            background: #fcfcfc;
+            border: 1px solid #f0f0f0;
             border-radius: 6px;
-            padding: 15px;
-            margin-top: 20px;
+            padding: 20px;
+            margin-top: 30px;
             display: none; /* 默认隐藏 */
         }
         .card-item {
             background: #fff;
-            border: 1px dashed #ddd;
-            padding: 10px;
-            margin-top: 10px;
+            border: 1px dashed #ffccba; /* 浅橙色虚线 */
+            background-color: #fffcfb;
+            padding: 12px;
+            margin-top: 12px;
             word-break: break-all;
             position: relative;
+            border-radius: 4px;
+            color: #333;
+            font-family: monospace;
         }
         .copy-btn {
             font-size: 12px;
-            padding: 2px 8px;
+            padding: 2px 10px;
             margin-left: 10px;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #666;
+            float: right;
+        }
+        .copy-btn:hover {
+            color: var(--tb-orange);
+            border-color: var(--tb-orange);
+        }
+        
+        /* 移动端微调 */
+        @media (max-width: 991.98px) {
+            .query-box {
+                padding: 20px 15px;
+            }
+            .nav-tabs .nav-link {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -64,8 +145,7 @@
                 </span>
             </a>
         </div>
-        <div class="mh-right">
-            </div>
+        <div class="mh-right"></div>
     </header>
 
     <div class="mobile-sidebar d-lg-none" id="mobile-sidebar">
@@ -76,7 +156,9 @@
         <div class="mobile-sidebar-content">
             <div id="mobile-category-list">
                 <a href="/">返回首页</a>
-                <a href="/orders.html" class="active">订单查询</a>
+                <a href="/orders.html" style="color: var(--tb-orange); background: rgba(255,255,255,0.1);">
+                    <i class="fa fa-file-alt"></i> 订单查询
+                </a>
                 <a href="/articles.html">教程文章</a>
             </div>
         </div>
@@ -101,7 +183,7 @@
             <nav class="main-nav d-none d-md-flex">
                 <a href="/" class="nav-link-item">首页</a>
                 <a href="/articles.html" class="nav-link-item">教程文章</a>
-                <a href="/orders.html" class="nav-link-item active">查询订单</a>
+                <a href="/orders.html" class="nav-link-item" style="color: var(--tb-orange); font-weight: bold;">查询订单</a>
             </nav>
 
             <div class="header-right">
@@ -116,51 +198,63 @@
             <div class="col-lg-9">
                 
                 <div class="query-box">
-                    <h4 class="mb-4 border-bottom pb-2"><i class="fa fa-search"></i> 订单查询</h4>
+                    <div class="d-flex align-items-center mb-4">
+                        <h4 class="mb-0" style="font-weight: bold;"><i class="fa fa-search" style="color: var(--tb-orange);"></i> 订单查询</h4>
+                    </div>
                     
                     <ul class="nav nav-tabs mb-4" id="queryTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="order-tab" data-bs-toggle="tab" data-bs-target="#by-order" type="button">订单号查询</button>
+                            <button class="nav-link active" id="order-tab" data-bs-toggle="tab" data-bs-target="#by-order" type="button">
+                                <i class="fa fa-barcode"></i> 订单号查询
+                            </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#by-contact" type="button">联系方式查询</button>
+                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#by-contact" type="button">
+                                <i class="fa fa-address-card"></i> 联系方式查询
+                            </button>
                         </li>
                     </ul>
 
                     <div class="tab-content" id="queryTabContent">
                         
                         <div class="tab-pane fade show active" id="by-order">
-                            <div class="mb-3">
+                            <div class="mb-3" style="max-width: 500px;">
                                 <label class="form-label">商户订单号 / 交易单号</label>
                                 <input type="text" class="form-control" id="input-order-id" placeholder="请输入订单号 (如: 2023xxxxx)">
+                                <div class="form-text text-muted">支付成功后，系统显示的订单号或支付平台发送的交易单号。</div>
                             </div>
-                            <button class="btn btn-primary w-100" onclick="queryByOrderId()">
-                                <i class="fa fa-search"></i> 立即查询
-                            </button>
+                            <div style="max-width: 500px;">
+                                <button class="btn-tb-submit" onclick="queryByOrderId()">
+                                    <i class="fa fa-search"></i> 立即查询
+                                </button>
+                            </div>
                         </div>
 
                         <div class="tab-pane fade" id="by-contact">
-                            <div class="mb-3">
+                            <div class="mb-3" style="max-width: 500px;">
                                 <label class="form-label">联系方式 (邮箱/QQ)</label>
-                                <input type="text" class="form-control" id="input-contact" placeholder="下单时填写的联系方式">
+                                <input type="text" class="form-control" id="input-contact" placeholder="请输入下单时填写的联系方式">
                             </div>
-                            <div class="mb-3">
+                            <div class="mb-3" style="max-width: 500px;">
                                 <label class="form-label">查单密码</label>
-                                <input type="password" class="form-control" id="input-password" placeholder="下单时设置的查单密码">
+                                <input type="password" class="form-control" id="input-password" placeholder="请输入下单时设置的查单密码">
                             </div>
-                            <button class="btn btn-primary w-100" onclick="queryByContact()">
-                                <i class="fa fa-search"></i> 立即查询
-                            </button>
-                            <div class="text-muted small mt-2">
-                                <i class="fa fa-info-circle"></i> 请输入下单时填写的联系方式和查单密码。
+                            <div style="max-width: 500px;">
+                                <button class="btn-tb-submit" onclick="queryByContact()">
+                                    <i class="fa fa-search"></i> 立即查询
+                                </button>
+                            </div>
+                            <div class="alert alert-secondary mt-3 small" style="max-width: 500px; border:none; background:#f9f9f9;">
+                                <i class="fa fa-info-circle"></i> 如果下单时未设置密码或忘记密码，请使用订单号查询或联系客服。
                             </div>
                         </div>
 
                     </div>
 
                     <div id="result-area" class="result-card">
-                        <h5><i class="fa fa-file-invoice"></i> 查询结果</h5>
-                        <hr>
+                        <h5 style="font-size: 16px; font-weight: bold; border-left: 4px solid var(--tb-orange); padding-left: 10px; margin-bottom: 15px;">
+                            查询结果
+                        </h5>
                         <div id="result-content">
                             </div>
                     </div>
@@ -189,9 +283,9 @@
                         
                         <div class="module-box">
                             <div class="module-title">快捷导航</div>
-                            <div class="list-group list-group-flush">
-                                <a href="/" class="list-group-item list-group-item-action">返回首页</a>
-                                <a href="/articles.html" class="list-group-item list-group-item-action">教程文章</a>
+                            <div class="list-group list-group-flush small">
+                                <a href="/" class="list-group-item list-group-item-action border-0 px-0"><i class="fa fa-angle-right"></i> 返回首页</a>
+                                <a href="/articles.html" class="list-group-item list-group-item-action border-0 px-0"><i class="fa fa-angle-right"></i> 查看使用教程</a>
                             </div>
                         </div>
 
@@ -257,43 +351,42 @@
         // === 页面初始化逻辑 ===
         document.addEventListener('DOMContentLoaded', function() {
             // 1. 设置年份
-            document.getElementById('year').textContent = new Date().getFullYear();
+            const yearEl = document.getElementById('year');
+            if(yearEl) yearEl.textContent = new Date().getFullYear();
             
-            // 2. 加载侧边栏和配置信息 (公告、联系方式、Logo)
+            // 2. 加载配置 (Logo, 站点名, 公告, 客服)
             fetch('/api/shop/config')
                 .then(res => res.json())
                 .then(config => {
-                    // 设置站点名称和Logo
                     if (config.site_name) {
-                        document.getElementById('footer-name').textContent = config.site_name;
-                        document.getElementById('mobile-header-site-name').textContent = config.site_name;
-                        document.getElementById('header-site-name').textContent = config.site_name;
-                        
-                        // 显示名称
+                        const els = ['footer-name', 'mobile-header-site-name', 'header-site-name'];
+                        els.forEach(id => {
+                            const el = document.getElementById(id);
+                            if(el) el.textContent = config.site_name;
+                        });
                         document.getElementById('site-name-wrap').classList.remove('d-none');
                         document.getElementById('mobile-site-name-wrap').classList.remove('d-none');
                     }
-
-                    // 公告
+                    
+                    // 填充公告和客服
                     const noticeContent = config.announce || '暂无公告';
+                    const contactContent = config.contact_info || '请查看首页底部或公告';
+                    
                     const noticeBox = document.getElementById('notice-box');
                     if(noticeBox) noticeBox.innerHTML = noticeContent;
 
-                    // 联系方式 (假设 config 中某个 key 存了联系方式，或者使用 announce)
-                    // 这里简单复用 announce 或者显示提示
-                    const contactContent = config.contact_info || '请查看首页底部或公告';
                     const contactBox = document.getElementById('contact-box');
                     if(contactBox) contactBox.innerHTML = contactContent;
+                    
                     const mobContact = document.getElementById('mobile-contact-content');
                     if(mobContact) mobContact.innerHTML = contactContent;
-
                 })
                 .catch(err => console.error('Config Load Error:', err));
             
-            // 3. 初始化侧边栏跟随 (仅PC)
+            // 3. 侧边栏跟随 (仅PC)
             if (window.innerWidth >= 992) {
                 new StickySidebar('#sidebar-wrapper', {
-                    topSpacing: 20,
+                    topSpacing: 80, // 考虑header高度
                     bottomSpacing: 20,
                     containerSelector: '.row',
                     innerWrapperSelector: '.sidebar-inner'
@@ -301,17 +394,18 @@
             }
         });
 
-        // === 查询功能逻辑 ===
+        // === 查询核心逻辑 ===
 
         function showResult(html) {
             const area = document.getElementById('result-area');
             const content = document.getElementById('result-content');
             content.innerHTML = html;
             area.style.display = 'block';
+            area.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function showError(msg) {
-            showResult(`<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> ${msg}</div>`);
+            showResult(`<div class="alert alert-danger border-0" style="background:#fff5f5; color:#e33;"><i class="fa fa-exclamation-circle"></i> ${msg}</div>`);
         }
 
         // 1. 订单号查询
@@ -322,25 +416,23 @@
                 return;
             }
 
-            const btn = event.target;
+            const btn = event.target.closest('button'); // 兼容点到icon的情况
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 查询中...';
             btn.disabled = true;
 
-            // 调用 API
             fetch(`/api/shop/order/status?order_id=${orderId}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.status >= 1) {
-                        // 已支付
-                        renderSuccess(orderId, data.cards);
+                        // 已支付/已发货
+                        renderSuccess(orderId, data.cards, data);
                     } else {
-                        // 未支付或不存在
                         showError('订单未支付、不存在，或尚未发货。请稍后再试。');
                     }
                 })
                 .catch(err => {
-                    showError('查询出错，请检查网络');
+                    showError('网络请求出错，请检查网络连接');
                 })
                 .finally(() => {
                     btn.innerHTML = originalText;
@@ -354,57 +446,36 @@
             const pass = document.getElementById('input-password').value.trim();
             
             if (!contact || !pass) {
-                alert('请填写完整信息');
+                alert('请填写联系方式和查单密码');
                 return;
             }
 
-            const btn = event.target;
+            const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 查询中...';
             btn.disabled = true;
 
-            // 注意：目前的 _worker.js 没有直接提供 "联系方式+密码" 的列表查询接口。
-            // 下面的代码尝试调用标准 API 路径，如果您更新了 worker 后端以支持此路由，它将工作。
-            // 否则它可能会报 404。
             fetch('/api/shop/orders/query', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ contact: contact, query_password: pass })
             })
             .then(res => {
-                if(!res.ok) throw new Error('查询接口未响应 (可能后端未支持)');
+                if(!res.ok) throw new Error('API Error');
                 return res.json();
             })
             .then(data => {
                 if (data.error) {
                     showError(data.error);
                 } else if (Array.isArray(data) && data.length > 0) {
-                    // 渲染订单列表
-                    let html = '';
-                    data.forEach(order => {
-                        html += `
-                            <div class="card mb-3">
-                                <div class="card-header d-flex justify-content-between">
-                                    <span>${order.created_at_str || '未知时间'}</span>
-                                    <span class="badge ${order.status>=1?'bg-success':'bg-warning'}">${order.status>=1?'已完成':'待支付'}</span>
-                                </div>
-                                <div class="card-body">
-                                    <h6 class="card-title">${order.product_name} (${order.variant_name})</h6>
-                                    <p class="card-text">订单号: <small>${order.id}</small></p>
-                                    ${order.status >= 1 ? renderCardsHtml(JSON.parse(order.cards_sent||'[]')) : ''}
-                                </div>
-                            </div>
-                        `;
-                    });
-                    showResult(html);
+                    renderOrderList(data);
                 } else {
-                    showError('未找到相关订单');
+                    showError('未找到匹配的订单记录');
                 }
             })
             .catch(err => {
                 console.error(err);
-                // 降级提示
-                showError('查询失败或系统暂不支持此查询方式，请尝试使用订单号查询。');
+                showError('查询失败，系统可能暂不支持此查询方式，请尝试使用订单号查询。');
             })
             .finally(() => {
                 btn.innerHTML = originalText;
@@ -412,38 +483,91 @@
             });
         }
 
-        // 辅助渲染函数：渲染卡密列表
-        function renderSuccess(orderId, cards) {
-            let html = `<div class="alert alert-success">
-                            <strong>查询成功！</strong><br>
-                            订单号：${orderId}<br>
-                            状态：<span class="badge bg-success">已发货</span>
-                        </div>`;
+        // 渲染单个订单详情 (订单号查询成功)
+        function renderSuccess(orderId, cards, data) {
+            let html = `
+                <div class="alert alert-success" style="background:#f6ffed; border-color:#b7eb8f; color:#389e0d;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><strong><i class="fa fa-check-circle"></i> 查询成功</strong></span>
+                        <span class="badge bg-success">已发货</span>
+                    </div>
+                    <div class="mt-2 small">
+                        订单号：${orderId}<br>
+                        商品：${data.product_name || '未知商品'}
+                    </div>
+                </div>`;
             
             html += renderCardsHtml(cards);
             showResult(html);
         }
 
+        // 渲染订单列表 (联系方式查询成功)
+        function renderOrderList(orders) {
+            let html = `<div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>共找到 ${orders.length} 条记录</span>
+                        </div>`;
+            
+            orders.forEach(order => {
+                const isPaid = order.status >= 1;
+                const statusBadge = isPaid 
+                    ? '<span class="badge bg-success">已完成</span>' 
+                    : '<span class="badge bg-warning text-dark">待支付</span>';
+                
+                // 尝试解析卡密
+                let cardsHtml = '';
+                if(isPaid && order.cards_sent) {
+                    try {
+                        const cards = JSON.parse(order.cards_sent);
+                        cardsHtml = renderCardsHtml(cards);
+                    } catch(e) {}
+                }
+
+                html += `
+                    <div class="card mb-3 border-0 shadow-sm" style="background:#fff;">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center border-bottom">
+                            <small class="text-muted">${order.created_at_str || '时间未知'}</small>
+                            ${statusBadge}
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title" style="font-weight:bold;">${order.product_name} <small class="text-muted">(${order.variant_name})</small></h6>
+                            <p class="card-text small text-muted mb-2">订单号: ${order.id}</p>
+                            ${cardsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+            showResult(html);
+        }
+
+        // 渲染卡密列表 HTML
         function renderCardsHtml(cards) {
             if (!cards || cards.length === 0) return '';
-            let html = '<h6>发货内容：</h6>';
+            let html = '<div class="mt-3"><h6 style="font-size:14px; font-weight:bold; color:#333;">发货内容：</h6>';
             cards.forEach(card => {
                 html += `
                     <div class="card-item">
                         <span class="card-content">${escapeHtml(card)}</span>
-                        <button class="btn btn-sm btn-outline-secondary copy-btn" onclick="copyText(this)">复制</button>
+                        <button class="btn btn-sm copy-btn" onclick="copyText(this)">复制</button>
                     </div>
                 `;
             });
+            html += '</div>';
             return html;
         }
 
+        // 复制功能
         function copyText(btn) {
             const content = btn.previousElementSibling.textContent;
             navigator.clipboard.writeText(content).then(() => {
                 const original = btn.textContent;
                 btn.textContent = '已复制';
-                setTimeout(() => btn.textContent = original, 2000);
+                btn.style.color = 'var(--tb-orange)';
+                btn.style.borderColor = 'var(--tb-orange)';
+                setTimeout(() => {
+                    btn.textContent = original;
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }, 2000);
             });
         }
 
