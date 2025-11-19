@@ -814,8 +814,8 @@ a:hover { color: var(--tb-orange); }
     right: 40px;        /* PC端默认距离右侧 40px */
     width: 45px;
     height: 45px;
-    background-color: rgba(0, 0, 0, 0.6); /* 半透明黑色背景 */
-    color: #fff;
+    background-color: rgb(86 84 84 / 44%); /* 半透明黑色背景 */
+    color: #f9f9f9;;
     border-radius: 50%; /* 圆形 */
     text-align: center;
     line-height: 45px;
@@ -849,15 +849,15 @@ a:hover { color: var(--tb-orange); }
         font-size: 16px;
         right: 15px;       /* 移动端靠右 15px */
         bottom: 70px;      /* [关键] 避开底部导航栏(50px) + 20px间距 */
-        background-color: rgba(255, 255, 255, 0.95); /* 移动端建议用白色背景 */
-        color: #666;
+        background-color: rgb(86 84 84 / 44%); /* 移动端建议用白色背景 */
+        color: #f9f9f9;
         border: 1px solid #eee;
     }
     
     .back-to-top-btn:hover {
-        background-color: #fff;
-        transform: none;   /* 移动端移除位移效果 */
+        background-color:  #ff570099;
+        transform: none;     /*移动端移除位移效果 */
         color: var(--tb-orange);
-        border-color: var(--tb-orange);
+        /*border-color: var(--tb-orange);*/
     }
 }
