@@ -810,7 +810,7 @@ a:hover { color: var(--tb-orange); }
 
 .back-to-top-btn {
     position: fixed;
-    bottom: 40px;       /* PC端默认距离底部 40px */
+    bottom: 120px;       /* PC端默认距离底部 40px */
     right: 40px;        /* PC端默认距离右侧 40px */
     width: 45px;
     height: 45px;
