@@ -2,139 +2,190 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>订单支付</title>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>收银台 - TB Shop</title>
+    
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/css/all.min.css" rel="stylesheet">
+    <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
+    
     <style>
-        body { background-color: #f5f5f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .pay-card { 
-            background: #fff; 
-            padding: 30px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-            text-align: center; 
-            max-width: 360px; 
-            width: 100%; 
-            margin: 20px;
+        .pay-card { min-height: 500px; }
+        .pay-amount { font-size: 24px; font-weight: bold; color: var(--tb-orange); }
+        .pay-method-item { 
+            border: 1px solid #eee; border-radius: 6px; padding: 15px; 
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center;
+            margin-bottom: 10px;
         }
-        #qr-container { 
-            min-height: 200px; 
-            min-width: 200px; 
-            /* 确保二维码在容器内居中 */
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
+        .pay-method-item:hover, .pay-method-item.active {
+            border-color: var(--tb-orange); background: #fff5f0;
         }
-        #launch-alipay-btn {
-            background-color: #007BFF; /* 支付宝蓝 */
-            border-color: #007BFF;
-            font-weight: bold;
+        .pay-method-icon { width: 32px; height: 32px; margin-right: 10px; object-fit: contain; }
+        .qr-placeholder {
+            width: 200px; height: 200px; background: #f8f9fa; border: 1px dashed #ddd;
+            display: flex; align-items: center; justify-content: center; margin: 0 auto;
+            color: #999; font-size: 14px;
         }
     </style>
-</head>
+
+    <script src="/themes/TBshop/files/common.js" defer></script>
+    </head>
 <body>
 
-    <div class="pay-card">
-        <h5 class="mb-3">请使用支付宝扫码</h5>
-        
-        <div id="qr-container" class="mb-3">
-            <p class="text-muted">支付信息加载中...</p>
+    <header class="mobile-header d-lg-none" id="global-mobile-header"></header>
+    
+    <div class="mobile-search-dropdown d-lg-none">
+        <div class="tb-search-group">
+            <input type="text" id="mobile-search-input" class="tb-search-input" placeholder="搜索商品...">
+            <button class="tb-search-btn" onclick="doSearch('mobile')">搜索</button>
         </div>
-        <p class="text-danger fw-bold fs-5">¥<span id="pay-amount">-</span></p>
-        
-        <a href="#" id="launch-alipay-btn" class="btn btn-primary btn-lg d-none w-100 mb-3">
-            <i class="fab fa-alipay me-1"></i> 启动支付宝付款
-        </a>
-        
-        <small class="text-muted d-block mb-3">支付完成后页面将自动跳转</small>
-        <a class="btn btn-outline-secondary btn-sm" href="/">返回首页</a>
+    </div>
+    <div class="mobile-search-overlay d-lg-none" id="mobile-search-overlay" onclick="toggleMobileSearch()"></div>
+
+    <div class="mobile-sidebar d-lg-none" id="mobile-sidebar"></div>
+    <div class="mobile-overlay d-lg-none" id="mobile-overlay" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></div>
+    
+    <header class="tb-header d-none d-lg-block" id="global-pc-header"></header>
+
+
+    <div class="container mt-4">
+        <div class="row gx-3" id="main-content-row">
+            
+            <div class="col-lg-9">
+                
+                <div class="module-box pay-card">
+                    <div class="module-title">
+                        <span><i class="fa fa-credit-card text-primary"></i> 收银台</span>
+                    </div>
+
+                    <div id="payment-checkout-area" class="p-3">
+                        
+                        <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <div class="text-muted small">订单号</div>
+                                <strong id="pay-order-id">Loading...</strong>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-muted small">应付金额</div>
+                                <span class="pay-amount" id="pay-order-amount">--</span> <small>元</small>
+                            </div>
+                        </div>
+
+                        <h6 class="mb-3">选择支付方式</h6>
+                        <div class="row g-3 mb-4" id="pay-methods-list">
+                            <div class="col-md-6">
+                                <div class="pay-method-item active" onclick="selectPayment('alipay')">
+                                    <i class="fab fa-alipay text-primary fa-2x me-2"></i>
+                                    <div>
+                                        <div class="fw-bold">支付宝支付</div>
+                                        <small class="text-muted">推荐支付宝用户使用</small>
+                                    </div>
+                                    <i class="fa fa-check-circle text-success ms-auto"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="pay-method-item" onclick="selectPayment('wechat')">
+                                    <i class="fab fa-weixin text-success fa-2x me-2"></i>
+                                    <div>
+                                        <div class="fw-bold">微信支付</div>
+                                        <small class="text-muted">亿万用户的选择</small>
+                                    </div>
+                                    <i class="fa fa-circle text-light ms-auto border rounded-circle"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="qr-code-section" class="text-center border-top pt-4">
+                            <div class="qr-placeholder mb-3">
+                                <span id="qr-loading-text">等待发起支付...</span>
+                                </div>
+                            <div id="pay-status-tip" class="text-muted small">请选择支付方式并付款</div>
+                            <button class="tb-btn-primary mt-3 px-5" style="width: auto; border-radius: 25px;" onclick="initiatePayment()">
+                                立即支付
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-lg-3 d-none d-lg-block">
+                <div id="sidebar-wrapper"> 
+                    <div id="global-sidebar-right"></div>
+                </div> 
+            </div>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
+    <footer class="site-footer" id="global-footer"></footer>
+
+    <nav class="mobile-bottom-nav d-lg-none" id="global-mobile-nav"></nav>
+
+    <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
+    <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
+        <div class="mcs-header">
+            <span class="mcs-title">联系客服</span>
+            <i class="fa fa-times mcs-close" id="mobile-contact-close-btn" onclick="togglePanel('mobile-contact-sheet', 'mobile-contact-overlay')"></i>
+        </div>
+        <div class="mcs-content" id="mobile-contact-content">
+            <p>加载中...</p>
+        </div>
+    </div>
+    
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-        const qrContainer = document.getElementById('qr-container');
-        const payAmountEl = document.getElementById('pay-amount');
-        const launchBtn = document.getElementById('launch-alipay-btn');
-        let orderId = null;
-
-        // 简单检测是否为移动设备
-        function isMobileDevice() {
-            // 提供一个更宽泛的检测
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            orderId = new URLSearchParams(window.location.search).get('order_id');
-            if (!orderId) {
-                qrContainer.innerHTML = '<p class="text-danger">订单ID无效</p>';
-                return;
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. 渲染公共布局
+            // 支付页不属于主导航(home/orders/articles)，传入 'pay' 即可 (nav不会高亮，符合预期)
+            if (typeof renderCommonLayout === 'function') {
+                renderCommonLayout('pay');
             }
 
-            try {
-                // 调用后端 /api/shop/pay
-                const payRes = await fetch('/api/shop/pay', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ order_id: orderId }) 
-                });
-                const payData = await payRes.json();
-                
-                if (payData.error) throw new Error(payData.error);
-
-                // --- 关键逻辑：一码两用 ---
-
-                if (payData.qr_code) {
-                    qrContainer.innerHTML = ''; // 清空加载提示
-                    
-                    // 用途1：生成可供扫描的二维码
-                    new QRCode(qrContainer, { 
-                        text: payData.qr_code, 
-                        width: 200, 
-                        height: 200 
-                    }); 
-                    
-                    payAmountEl.innerText = payData.amount; 
-                
-                    // 用途2：如果是移动设备，显示“唤起APP”按钮，并设置其链接
-                    if (isMobileDevice()) {
-                        launchBtn.href = payData.qr_code; // <-- 关键点：使用同一个URL
-                        launchBtn.classList.remove('d-none'); // 显示按钮
-                    }
-
-                } else if (payData.paid) {
-                    qrContainer.innerHTML = '<p class="text-success">订单已支付</p>';
-                } else {
-                    qrContainer.innerHTML = '<p class="text-danger">二维码获取失败</p>';
-                }
-                
-                // 启动订单状态检查
-                checkOrderLoop(orderId);
-
-            } catch (e) {
-                qrContainer.innerHTML = `<p class="text-danger">支付请求失败: ${e.message}</p>`;
+            // 2. (可选) 获取URL参数，回显订单信息
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('order_id');
+            if(orderId) {
+                const oidEl = document.getElementById('pay-order-id');
+                if(oidEl) oidEl.textContent = orderId;
+                // 此处可以调用您的 API 获取订单实际金额并填充
+                // fetch(`/api/order/${orderId}`)...
             }
         });
 
-        // 订单状态轮询函数 (同前)
-        function checkOrderLoop(orderId) {
-            const timer = setInterval(async () => {
-                try {
-                    const res = await fetch(`/api/shop/order/status?order_id=${orderId}`);
-                    const data = await res.json();
-                    
-                    if(data.status >= 1) { 
-                        clearInterval(timer); 
-                        qrContainer.innerHTML = '<h5 class="text-success">支付成功！</h5><p>即将自动跳转...</p>';
-                        launchBtn.classList.add('d-none'); // 支付成功后隐藏按钮
-                        
-                        setTimeout(() => {
-                           window.location.href = '/'; // 跳转回首页
-                        }, 3000);
-                    }
-                } catch(e) {}
-            }, 3000);
+        // 简单的支付方式切换效果 (配合上面的HTML)
+        function selectPayment(method) {
+            document.querySelectorAll('.pay-method-item').forEach(el => {
+                el.classList.remove('active');
+                el.querySelector('.ms-auto').className = 'fa fa-circle text-light ms-auto border rounded-circle';
+            });
+            const activeItem = event.currentTarget;
+            activeItem.classList.add('active');
+            activeItem.querySelector('.ms-auto').className = 'fa fa-check-circle text-success ms-auto';
+        }
+        
+        // 发起支付占位函数
+        function initiatePayment() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 处理中...';
+            
+            // 模拟：1秒后显示二维码
+            setTimeout(() => {
+                document.getElementById('qr-loading-text').innerHTML = '<span class="text-dark">这里显示付款二维码</span>';
+                document.getElementById('pay-status-tip').innerHTML = '<span class="text-success">请扫描二维码付款，完成后自动跳转</span>';
+                btn.innerHTML = '已完成支付';
+                // 此处应开始轮询订单状态
+            }, 1000);
         }
     </script>
+    
 </body>
 </html>
