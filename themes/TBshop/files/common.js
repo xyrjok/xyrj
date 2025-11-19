@@ -146,13 +146,13 @@ const TB_LAYOUT = {
                     <div class="module-title">销量排行</div>
                     <div id="top-sales-list"></div>
                 </div>
+                <div class="module-box d-none" id="article-cat-box-container">
+                     <div class="module-title">教程分类</div>
+                     <div class="art-cat-list" id="article-cat-list"></div>
+                </div>
                 <div class="module-box d-none" id="tag-cloud-box-container">
                      <div class="module-title">热门标签</div>
                      <div class="tag-cloud" id="tag-cloud-list"></div>
-                </div>
-                 <div class="module-box d-none" id="article-cat-box-container">
-                     <div class="module-title">教程分类</div>
-                     <div class="art-cat-list" id="article-cat-list"></div>
                 </div>
             </div>
         </div>
