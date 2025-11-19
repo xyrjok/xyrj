@@ -10,6 +10,19 @@ let selectedCardNote = null;
 let buyMode = null; 
 let currentAction = 'buy'; 
 
+// ============================================================
+// 【修复】补充缺失的全局变量定义
+// ============================================================
+const specListMaxRows = 20;       // 分页阈值
+let specPages = [];               // 移动端规格分页数据
+let pcSpecPages = [];             // PC端规格分页数据
+let specCurrentPage = 1;          // 移动端当前页码
+let pcSpecCurrentPage = 1;        // PC端当前页码
+let hasCalculatedPages = false;   // 移动端分页计算标记
+let pcHasCalculatedPages = false; // PC端分页计算标记
+let skuSheet = null;              // SKU弹窗实例
+// ============================================================
+
 // 页面加载入口
 async function init() {
     if (typeof loadCartBadge === 'function') loadCartBadge();
