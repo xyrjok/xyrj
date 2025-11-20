@@ -9,7 +9,7 @@ let currentVariant = null;   // 当前选中的 SKU
 let quantity = 1;            // 购买数量
 let buyMethod = 'random';    // 购买方式
 let selfSelectPrice = 0.00;  // 自选加价
-let paymentMethod = 'alipay'; // [新增] 默认支付方式
+let paymentMethod = 'alipay'; // 默认支付方式
 
 // 页面启动入口
 async function initProductPage() {
@@ -56,6 +56,10 @@ function renderProductDetail(p) {
     const mainVariant = p.variants && p.variants.length > 0 ? p.variants[0] : {};
     currentVariant = mainVariant;
 
+    // [新增3] 检查默认规格是否有批发价
+    const showWholesale = mainVariant.wholesale_price && mainVariant.wholesale_price > 0;
+    const wholesaleDisplay = showWholesale ? 'block' : 'none';
+
     // 构建 HTML
     const html = `
         <div class="module-box product-showcase">
@@ -70,17 +74,30 @@ function renderProductDetail(p) {
 
                 <div class="col-md-7">
                     <div class="p-3">
-                        <h4 class="fw-bold mb-2" style="line-height:1.4;">${p.name}</h4>
+                        <h5 class="fw-bold mb-2" style="line-height:1.4;">${p.name}</h5>
                         
+                        <div class="tb-tags-row mb-2" id="p-tags-container">
+                            ${renderProductTags(p.tags)}
+                        </div>
+
                         <div class="price-bar bg-light p-3 rounded mb-3 mt-3">
                             <div class="d-flex align-items-end text-danger">
                                 <span class="small me-1">¥</span>
                                 <span class="fs-2 fw-bold" id="p-display-price">${mainVariant.price}</span>
                             </div>
-                            <div class="text-muted small mt-1">
-                                <span>库存: <span id="p-stock">${mainVariant.stock}</span></span>
-                                <span class="mx-2">|</span>
-                                <span>销量: ${p.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
+                            
+                            <div class="text-muted small mt-1 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span>库存: <span id="p-stock">${mainVariant.stock}</span></span>
+                                    <span class="mx-2">|</span>
+                                    <span>销量: ${p.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
+                                </div>
+                                
+                                <div id="p-wholesale-wrap" style="display: ${wholesaleDisplay};">
+                                    <span class="text-danger border border-danger px-1 rounded bg-white" style="font-size:11px; cursor:help;" title="大批量采购优惠">
+                                        批发价: ¥<span id="p-wholesale-val">${mainVariant.wholesale_price || 0}</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
@@ -118,20 +135,18 @@ function renderProductDetail(p) {
                         <div class="mb-4 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">支付方式：</span>
                             <div class="d-flex align-items-center flex-wrap" id="payment-method-list">
-                                
                                 <div class="payment-option active" onclick="selectPayment('alipay', this)">
-                                    <i class="fab fa-alipay" style="color:#1678ff;"></i> <div class="payment-check-mark"><i class="fa fa-check"></i></div>
+                                    <i class="fab fa-alipay" style="color:#1678ff;"></i>
+                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
-
                                 <div class="payment-option" onclick="selectPayment('wxpay', this)">
-                                    <i class="fab fa-weixin" style="color:#09bb07;"></i> <div class="payment-check-mark"><i class="fa fa-check"></i></div>
+                                    <i class="fab fa-weixin" style="color:#09bb07;"></i>
+                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
-                                
                                 <div class="payment-option" onclick="selectPayment('usdt', this)">
                                     <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
                                     <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
-
                             </div>
                         </div>
 
@@ -171,6 +186,27 @@ function renderProductDetail(p) {
     }, 100);
 }
 
+/**
+ * 辅助函数：渲染商品标签
+ */
+function renderProductTags(tags) {
+    if (!tags) return '';
+    let tagList = [];
+    
+    // 支持字符串 "热销,推荐" 或 数组 ["热销", "推荐"]
+    if (typeof tags === 'string') {
+        tagList = tags.split(',').filter(t => t.trim() !== '');
+    } else if (Array.isArray(tags)) {
+        tagList = tags;
+    }
+
+    if (tagList.length === 0) return '';
+
+    return tagList.map(t => 
+        `<span class="dynamic-tag border border-danger text-danger" style="margin-right:4px;">${t}</span>`
+    ).join('');
+}
+
 function renderSkuButtons(variants) {
     if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
     return variants.map((v, index) => {
@@ -193,22 +229,13 @@ async function loadSidebarRecommendations() {
 // === 交互逻辑
 // =============================================
 
-/**
- * [新增] 切换支付方式
- */
 function selectPayment(type, el) {
     paymentMethod = type;
-    
-    // 移除所有 active
     const list = document.getElementById('payment-method-list');
     list.querySelectorAll('.payment-option').forEach(opt => {
         opt.classList.remove('active');
     });
-    
-    // 给当前点击的添加 active
     el.classList.add('active');
-    
-    console.log('当前支付方式:', paymentMethod);
 }
 
 function selectBuyMethod(type, btn) {
@@ -235,6 +262,18 @@ function selectSku(index, btn) {
     animateValue('p-display-price', variant.price);
     document.getElementById('p-stock').innerText = variant.stock;
     if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
+
+    // [新增3] 切换规格时更新批发价显示
+    const wWrap = document.getElementById('p-wholesale-wrap');
+    const wVal = document.getElementById('p-wholesale-val');
+    if (wWrap && wVal) {
+        if (variant.wholesale_price && variant.wholesale_price > 0) {
+            wVal.innerText = variant.wholesale_price;
+            wWrap.style.display = 'block';
+        } else {
+            wWrap.style.display = 'none';
+        }
+    }
 }
 
 function changeQty(delta) {
