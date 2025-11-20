@@ -53,7 +53,13 @@ function renderProductDetail(p) {
     
     if (!container) return;
 
-    const mainVariant = p.variants && p.variants.length > 0 ? p.variants[0] : {};
+    // [修改] 优先选中第一个有库存的 SKU
+    let selectedIdx = 0;
+    if (p.variants && p.variants.length > 0) {
+        const firstInStock = p.variants.findIndex(v => v.stock > 0);
+        if (firstInStock !== -1) selectedIdx = firstInStock;
+    }
+    const mainVariant = p.variants && p.variants.length > 0 ? p.variants[selectedIdx] : {};
     currentVariant = mainVariant;
 
     // 检查默认规格是否有批发价
@@ -104,7 +110,7 @@ function renderProductDetail(p) {
                         <div class="sku-section mb-4">
                             <div class="mb-2 text-secondary small">选择规格：</div>
                             <div class="sku-list d-flex flex-wrap" id="sku-btn-list">
-                                ${renderSkuButtons(p.variants)}
+                                ${renderSkuButtons(p.variants, selectedIdx)}
                             </div>
                             <div id="spec-pagination-area" class="spec-pagination-container"></div>
                         </div>
@@ -187,14 +193,47 @@ function renderProductDetail(p) {
 }
 
 /**
- * [重点修改] 渲染商品标签 (支持自定义颜色解析)
- * 格式：b1#xxxxxx(边框) b2#xxxxxx(背景) 标签文字#xxxxxx(字色)
+ * [修改] 生成 SKU 按钮 HTML (增加缺货样式和角标)
+ */
+function renderSkuButtons(variants, selectedIdx = 0) {
+    if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
+    
+    return variants.map((v, index) => {
+        const isOOS = v.stock <= 0;        // 是否缺货
+        const isSelected = index === selectedIdx; // 是否选中
+
+        // 基础样式
+        let btnClass = isSelected ? 'btn-danger' : 'btn-outline-secondary';
+        
+        // 如果缺货，追加 .no-stock 类
+        if (isOOS) btnClass += ' no-stock';
+        
+        const name = v.name || v.specs || `规格${index+1}`;
+        
+        // 缺货角标 HTML
+        const badgeHtml = isOOS ? '<span class="sku-oos-badge">缺货</span>' : '';
+        
+        // 如果缺货，禁用点击 (disabled 属性)
+        // 注意：onclick 里的逻辑也可以加 isOOS 判断，双重保险
+        return `
+            <button class="btn btn-sm ${btnClass} me-2 mb-2 sku-btn" 
+                data-idx="${index}" 
+                onclick="${isOOS ? '' : `selectSku(${index}, this)`}" 
+                ${isOOS ? 'disabled' : ''}>
+                ${name}
+                ${badgeHtml}
+            </button>
+        `;
+    }).join('');
+}
+
+/**
+ * 渲染商品标签 (支持 b1# b2# 自定义颜色)
  */
 function renderProductTags(tags) {
     if (!tags) return '';
     let tagList = [];
     
-    // 转数组
     if (typeof tags === 'string') {
         tagList = tags.split(',').filter(t => t.trim() !== '');
     } else if (Array.isArray(tags)) {
@@ -204,41 +243,34 @@ function renderProductTags(tags) {
     if (tagList.length === 0) return '';
 
     return tagList.map(tagStr => {
-        // 1. 设置默认样式
-        let borderColor = '#dc3545'; // 默认红边框
-        let bgColor = '#dc3545';     // 默认红背景
-        let textColor = '#ffffff';   // 默认白字
+        let borderColor = '#dc3545'; 
+        let bgColor = '#dc3545';     
+        let textColor = '#ffffff';   
         let text = tagStr.trim();
 
-        // 2. 解析边框色 b1#xxxxxx
         const b1Match = text.match(/b1#([0-9a-fA-F]{3,6})/);
         if (b1Match) {
             borderColor = '#' + b1Match[1];
             text = text.replace(b1Match[0], '').trim();
         }
 
-        // 3. 解析背景色 b2#xxxxxx
         const b2Match = text.match(/b2#([0-9a-fA-F]{3,6})/);
         if (b2Match) {
             bgColor = '#' + b2Match[1];
             text = text.replace(b2Match[0], '').trim();
         }
 
-        // 4. 解析文字颜色 (结尾的 #xxxxxx)
-        // 例如 "自动发货#ffff00" -> 提取 #ffff00 并移除
         const colorMatch = text.match(/#([0-9a-fA-F]{3,6})$/);
         if (colorMatch) {
             textColor = '#' + colorMatch[1];
-            // 移除结尾的颜色代码
             text = text.substring(0, colorMatch.index).trim();
         }
         
-        // 如果解析后没文字了，则跳过
         if (!text) return '';
 
-        // 5. 生成 HTML (使用 inline-style 覆盖默认 css)
         return `<span class="dynamic-tag" style="
             display: inline-block;
+            margin-right: 6px;
             margin-bottom: 4px;
             padding: 1px 5px; 
             border: 1px solid ${borderColor};
@@ -248,15 +280,6 @@ function renderProductTags(tags) {
             font-size: 11px;
             line-height: normal;
         ">${text}</span>`;
-    }).join('');
-}
-
-function renderSkuButtons(variants) {
-    if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
-    return variants.map((v, index) => {
-        const activeClass = index === 0 ? 'btn-danger' : 'btn-outline-secondary';
-        const name = v.name || v.specs || `规格${index+1}`;
-        return `<button class="btn btn-sm ${activeClass} me-2 mb-2 sku-btn" data-idx="${index}" onclick="selectSku(${index}, this)">${name}</button>`;
     }).join('');
 }
 
@@ -297,6 +320,7 @@ function selectSku(index, btn) {
     document.querySelectorAll('.sku-btn').forEach(b => {
         b.classList.remove('btn-danger');
         b.classList.add('btn-outline-secondary');
+        b.classList.remove('active'); // 确保移除其他选中状态
     });
     btn.classList.remove('btn-outline-secondary');
     btn.classList.add('btn-danger');
@@ -307,7 +331,6 @@ function selectSku(index, btn) {
     document.getElementById('p-stock').innerText = variant.stock;
     if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
 
-    // 切换规格时更新批发价显示
     const wWrap = document.getElementById('p-wholesale-wrap');
     const wVal = document.getElementById('p-wholesale-val');
     if (wWrap && wVal) {
