@@ -56,7 +56,7 @@ function renderProductDetail(p) {
     const mainVariant = p.variants && p.variants.length > 0 ? p.variants[0] : {};
     currentVariant = mainVariant;
 
-    // [新增3] 检查默认规格是否有批发价
+    // 检查默认规格是否有批发价
     const showWholesale = mainVariant.wholesale_price && mainVariant.wholesale_price > 0;
     const wholesaleDisplay = showWholesale ? 'block' : 'none';
 
@@ -187,13 +187,14 @@ function renderProductDetail(p) {
 }
 
 /**
- * 辅助函数：渲染商品标签
+ * [核心修改] 渲染商品标签 - 支持自定义颜色代码
+ * 解析格式: "b1#边框色 b2#背景色 标签#文字色 标签内容"
+ * 默认样式: #dc3545 边框/背景, #ffffff 文字
  */
 function renderProductTags(tags) {
     if (!tags) return '';
     let tagList = [];
     
-    // 支持字符串 "热销,推荐" 或 数组 ["热销", "推荐"]
     if (typeof tags === 'string') {
         tagList = tags.split(',').filter(t => t.trim() !== '');
     } else if (Array.isArray(tags)) {
@@ -202,9 +203,51 @@ function renderProductTags(tags) {
 
     if (tagList.length === 0) return '';
 
-    return tagList.map(t => 
-        `<span class="dynamic-tag border border-danger text-danger" style="margin-right:4px;">${t}</span>`
-    ).join('');
+    return tagList.map(t => {
+        // 默认值
+        let borderColor = '#dc3545';
+        let bgColor = '#dc3545';
+        let textColor = '#ffffff';
+        let content = t;
+
+        // 解析 b1# (边框)
+        const b1Match = content.match(/b1#([0-9a-fA-F]{3,6})/);
+        if (b1Match) {
+            borderColor = '#' + b1Match[1];
+            content = content.replace(b1Match[0], '');
+        }
+
+        // 解析 b2# (背景)
+        const b2Match = content.match(/b2#([0-9a-fA-F]{3,6})/);
+        if (b2Match) {
+            bgColor = '#' + b2Match[1];
+            content = content.replace(b2Match[0], '');
+        }
+
+        // 解析 标签# 或 c# (文字颜色)
+        // 支持 "标签#xxxxxx" 或 "c#xxxxxx"
+        const cMatch = content.match(/(标签|c)#([0-9a-fA-F]{3,6})/);
+        if (cMatch) {
+            textColor = '#' + cMatch[2];
+            content = content.replace(cMatch[0], '');
+        }
+
+        // 清理多余空格
+        content = content.trim();
+        if (!content) return ''; // 如果只剩下颜色代码没有内容，则不显示
+
+        return `<span class="dynamic-tag" style="
+            display: inline-block; 
+            padding: 1px 4px; 
+            border-radius: 3px; 
+            margin-right: 4px; 
+            font-size: 11px;
+            line-height: normal;
+            border: 1px solid ${borderColor}; 
+            background-color: ${bgColor}; 
+            color: ${textColor};
+        ">${content}</span>`;
+    }).join('');
 }
 
 function renderSkuButtons(variants) {
@@ -263,7 +306,7 @@ function selectSku(index, btn) {
     document.getElementById('p-stock').innerText = variant.stock;
     if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
 
-    // [新增3] 切换规格时更新批发价显示
+    // 切换规格时更新批发价显示
     const wWrap = document.getElementById('p-wholesale-wrap');
     const wVal = document.getElementById('p-wholesale-val');
     if (wWrap && wVal) {
