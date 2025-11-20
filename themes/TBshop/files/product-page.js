@@ -1,14 +1,13 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (商品详情页专属逻辑 - 已优化)
+// === (商品详情页专属逻辑 - 深度定制版)
 // =============================================
 
 // 全局变量
 let currentProduct = null;   // 当前商品数据
 let currentVariant = null;   // 当前选中的 SKU
 let quantity = 1;            // 购买数量
-let buyMethod = null;        // [修改] 购买方式: null (未选) | 'random' | 'select'
-let selfSelectPrice = 0.00;  // 自选加价
+let buyMethod = null;        // 购买方式: null (未选) | 'random' | 'select'
 let paymentMethod = 'alipay'; // 默认支付方式
 
 // 页面启动入口
@@ -53,7 +52,7 @@ function renderProductDetail(p) {
     
     if (!container) return;
 
-    // 优先选中第一个有库存的 SKU
+    // 1. 优先选中第一个有库存的 SKU
     let selectedIdx = 0;
     if (p.variants && p.variants.length > 0) {
         const firstInStock = p.variants.findIndex(v => v.stock > 0);
@@ -62,7 +61,7 @@ function renderProductDetail(p) {
     const mainVariant = p.variants && p.variants.length > 0 ? p.variants[selectedIdx] : {};
     currentVariant = mainVariant;
 
-    // 构建 HTML
+    // 2. 构建 HTML 结构
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -84,7 +83,6 @@ function renderProductDetail(p) {
 
                         <div class="price-bar bg-light p-3 rounded mb-3">
                             <div class="d-flex justify-content-between align-items-start">
-                                
                                 <div class="d-flex align-items-baseline text-danger">
                                     <span class="fw-bold me-1" style="font-size: 18px;">¥</span>
                                     <span class="fs-1 fw-bold" id="p-display-price" style="line-height: 1;">${mainVariant.price}</span>
@@ -99,7 +97,7 @@ function renderProductDetail(p) {
                                 </div>
                             </div>
 
-                            <div id="wholesale-info-display" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
+                            <div id="dynamic-info-display" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
                                 </div>
                         </div>
 
@@ -113,18 +111,8 @@ function renderProductDetail(p) {
 
                         <div class="mb-3 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">购买方式：</span>
-                            <div class="d-flex align-items-center flex-wrap">
-                                <button class="btn btn-sm btn-outline-secondary me-2 mb-1 method-btn" 
-                                    id="btn-method-random"
-                                    data-type="random" onclick="selectBuyMethod('random', this)">
-                                    默认随机
-                                </button>
-                                <button class="btn btn-sm btn-outline-secondary mb-1 method-btn" 
-                                    id="btn-method-select"
-                                    data-type="select" onclick="selectBuyMethod('select', this)">
-                                    自选卡密/号码 (加价<span id="self-select-price">${selfSelectPrice.toFixed(2)}</span>元)
-                                </button>
-                            </div>
+                            <div class="d-flex align-items-center flex-wrap" id="buy-method-container">
+                                </div>
                         </div>
 
                         <div class="mb-3 d-flex align-items-center">
@@ -183,6 +171,10 @@ function renderProductDetail(p) {
 
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
     
+    // 3. 初始化购买方式按钮和信息显示
+    updateBuyMethodButtons(); 
+    updateDynamicInfoDisplay();
+
     setTimeout(() => {
          if (typeof initSpecPagination === 'function') {
              initSpecPagination('#sku-btn-list', '.sku-btn', 6);
@@ -191,62 +183,120 @@ function renderProductDetail(p) {
 }
 
 // =============================================
-// === 交互逻辑 (修改部分)
+// === 交互逻辑 (核心修改)
 // =============================================
 
 /**
- * [修改] 切换购买方式 (支持取消选中)
+ * [核心] 根据当前 SKU 更新购买方式按钮
+ * 逻辑：
+ * 1. "默认随机" 永远显示。
+ * 2. "自选" 仅当当前 SKU 的 selection_label 有值时显示。
  */
-function selectBuyMethod(type, btn) {
-    // 如果点击的是已选中的，则取消选中
-    if (buyMethod === type) {
+function updateBuyMethodButtons() {
+    const container = document.getElementById('buy-method-container');
+    if (!container || !currentVariant) return;
+
+    // 准备数据
+    const hasSelection = currentVariant.selection_label && currentVariant.selection_label.trim() !== '';
+    const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
+    const label = currentVariant.selection_label || '自选';
+
+    // 检查当前选中的 buyMethod 是否在当前 SKU 有效
+    // 如果当前选了 'select' 但这个 SKU 不支持自选，重置为 null
+    if (buyMethod === 'select' && !hasSelection) {
         buyMethod = null;
-        btn.classList.remove('btn-danger');
-        btn.classList.add('btn-outline-secondary');
-        // 隐藏批发信息
-        updateWholesaleDisplay();
-        return;
+        updateDynamicInfoDisplay(); // 隐藏信息栏
     }
 
-    // 否则选中新的
-    buyMethod = type;
-    
-    // 重置所有按钮样式
-    document.querySelectorAll('.method-btn').forEach(b => {
-        b.classList.remove('btn-danger');
-        b.classList.add('btn-outline-secondary');
-    });
-    // 高亮当前按钮
-    btn.classList.remove('btn-outline-secondary');
-    btn.classList.add('btn-danger');
+    // 生成 HTML
+    let html = '';
 
-    // 更新批发信息显示
-    updateWholesaleDisplay();
+    // 按钮1：默认随机
+    // 选中状态判断：buyMethod === 'random'
+    const randomClass = buyMethod === 'random' ? 'btn-danger' : 'btn-outline-secondary';
+    html += `
+        <button class="btn btn-sm ${randomClass} me-2 mb-1 method-btn" 
+            data-type="random" onclick="selectBuyMethod('random', this)">
+            默认随机
+        </button>
+    `;
+
+    // 按钮2：自选 (如果有配置)
+    if (hasSelection) {
+        const selectClass = buyMethod === 'select' ? 'btn-danger' : 'btn-outline-secondary';
+        html += `
+            <button class="btn btn-sm ${selectClass} mb-1 method-btn" 
+                data-type="select" onclick="selectBuyMethod('select', this)">
+                ${label} (加价${markup}元)
+            </button>
+        `;
+    }
+
+    container.innerHTML = html;
 }
 
 /**
- * [新增] 更新批发优惠信息的显示状态和内容
+ * [核心] 切换购买方式 (支持取消选中)
  */
-function updateWholesaleDisplay() {
-    const displayDiv = document.getElementById('wholesale-info-display');
+function selectBuyMethod(type, btn) {
+    // 1. 取消选中逻辑：如果点击的是已选中的，则重置
+    if (buyMethod === type) {
+        buyMethod = null;
+        updateBuyMethodButtons(); // 重新渲染按钮样式
+        updateDynamicInfoDisplay(); // 隐藏信息栏
+        return;
+    }
+
+    // 2. 选中新方式
+    buyMethod = type;
+    
+    // 3. 更新 UI
+    updateBuyMethodButtons(); // 更新按钮样式
+    updateDynamicInfoDisplay(); // 更新下方信息栏内容
+}
+
+/**
+ * [核心] 更新价格下方的动态信息栏
+ */
+function updateDynamicInfoDisplay() {
+    const displayDiv = document.getElementById('dynamic-info-display');
     if (!displayDiv) return;
 
-    // 只有选中 "random" 时才显示批发信息
-    if (buyMethod === 'random' && currentVariant) {
-        displayDiv.style.display = 'block';
-        
-        // 检查是否有批发价 (假设 > 0 即为有设置)
-        // 这里假设 wholesale_price 是单一价格，起购量默认为 X (如需精确需后端字段支持)
-        // 如果您的 wholesale_price 字段本身包含文本规则，请直接显示
-        if (currentVariant.wholesale_price && parseFloat(currentVariant.wholesale_price) > 0) {
+    // 如果没有选择购买方式，或者没有当前规格数据，隐藏
+    if (buyMethod === null || !currentVariant) {
+        displayDiv.style.display = 'none';
+        return;
+    }
+
+    displayDiv.style.display = 'block';
+
+    // --- 情况 A: 选中了 "默认随机" -> 显示批发优惠信息 ---
+    if (buyMethod === 'random') {
+        // 检查是否有批发配置 (wholesale_config)
+        // 假设后端传来的是 text 或者 json。这里做简单判断：只要有值且不为空/0
+        const wConfig = currentVariant.wholesale_config;
+        // 这里简化判断：假设 wholesale_config 有内容即代表有优惠
+        // 实际项目中您可能需要解析 JSON 字符串来显示具体 tiered pricing
+        if (wConfig && wConfig.length > 0 && wConfig !== '[]' && wConfig !== '{}') {
             // 有批发价：显示红色优惠文本
-            // 模拟格式：批发价 10个起 XX元/1个 (起购量如果是固定的可以写死，或者从后端获取)
-            const price = currentVariant.wholesale_price;
-            // 注意：如果后端没有 quantity 字段，这里暂时写 "多" 或留空
+            // 如果 wConfig 是详细文本，直接显示；如果是 JSON，需要解析
+            // 这里按需求显示通用格式，或者直接显示 wConfig 如果它是可读文本
+            // 为了符合需求图示，我们尝试构造一个标准显示，或者直接显示后端存的文本
+            
+            let displayText = wConfig; // 如果数据库里存的就是 "10个起0.5元/1个"
+            
+            // 如果数据库存的是 JSON (例如 [{"count":10, "price":0.5}])，则需要解析：
+            // try {
+            //      const rules = JSON.parse(wConfig);
+            //      if(Array.isArray(rules) && rules.length > 0) {
+            //          displayText = `${rules[0].count}个起${rules[0].price}元/1个`;
+            //      }
+            // } catch(e) {}
+
             displayDiv.innerHTML = `
                 <span style="color:#dc3545; font-size:13px; font-weight:500;">
                     <i class="fa fa-tag me-1"></i>
-                    批发价 10个起${price}元/1个
+                    批发优惠: ${displayText}
                 </span>
             `;
         } else {
@@ -257,14 +307,27 @@ function updateWholesaleDisplay() {
                 </span>
             `;
         }
-    } else {
-        // 其他情况隐藏
-        displayDiv.style.display = 'none';
+    } 
+    
+    // --- 情况 B: 选中了 "自选" -> 显示自选标签及价格 ---
+    else if (buyMethod === 'select') {
+        const label = currentVariant.selection_label || '自选';
+        const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
+        
+        // 显示格式： 自选标签文字 (加价x.xx元)
+        displayDiv.innerHTML = `
+            <span style="color:#dc3545; font-size:13px; font-weight:500;">
+                <i class="fa fa-check-circle me-1"></i>
+                ${label} (加价 ${markup}元)
+            </span>
+        `;
     }
 }
 
 function selectSku(index, btn) {
     if (!currentProduct) return;
+    
+    // 切换样式
     document.querySelectorAll('.sku-btn').forEach(b => {
         b.classList.remove('btn-danger');
         b.classList.add('btn-outline-secondary');
@@ -273,17 +336,21 @@ function selectSku(index, btn) {
     btn.classList.remove('btn-outline-secondary');
     btn.classList.add('btn-danger');
 
+    // 更新数据
     const variant = currentProduct.variants[index];
     currentVariant = variant;
+    
+    // 更新基础信息
     animateValue('p-display-price', variant.price);
     document.getElementById('p-stock').innerText = variant.stock;
     if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
 
-    // [修改] 切换规格时，如果当前选中的是“默认随机”，需要实时刷新批发价显示
-    updateWholesaleDisplay();
+    // [核心] 切换规格后，重新计算购买方式按钮和信息栏
+    updateBuyMethodButtons();
+    updateDynamicInfoDisplay();
 }
 
-// --- 以下函数保持不变，为了完整性一并提供 ---
+// --- 辅助函数 ---
 
 function renderSkuButtons(variants, selectedIdx = 0) {
     if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
@@ -376,10 +443,14 @@ function changeQty(delta) {
 function addToCart() {
     if (!currentVariant) return;
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
-    if (buyMethod === null) { alert('请选择购买方式'); return; } // [新增] 校验
+    // 校验：必须选择一种购买方式
+    if (buyMethod === null) { alert('请选择购买方式'); return; }
 
     let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
     const existingItem = cart.find(item => item.variant_id === currentVariant.id);
+    
+    // 这里需要注意：如果购物车区分“自选”和“随机”，数据结构可能需要调整
+    // 目前为了兼容旧逻辑，我们暂时只添加商品，实际项目中建议扩展购物车字段记录 buyMethod
     
     if (existingItem) {
         existingItem.quantity += quantity;
@@ -409,7 +480,7 @@ function addToCart() {
 }
 
 function buyNow() {
-    if (buyMethod === null) { alert('请选择购买方式'); return; } // [新增] 校验
+    if (buyMethod === null) { alert('请选择购买方式'); return; }
     addToCart();
     setTimeout(() => {
         window.location.href = '/cart.html';
