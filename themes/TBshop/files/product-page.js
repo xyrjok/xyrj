@@ -239,7 +239,6 @@ function renderProductTags(tags) {
         // 5. 生成 HTML (使用 inline-style 覆盖默认 css)
         return `<span class="dynamic-tag" style="
             display: inline-block;
-            margin-right: 6px;
             margin-bottom: 4px;
             padding: 1px 5px; 
             border: 1px solid ${borderColor};
