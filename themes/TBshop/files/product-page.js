@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (商品详情页专属逻辑 - 深度定制版)
+// === (商品详情页专属逻辑 - 深度定制版 - 修复Bug)
 // =============================================
 
 // 全局变量
@@ -183,7 +183,7 @@ function renderProductDetail(p) {
 }
 
 // =============================================
-// === 交互逻辑 (核心修改)
+// === 交互逻辑 (修复部分)
 // =============================================
 
 /**
@@ -245,7 +245,7 @@ function selectBuyMethod(type, btn) {
 }
 
 /**
- * [核心] 更新价格下方的动态信息栏 (含批发价解析)
+ * [核心修复] 更新价格下方的动态信息栏 (解决 trim 报错)
  */
 function updateDynamicInfoDisplay() {
     const displayDiv = document.getElementById('dynamic-info-display');
@@ -264,10 +264,16 @@ function updateDynamicInfoDisplay() {
         let parsedText = '';
         let hasPromo = false;
 
-        if (wConfig && wConfig.trim() !== '') {
+        // [修复点]：增加强制类型转换，防止 wConfig 不是字符串导致报错
+        let strConfig = '';
+        if (wConfig !== null && wConfig !== undefined) {
+            strConfig = String(wConfig).trim();
+        }
+
+        if (strConfig !== '' && strConfig !== 'null') {
             // [解析逻辑] 尝试解析 "5=3,10=2" 格式
             // 兼容中文逗号，去除空格
-            const rules = wConfig.replace(/\s+/g, '').split(/[,，]/).filter(r => r !== '');
+            const rules = strConfig.replace(/\s+/g, '').split(/[,，]/).filter(r => r !== '');
             const formattedRules = [];
 
             rules.forEach(rule => {
@@ -278,8 +284,8 @@ function updateDynamicInfoDisplay() {
                     // 格式化为：5个起3元/1个
                     formattedRules.push(`${count}个起${price}元/1个`);
                 } else {
-                    // 如果格式不对，保留原文本
-                    formattedRules.push(rule);
+                    // 如果格式不对，保留原文本，或者可以尝试解析更复杂的格式
+                    if(rule.length > 0) formattedRules.push(rule);
                 }
             });
 
