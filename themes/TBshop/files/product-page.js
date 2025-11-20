@@ -187,66 +187,74 @@ function renderProductDetail(p) {
 }
 
 /**
- * [核心修改] 渲染商品标签 - 支持自定义颜色代码
- * 解析格式: "b1#边框色 b2#背景色 标签#文字色 标签内容"
- * 默认样式: #dc3545 边框/背景, #ffffff 文字
+ * [修改] 渲染商品标签 - 支持颜色自定义
+ * 格式支持: "b1#边框色 b2#背景色 标签名#文字色" (空格或逗号分隔)
+ * 默认: 背景/边框 #dc3545, 文字 #ffffff
  */
 function renderProductTags(tags) {
     if (!tags) return '';
-    let tagList = [];
+    let rawList = [];
     
+    // 1. 将标签字符串按“逗号”或“空格”分割成数组
     if (typeof tags === 'string') {
-        tagList = tags.split(',').filter(t => t.trim() !== '');
+        rawList = tags.split(/[, ]+/).filter(t => t.trim() !== '');
     } else if (Array.isArray(tags)) {
-        tagList = tags;
+        rawList = tags;
     }
 
-    if (tagList.length === 0) return '';
+    if (rawList.length === 0) return '';
 
-    return tagList.map(t => {
-        // 默认值
-        let borderColor = '#dc3545';
-        let bgColor = '#dc3545';
-        let textColor = '#ffffff';
-        let content = t;
+    // 2. 默认样式设置
+    let borderColor = '#dc3545';
+    let bgColor = '#dc3545';
+    let defaultTextColor = '#ffffff';
 
-        // 解析 b1# (边框)
-        const b1Match = content.match(/b1#([0-9a-fA-F]{3,6})/);
-        if (b1Match) {
-            borderColor = '#' + b1Match[1];
-            content = content.replace(b1Match[0], '');
+    let displayList = [];
+
+    // 3. 第一次遍历：提取 b1(边框) 和 b2(背景) 设置
+    rawList.forEach(item => {
+        item = item.trim();
+        if (!item) return;
+
+        if (item.toLowerCase().startsWith('b1#')) {
+            // 提取边框色 (移除 b1)
+            borderColor = item.substring(2); // b1#xxxx -> #xxxx
+        } else if (item.toLowerCase().startsWith('b2#')) {
+            // 提取背景色 (移除 b2)
+            bgColor = item.substring(2); 
+        } else {
+            // 普通标签，稍后处理
+            displayList.push(item);
+        }
+    });
+
+    if (displayList.length === 0) return '';
+
+    // 4. 生成 HTML
+    return displayList.map(tagStr => {
+        let text = tagStr;
+        let textColor = defaultTextColor;
+
+        // 检查是否有文字颜色定义 (例如: 自动发货#ffff00)
+        // 从后往前找 #，确保不破坏标签名中可能存在的其他字符
+        const hashIndex = tagStr.lastIndexOf('#');
+        if (hashIndex > 0) {
+            text = tagStr.substring(0, hashIndex);
+            textColor = tagStr.substring(hashIndex); // 包括 #
         }
 
-        // 解析 b2# (背景)
-        const b2Match = content.match(/b2#([0-9a-fA-F]{3,6})/);
-        if (b2Match) {
-            bgColor = '#' + b2Match[1];
-            content = content.replace(b2Match[0], '');
-        }
-
-        // 解析 标签# 或 c# (文字颜色)
-        // 支持 "标签#xxxxxx" 或 "c#xxxxxx"
-        const cMatch = content.match(/(标签|c)#([0-9a-fA-F]{3,6})/);
-        if (cMatch) {
-            textColor = '#' + cMatch[2];
-            content = content.replace(cMatch[0], '');
-        }
-
-        // 清理多余空格
-        content = content.trim();
-        if (!content) return ''; // 如果只剩下颜色代码没有内容，则不显示
-
+        // 生成带内联样式的标签
         return `<span class="dynamic-tag" style="
-            display: inline-block; 
-            padding: 1px 4px; 
-            border-radius: 3px; 
-            margin-right: 4px; 
-            font-size: 11px;
-            line-height: normal;
-            border: 1px solid ${borderColor}; 
             background-color: ${bgColor}; 
+            border: 1px solid ${borderColor}; 
             color: ${textColor};
-        ">${content}</span>`;
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+            line-height: normal;
+        ">${text}</span>`;
     }).join('');
 }
 
