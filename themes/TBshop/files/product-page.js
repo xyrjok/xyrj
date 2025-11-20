@@ -7,7 +7,7 @@
 let currentProduct = null;   // 当前商品数据
 let currentVariant = null;   // 当前选中的 SKU
 let quantity = 1;            // 购买数量
-let buyMethod = 'random';    // 购买方式
+let buyMethod = null;        // [修改] 购买方式: null (未选) | 'random' | 'select'
 let selfSelectPrice = 0.00;  // 自选加价
 let paymentMethod = 'alipay'; // 默认支付方式
 
@@ -62,10 +62,6 @@ function renderProductDetail(p) {
     const mainVariant = p.variants && p.variants.length > 0 ? p.variants[selectedIdx] : {};
     currentVariant = mainVariant;
 
-    // 检查默认规格是否有批发价
-    const showWholesale = mainVariant.wholesale_price && mainVariant.wholesale_price > 0;
-    const wholesaleDisplay = showWholesale ? 'block' : 'none';
-
     // 构建 HTML
     const html = `
         <div class="module-box product-showcase">
@@ -100,14 +96,11 @@ function renderProductDetail(p) {
                                         <span class="mx-2">|</span>
                                         <span>销量: ${p.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
                                     </div>
-                                    
-                                    <div id="p-wholesale-wrap" style="display: ${wholesaleDisplay};">
-                                        <span class="text-danger border border-danger px-1 rounded bg-white" style="font-size:11px; cursor:help;" title="大批量采购优惠">
-                                            批发价: ¥<span id="p-wholesale-val">${mainVariant.wholesale_price || 0}</span>
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
+
+                            <div id="wholesale-info-display" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
+                                </div>
                         </div>
 
                         <div class="sku-section mb-4">
@@ -121,11 +114,13 @@ function renderProductDetail(p) {
                         <div class="mb-3 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">购买方式：</span>
                             <div class="d-flex align-items-center flex-wrap">
-                                <button class="btn btn-sm btn-danger me-2 mb-1 method-btn" 
+                                <button class="btn btn-sm btn-outline-secondary me-2 mb-1 method-btn" 
+                                    id="btn-method-random"
                                     data-type="random" onclick="selectBuyMethod('random', this)">
                                     默认随机
                                 </button>
                                 <button class="btn btn-sm btn-outline-secondary mb-1 method-btn" 
+                                    id="btn-method-select"
                                     data-type="select" onclick="selectBuyMethod('select', this)">
                                     自选卡密/号码 (加价<span id="self-select-price">${selfSelectPrice.toFixed(2)}</span>元)
                                 </button>
@@ -195,7 +190,101 @@ function renderProductDetail(p) {
     }, 100);
 }
 
-// 生成 SKU 按钮 HTML (含缺货样式)
+// =============================================
+// === 交互逻辑 (修改部分)
+// =============================================
+
+/**
+ * [修改] 切换购买方式 (支持取消选中)
+ */
+function selectBuyMethod(type, btn) {
+    // 如果点击的是已选中的，则取消选中
+    if (buyMethod === type) {
+        buyMethod = null;
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-outline-secondary');
+        // 隐藏批发信息
+        updateWholesaleDisplay();
+        return;
+    }
+
+    // 否则选中新的
+    buyMethod = type;
+    
+    // 重置所有按钮样式
+    document.querySelectorAll('.method-btn').forEach(b => {
+        b.classList.remove('btn-danger');
+        b.classList.add('btn-outline-secondary');
+    });
+    // 高亮当前按钮
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('btn-danger');
+
+    // 更新批发信息显示
+    updateWholesaleDisplay();
+}
+
+/**
+ * [新增] 更新批发优惠信息的显示状态和内容
+ */
+function updateWholesaleDisplay() {
+    const displayDiv = document.getElementById('wholesale-info-display');
+    if (!displayDiv) return;
+
+    // 只有选中 "random" 时才显示批发信息
+    if (buyMethod === 'random' && currentVariant) {
+        displayDiv.style.display = 'block';
+        
+        // 检查是否有批发价 (假设 > 0 即为有设置)
+        // 这里假设 wholesale_price 是单一价格，起购量默认为 X (如需精确需后端字段支持)
+        // 如果您的 wholesale_price 字段本身包含文本规则，请直接显示
+        if (currentVariant.wholesale_price && parseFloat(currentVariant.wholesale_price) > 0) {
+            // 有批发价：显示红色优惠文本
+            // 模拟格式：批发价 10个起 XX元/1个 (起购量如果是固定的可以写死，或者从后端获取)
+            const price = currentVariant.wholesale_price;
+            // 注意：如果后端没有 quantity 字段，这里暂时写 "多" 或留空
+            displayDiv.innerHTML = `
+                <span style="color:#dc3545; font-size:13px; font-weight:500;">
+                    <i class="fa fa-tag me-1"></i>
+                    批发价 10个起${price}元/1个
+                </span>
+            `;
+        } else {
+            // 无批发价：显示暂无优惠
+            displayDiv.innerHTML = `
+                <span style="color:#999; font-size:13px;">
+                    <i class="fa fa-info-circle me-1"></i> 暂无批发优惠
+                </span>
+            `;
+        }
+    } else {
+        // 其他情况隐藏
+        displayDiv.style.display = 'none';
+    }
+}
+
+function selectSku(index, btn) {
+    if (!currentProduct) return;
+    document.querySelectorAll('.sku-btn').forEach(b => {
+        b.classList.remove('btn-danger');
+        b.classList.add('btn-outline-secondary');
+        b.classList.remove('active');
+    });
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('btn-danger');
+
+    const variant = currentProduct.variants[index];
+    currentVariant = variant;
+    animateValue('p-display-price', variant.price);
+    document.getElementById('p-stock').innerText = variant.stock;
+    if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
+
+    // [修改] 切换规格时，如果当前选中的是“默认随机”，需要实时刷新批发价显示
+    updateWholesaleDisplay();
+}
+
+// --- 以下函数保持不变，为了完整性一并提供 ---
+
 function renderSkuButtons(variants, selectedIdx = 0) {
     if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
     
@@ -221,57 +310,37 @@ function renderSkuButtons(variants, selectedIdx = 0) {
     }).join('');
 }
 
-// 渲染商品标签
 function renderProductTags(tags) {
     if (!tags) return '';
     let tagList = [];
-    
     if (typeof tags === 'string') {
         tagList = tags.split(',').filter(t => t.trim() !== '');
     } else if (Array.isArray(tags)) {
         tagList = tags;
     }
-
     if (tagList.length === 0) return '';
-
     return tagList.map(tagStr => {
         let borderColor = '#dc3545'; 
         let bgColor = '#dc3545';     
         let textColor = '#ffffff';   
         let text = tagStr.trim();
-
         const b1Match = text.match(/b1#([0-9a-fA-F]{3,6})/);
         if (b1Match) {
             borderColor = '#' + b1Match[1];
             text = text.replace(b1Match[0], '').trim();
         }
-
         const b2Match = text.match(/b2#([0-9a-fA-F]{3,6})/);
         if (b2Match) {
             bgColor = '#' + b2Match[1];
             text = text.replace(b2Match[0], '').trim();
         }
-
         const colorMatch = text.match(/#([0-9a-fA-F]{3,6})$/);
         if (colorMatch) {
             textColor = '#' + colorMatch[1];
             text = text.substring(0, colorMatch.index).trim();
         }
-        
         if (!text) return '';
-
-        return `<span class="dynamic-tag" style="
-            display: inline-block;
-            margin-right: 6px;
-            margin-bottom: 4px;
-            padding: 1px 5px; 
-            border: 1px solid ${borderColor};
-            background-color: ${bgColor};
-            color: ${textColor};
-            border-radius: 3px;
-            font-size: 11px;
-            line-height: normal;
-        ">${text}</span>`;
+        return `<span class="dynamic-tag" style="display: inline-block; margin-right: 6px; margin-bottom: 4px; padding: 1px 5px; border: 1px solid ${borderColor}; background-color: ${bgColor}; color: ${textColor}; border-radius: 3px; font-size: 11px; line-height: normal;">${text}</span>`;
     }).join('');
 }
 
@@ -284,10 +353,6 @@ async function loadSidebarRecommendations() {
     } catch(e) { console.warn('Sidebar load failed', e); }
 }
 
-// =============================================
-// === 交互逻辑
-// =============================================
-
 function selectPayment(type, el) {
     paymentMethod = type;
     const list = document.getElementById('payment-method-list');
@@ -295,44 +360,6 @@ function selectPayment(type, el) {
         opt.classList.remove('active');
     });
     el.classList.add('active');
-}
-
-function selectBuyMethod(type, btn) {
-    buyMethod = type;
-    document.querySelectorAll('.method-btn').forEach(b => {
-        b.classList.remove('btn-danger');
-        b.classList.add('btn-outline-secondary');
-    });
-    btn.classList.remove('btn-outline-secondary');
-    btn.classList.add('btn-danger');
-}
-
-function selectSku(index, btn) {
-    if (!currentProduct) return;
-    document.querySelectorAll('.sku-btn').forEach(b => {
-        b.classList.remove('btn-danger');
-        b.classList.add('btn-outline-secondary');
-        b.classList.remove('active');
-    });
-    btn.classList.remove('btn-outline-secondary');
-    btn.classList.add('btn-danger');
-
-    const variant = currentProduct.variants[index];
-    currentVariant = variant;
-    animateValue('p-display-price', variant.price);
-    document.getElementById('p-stock').innerText = variant.stock;
-    if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
-
-    const wWrap = document.getElementById('p-wholesale-wrap');
-    const wVal = document.getElementById('p-wholesale-val');
-    if (wWrap && wVal) {
-        if (variant.wholesale_price && variant.wholesale_price > 0) {
-            wVal.innerText = variant.wholesale_price;
-            wWrap.style.display = 'block';
-        } else {
-            wWrap.style.display = 'none';
-        }
-    }
 }
 
 function changeQty(delta) {
@@ -349,6 +376,7 @@ function changeQty(delta) {
 function addToCart() {
     if (!currentVariant) return;
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
+    if (buyMethod === null) { alert('请选择购买方式'); return; } // [新增] 校验
 
     let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
     const existingItem = cart.find(item => item.variant_id === currentVariant.id);
@@ -381,6 +409,7 @@ function addToCart() {
 }
 
 function buyNow() {
+    if (buyMethod === null) { alert('请选择购买方式'); return; } // [新增] 校验
     addToCart();
     setTimeout(() => {
         window.location.href = '/cart.html';
