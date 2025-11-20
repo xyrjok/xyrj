@@ -76,11 +76,11 @@ function renderProductDetail(p) {
                     <div class="p-3">
                         <h5 class="fw-bold mb-2" style="line-height:1.4;">${p.name}</h5>
                         
-                        <div class="tb-tags-row mb-2" id="p-tags-container">
+                        <div class="tb-tags-row mb-3" id="p-tags-container" style="min-height:20px;">
                             ${renderProductTags(p.tags)}
                         </div>
 
-                        <div class="price-bar bg-light p-3 rounded mb-3 mt-3">
+                        <div class="price-bar bg-light p-3 rounded mb-3">
                             <div class="d-flex align-items-end text-danger">
                                 <span class="small me-1">¥</span>
                                 <span class="fs-2 fw-bold" id="p-display-price">${mainVariant.price}</span>
@@ -187,72 +187,66 @@ function renderProductDetail(p) {
 }
 
 /**
- * [修改] 渲染商品标签 - 支持颜色自定义
- * 格式支持: "b1#边框色 b2#背景色 标签名#文字色" (空格或逗号分隔)
- * 默认: 背景/边框 #dc3545, 文字 #ffffff
+ * [重点修改] 渲染商品标签 (支持自定义颜色解析)
+ * 格式：b1#xxxxxx(边框) b2#xxxxxx(背景) 标签文字#xxxxxx(字色)
  */
 function renderProductTags(tags) {
     if (!tags) return '';
-    let rawList = [];
+    let tagList = [];
     
-    // 1. 将标签字符串按“逗号”或“空格”分割成数组
+    // 转数组
     if (typeof tags === 'string') {
-        rawList = tags.split(/[, ]+/).filter(t => t.trim() !== '');
+        tagList = tags.split(',').filter(t => t.trim() !== '');
     } else if (Array.isArray(tags)) {
-        rawList = tags;
+        tagList = tags;
     }
 
-    if (rawList.length === 0) return '';
+    if (tagList.length === 0) return '';
 
-    // 2. 默认样式设置
-    let borderColor = '#dc3545';
-    let bgColor = '#dc3545';
-    let defaultTextColor = '#ffffff';
+    return tagList.map(tagStr => {
+        // 1. 设置默认样式
+        let borderColor = '#dc3545'; // 默认红边框
+        let bgColor = '#dc3545';     // 默认红背景
+        let textColor = '#ffffff';   // 默认白字
+        let text = tagStr.trim();
 
-    let displayList = [];
-
-    // 3. 第一次遍历：提取 b1(边框) 和 b2(背景) 设置
-    rawList.forEach(item => {
-        item = item.trim();
-        if (!item) return;
-
-        if (item.toLowerCase().startsWith('b1#')) {
-            // 提取边框色 (移除 b1)
-            borderColor = item.substring(2); // b1#xxxx -> #xxxx
-        } else if (item.toLowerCase().startsWith('b2#')) {
-            // 提取背景色 (移除 b2)
-            bgColor = item.substring(2); 
-        } else {
-            // 普通标签，稍后处理
-            displayList.push(item);
-        }
-    });
-
-    if (displayList.length === 0) return '';
-
-    // 4. 生成 HTML
-    return displayList.map(tagStr => {
-        let text = tagStr;
-        let textColor = defaultTextColor;
-
-        // 检查是否有文字颜色定义 (例如: 自动发货#ffff00)
-        // 从后往前找 #，确保不破坏标签名中可能存在的其他字符
-        const hashIndex = tagStr.lastIndexOf('#');
-        if (hashIndex > 0) {
-            text = tagStr.substring(0, hashIndex);
-            textColor = tagStr.substring(hashIndex); // 包括 #
+        // 2. 解析边框色 b1#xxxxxx
+        const b1Match = text.match(/b1#([0-9a-fA-F]{3,6})/);
+        if (b1Match) {
+            borderColor = '#' + b1Match[1];
+            text = text.replace(b1Match[0], '').trim();
         }
 
-        // 生成带内联样式的标签
+        // 3. 解析背景色 b2#xxxxxx
+        const b2Match = text.match(/b2#([0-9a-fA-F]{3,6})/);
+        if (b2Match) {
+            bgColor = '#' + b2Match[1];
+            text = text.replace(b2Match[0], '').trim();
+        }
+
+        // 4. 解析文字颜色 (结尾的 #xxxxxx)
+        // 例如 "自动发货#ffff00" -> 提取 #ffff00 并移除
+        const colorMatch = text.match(/#([0-9a-fA-F]{3,6})$/);
+        if (colorMatch) {
+            textColor = '#' + colorMatch[1];
+            // 移除结尾的颜色代码
+            text = text.substring(0, colorMatch.index).trim();
+        }
+        
+        // 如果解析后没文字了，则跳过
+        if (!text) return '';
+
+        // 5. 生成 HTML (使用 inline-style 覆盖默认 css)
         return `<span class="dynamic-tag" style="
-            background-color: ${bgColor}; 
-            border: 1px solid ${borderColor}; 
-            color: ${textColor};
             display: inline-block;
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-right: 5px;
+            margin-right: 6px;
+            margin-bottom: 4px;
+            padding: 1px 5px; 
+            border: 1px solid ${borderColor};
+            background-color: ${bgColor};
+            color: ${textColor};
+            border-radius: 3px;
+            font-size: 11px;
             line-height: normal;
         ">${text}</span>`;
     }).join('');
