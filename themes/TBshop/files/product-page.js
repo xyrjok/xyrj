@@ -53,7 +53,7 @@ function renderProductDetail(p) {
     
     if (!container) return;
 
-    // [修改] 优先选中第一个有库存的 SKU
+    // 优先选中第一个有库存的 SKU
     let selectedIdx = 0;
     if (p.variants && p.variants.length > 0) {
         const firstInStock = p.variants.findIndex(v => v.stock > 0);
@@ -87,22 +87,25 @@ function renderProductDetail(p) {
                         </div>
 
                         <div class="price-bar bg-light p-3 rounded mb-3">
-                            <div class="d-flex align-items-end text-danger">
-                                <span class="small me-1">¥</span>
-                                <span class="fs-2 fw-bold" id="p-display-price">${mainVariant.price}</span>
-                            </div>
-                            
-                            <div class="text-muted small mt-1 d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span>库存: <span id="p-stock">${mainVariant.stock}</span></span>
-                                    <span class="mx-2">|</span>
-                                    <span>销量: ${p.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
-                                </div>
+                            <div class="d-flex justify-content-between align-items-start">
                                 
-                                <div id="p-wholesale-wrap" style="display: ${wholesaleDisplay};">
-                                    <span class="text-danger border border-danger px-1 rounded bg-white" style="font-size:11px; cursor:help;" title="大批量采购优惠">
-                                        批发价: ¥<span id="p-wholesale-val">${mainVariant.wholesale_price || 0}</span>
-                                    </span>
+                                <div class="d-flex align-items-baseline text-danger">
+                                    <span class="fw-bold me-1" style="font-size: 18px;">¥</span>
+                                    <span class="fs-1 fw-bold" id="p-display-price" style="line-height: 1;">${mainVariant.price}</span>
+                                </div>
+
+                                <div class="text-muted small d-flex flex-column align-items-end" style="font-size: 13px;">
+                                    <div class="mb-1">
+                                        <span>库存: <span id="p-stock">${mainVariant.stock}</span></span>
+                                        <span class="mx-2">|</span>
+                                        <span>销量: ${p.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
+                                    </div>
+                                    
+                                    <div id="p-wholesale-wrap" style="display: ${wholesaleDisplay};">
+                                        <span class="text-danger border border-danger px-1 rounded bg-white" style="font-size:11px; cursor:help;" title="大批量采购优惠">
+                                            批发价: ¥<span id="p-wholesale-val">${mainVariant.wholesale_price || 0}</span>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -192,29 +195,20 @@ function renderProductDetail(p) {
     }, 100);
 }
 
-/**
- * [修改] 生成 SKU 按钮 HTML (增加缺货样式和角标)
- */
+// 生成 SKU 按钮 HTML (含缺货样式)
 function renderSkuButtons(variants, selectedIdx = 0) {
     if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
     
     return variants.map((v, index) => {
-        const isOOS = v.stock <= 0;        // 是否缺货
-        const isSelected = index === selectedIdx; // 是否选中
+        const isOOS = v.stock <= 0;
+        const isSelected = index === selectedIdx; 
 
-        // 基础样式
         let btnClass = isSelected ? 'btn-danger' : 'btn-outline-secondary';
-        
-        // 如果缺货，追加 .no-stock 类
         if (isOOS) btnClass += ' no-stock';
         
         const name = v.name || v.specs || `规格${index+1}`;
-        
-        // 缺货角标 HTML
         const badgeHtml = isOOS ? '<span class="sku-oos-badge">缺货</span>' : '';
         
-        // 如果缺货，禁用点击 (disabled 属性)
-        // 注意：onclick 里的逻辑也可以加 isOOS 判断，双重保险
         return `
             <button class="btn btn-sm ${btnClass} me-2 mb-2 sku-btn" 
                 data-idx="${index}" 
@@ -227,9 +221,7 @@ function renderSkuButtons(variants, selectedIdx = 0) {
     }).join('');
 }
 
-/**
- * 渲染商品标签 (支持 b1# b2# 自定义颜色)
- */
+// 渲染商品标签
 function renderProductTags(tags) {
     if (!tags) return '';
     let tagList = [];
@@ -320,7 +312,7 @@ function selectSku(index, btn) {
     document.querySelectorAll('.sku-btn').forEach(b => {
         b.classList.remove('btn-danger');
         b.classList.add('btn-outline-secondary');
-        b.classList.remove('active'); // 确保移除其他选中状态
+        b.classList.remove('active');
     });
     btn.classList.remove('btn-outline-secondary');
     btn.classList.add('btn-danger');
