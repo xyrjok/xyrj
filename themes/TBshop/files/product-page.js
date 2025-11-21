@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终修改版 - 支持自选号码弹窗 & 布局调整)
+// === (最终修改版 - 修复提示文字与已选信息显示)
 // =============================================
 
 // 全局变量
@@ -115,7 +115,7 @@ function renderProductDetail(p) {
                                 </div>
                             </div>
 
-                            <div id="dynamic-info-display" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
+                            <div id="dynamic-info-display" style="display:block; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd; min-height:28px;">
                             </div>
                         </div>
 
@@ -190,7 +190,7 @@ function renderProductDetail(p) {
 
     // 3. 初始化后续逻辑
     updateBuyMethodButtons(); 
-    updateDynamicInfoDisplay();
+    updateDynamicInfoDisplay(); // 初始化时会显示"请选择规格..."
     
     // 侧边栏推荐
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
@@ -212,7 +212,6 @@ function parseWholesaleInfo(config) {
     if (!config) return null;
     let rules = [];
     let data = config;
-    // (...保持原有解析逻辑...)
     if (typeof data === 'string') {
         data = data.trim();
         if (data.startsWith('[') || data.startsWith('{')) {
@@ -260,7 +259,7 @@ function updateBuyMethodButtons() {
     container.innerHTML = html;
 }
 
-// [修改] 购买方式点击事件
+// 购买方式点击事件
 function selectBuyMethod(type, btn) {
     if (buyMethod === type) {
         buyMethod = null; // 取消选中
@@ -282,7 +281,7 @@ function selectBuyMethod(type, btn) {
     updateRealTimePrice();
 }
 
-// [新增] 打开号码选择器
+// 打开号码选择器
 async function openNumberSelector() {
     const modal = document.getElementById('number-selector-modal');
     const listContainer = document.getElementById('ns-list-container');
@@ -317,13 +316,13 @@ async function openNumberSelector() {
     }
 }
 
-// [新增] 关闭号码选择器
+// 关闭号码选择器
 function closeNumberSelector() {
     const modal = document.getElementById('number-selector-modal');
     if (modal) modal.classList.remove('active');
 }
 
-// [新增] 选中某个号码
+// 选中某个号码
 function selectNumberItem(id, note) {
     selectedSpecificCardId = id;
     selectedSpecificCardInfo = note;
@@ -346,40 +345,43 @@ function updateDynamicInfoDisplay() {
     const displayDiv = document.getElementById('dynamic-info-display');
     if (!displayDiv) return;
 
-    if (buyMethod === null || !currentVariant) {
-        displayDiv.style.display = 'none';
+    // [修改 2] 初始/未全选状态：显示提示文字
+    if (!currentVariant || buyMethod === null) {
+        displayDiv.style.display = 'block';
+        displayDiv.innerHTML = '<span style="color:#999; font-size:13px;"><i class="fa fa-info-circle me-1"></i> 请选择规格和购买方式</span>';
         return;
     }
 
     displayDiv.style.display = 'block';
     const specName = currentVariant.name || currentVariant.specs || '默认规格';
 
+    // 构建左侧 (样式效果：优惠/加价)
+    let leftHtml = '';
     if (buyMethod === 'random') {
-        // 显示：批发优惠...  后面显示：已选规格
         const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
-        let html = '';
         if (promoText) {
-            html += `<span style="color:#dc3545;">批发优惠: ${promoText}</span>`;
+            leftHtml = `<span style="color:#dc3545;">批发优惠: ${promoText}</span>`;
         }
-        // 只有随机模式下显示“已选：xxx”，且没有号码信息
-        html += `<span style="float:right; color:#666; font-size:12px; margin-top:2px;">已选: ${specName}</span>`;
-        html += `<div style="clear:both;"></div>`; // 清除浮动
-        displayDiv.innerHTML = html;
-
     } else if (buyMethod === 'select') {
-        // 显示：加价x.xx元   后面显示：已选规格+预设信息
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
-        let html = `<span style="color:#dc3545;">加价 ${markup}元</span>`;
-        
-        let infoText = specName;
-        if (selectedSpecificCardInfo) {
-            infoText += ` + ${selectedSpecificCardInfo}`;
-        }
-        
-        html += `<span style="float:right; color:#333; font-weight:500; font-size:12px; margin-top:2px;">已选: ${infoText}</span>`;
-        html += `<div style="clear:both;"></div>`;
-        displayDiv.innerHTML = html;
+        leftHtml = `<span style="color:#dc3545;">加价 ${markup}元</span>`;
     }
+
+    // 构建右侧 (已选规格 + 预设信息)
+    // [修改 1] 规则：显示已选规格 + 卡密/号码预设信息内容（没有则不显示）
+    let rightInfo = specName;
+    if (buyMethod === 'select' && selectedSpecificCardInfo) {
+        rightInfo += ` + ${selectedSpecificCardInfo}`;
+    }
+
+    let html = '';
+    if (leftHtml) html += leftHtml;
+    
+    // 右侧文本 float right
+    html += `<span style="float:right; color:#333; font-weight:500; font-size:12px; margin-top:2px;">已选: ${rightInfo}</span>`;
+    html += `<div style="clear:both;"></div>`; // 清除浮动
+    
+    displayDiv.innerHTML = html;
 }
 
 function selectSku(index, btn) {
@@ -495,7 +497,7 @@ function changeQty(delta) {
     updateRealTimePrice();
 }
 
-// [修改] 加入购物车逻辑
+// 加入购物车逻辑
 function addToCart() {
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
@@ -512,14 +514,12 @@ function addToCart() {
 
     let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
     
-    // 检查是否已存在 (对于自选卡密，不能简单的合并数量，通常视为独立项或不允许重复)
-    // 这里简化逻辑：如果是自选卡密，视为唯一商品，不与普通规格合并
-    
+    // 检查是否已存在
     let existingItem = null;
     if (buyMethod === 'random') {
         existingItem = cart.find(item => item.variant_id === currentVariant.id && item.buyMode === 'random');
     } 
-    // 自选模式下，如果不允许重复购买同一个卡密，可以检查 selectedCardId
+    // 自选模式视为独立项，不合并
 
     if (existingItem) {
         existingItem.quantity += quantity;
@@ -529,14 +529,12 @@ function addToCart() {
             variant_id: currentVariant.id,
             name: currentProduct.name,
             variant_name: currentVariant.name || currentVariant.specs,
-            price: currentVariant.price, // 基础价格，结算时会重新计算
+            price: currentVariant.price, // 基础价格
             image: currentVariant.image_url || currentProduct.image_url,
             quantity: quantity,
-            
-            // [关键] 传入购买方式和选中的卡密ID
             buyMode: buyMethod,
             selectedCardId: selectedSpecificCardId,
-            selectedCardInfo: selectedSpecificCardInfo // 仅供前端展示用
+            selectedCardInfo: selectedSpecificCardInfo 
         });
     }
 
@@ -558,7 +556,6 @@ function buyNow() {
     if (buyMethod === null) { alert('请选择购买方式'); return; }
     
     addToCart();
-    // 稍微延迟跳转，让用户看到“已加入”反馈
     setTimeout(() => {
         window.location.href = '/cart.html';
     }, 200);
@@ -574,7 +571,7 @@ function showError(msg) {
     if (container) container.innerHTML = `<div class="text-danger py-5"><i class="fa fa-exclamation-triangle"></i> ${msg}</div>`;
 }
 
-// 分页逻辑 (保持不变)
+// 分页逻辑
 function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
     const container = document.querySelector(containerSelector);
     const paginationArea = document.getElementById('spec-pagination-area');
@@ -686,15 +683,11 @@ function updateRealTimePrice() {
     else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0);
         if (markup > 0) {
-            // 基础价
             const basePrice = finalPrice; 
-            // 总价 (含加价)
             const totalPrice = basePrice + markup;
-            // 显示为: 基础价 + 加价 = 总价
             displayHTML = `<span style="font-size:0.5em; color:#666; vertical-align: middle;">${basePrice.toFixed(2)} + ${markup.toFixed(2)} = </span>${totalPrice.toFixed(2)}`;
         }
         
-        // 如果数量 > 1，强制设为 1 (已在 changeQty 中处理，这里仅防卫)
         if (quantity > 1) {
              quantity = 1;
              document.getElementById('buy-qty').value = 1;
