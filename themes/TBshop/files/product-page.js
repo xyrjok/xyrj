@@ -62,6 +62,7 @@ function renderProductDetail(p) {
     currentVariant = mainVariant;
 
     // 2. 构建 HTML 结构
+    // [修改] 在“选择规格”后添加 (共xxx个)
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -102,7 +103,7 @@ function renderProductDetail(p) {
                         </div>
 
                         <div class="sku-section mb-4">
-                            <div class="mb-2 text-secondary small">选择规格：</div>
+                            <div class="mb-2 text-secondary small">选择规格 <span class="fw-normal text-muted" style="font-size: 0.9em;">(共${p.variants ? p.variants.length : 0}个)</span>：</div>
                             <div class="sku-list d-flex flex-wrap" id="sku-btn-list">
                                 ${renderSkuButtons(p.variants, selectedIdx)}
                             </div>
@@ -175,6 +176,9 @@ function renderProductDetail(p) {
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay();
 
+    // [修改] 初始化时调用一次价格计算，确保显示正确
+    updateRealTimePrice();
+
     setTimeout(() => {
          if (typeof initSpecPagination === 'function') {
              initSpecPagination('#sku-btn-list', '.sku-btn', 6);
@@ -187,7 +191,7 @@ function renderProductDetail(p) {
 // =============================================
 
 /**
- * [核心] 解析批发价数据
+ * [核心] 解析批发价数据 (用于显示文本)
  */
 function parseWholesaleInfo(config) {
     if (!config) return null;
@@ -309,6 +313,9 @@ function selectBuyMethod(type, btn) {
     }
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay(); 
+    
+    // [修改] 切换购买方式后，重新计算价格
+    updateRealTimePrice();
 }
 
 /**
@@ -381,7 +388,10 @@ function selectSku(index, btn) {
     const variant = currentProduct.variants[index];
     currentVariant = variant;
     
-    animateValue('p-display-price', variant.price);
+    // [修改] 移除原来的动画，改用实时计算
+    // animateValue('p-display-price', variant.price); 
+    updateRealTimePrice(); 
+
     document.getElementById('p-stock').innerText = variant.stock;
     if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
 
@@ -478,6 +488,9 @@ function changeQty(delta) {
     }
     quantity = newQty;
     document.getElementById('buy-qty').value = quantity;
+    
+    // [修改] 修改数量时，重新计算价格 (以支持批发阶梯价)
+    updateRealTimePrice();
 }
 
 function addToCart() {
@@ -600,4 +613,96 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(calculatePages, 300);
     });
+}
+
+
+// =============================================
+// === 新增功能：实时价格计算与批发逻辑
+// =============================================
+
+function updateRealTimePrice() {
+    if (!currentVariant) return;
+    
+    const priceEl = document.getElementById('p-display-price');
+    if (!priceEl) return;
+
+    // 基础价格（默认为当前规格的价格）
+    // 注意：假设后端返回的 product.price 或 variant.price 已经是数字或字符串数字
+    let finalPrice = parseFloat(currentVariant.price);
+    let displayHTML = finalPrice.toFixed(2); // 默认显示
+
+    // 逻辑 A: 默认随机 -> 检查批发价
+    if (buyMethod === 'random') {
+        // 解析批发配置
+        const rules = parseWholesaleDataForCalc(currentVariant.wholesale_config);
+        if (rules.length > 0) {
+            // 按数量从大到小匹配，找到满足当前数量的最高档位
+            // rules 已经按 count 降序排列
+            const rule = rules.find(r => quantity >= r.count);
+            if (rule) {
+                finalPrice = parseFloat(rule.price);
+                displayHTML = finalPrice.toFixed(2);
+            }
+        }
+    }
+    
+    // 逻辑 B: 自选规格 -> 显示加价公式
+    else if (buyMethod === 'select') {
+        const markup = parseFloat(currentVariant.custom_markup || 0);
+        // 只有当有加价时才显示公式
+        if (markup > 0) {
+            // 假设 currentVariant.price 是包含加价后的最终价
+            // 那么：基础价 = 最终价 - 加价
+            const basePrice = finalPrice - markup;
+            
+            // 拼接显示格式：默认价 + 加价 = 最终价
+            // 使用小字体显示公式部分，防止换行，保持整洁
+            // 格式: ¥10.00 + ¥2.00 = 12.00
+            displayHTML = `<span style="font-size:0.5em; color:#666; vertical-align: middle;">¥${basePrice.toFixed(2)} + ¥${markup.toFixed(2)} = </span>${finalPrice.toFixed(2)}`;
+        }
+    }
+
+    // 更新页面显示
+    priceEl.innerHTML = displayHTML;
+}
+
+// 辅助函数：解析批发数据为数组 [{count:10, price:5}, ...]
+function parseWholesaleDataForCalc(config) {
+    let rules = [];
+    if (!config) return rules;
+    
+    let data = config;
+    // 1. 尝试处理字符串格式
+    if (typeof data === 'string') {
+        try { 
+            // 如果是 JSON 字符串
+            if (data.startsWith('[') || data.startsWith('{')) {
+                data = JSON.parse(data); 
+            } else {
+                // 处理简单格式如 "10=5,20=4"
+                data.split(/[,，]/).forEach(p => {
+                    const [k, v] = p.split('=');
+                    if(k && v) rules.push({ count: parseInt(k), price: parseFloat(v) });
+                });
+                // 按数量降序返回
+                return rules.sort((a,b) => b.count - a.count);
+            }
+        } catch(e) { return []; }
+    }
+    
+    // 2. 处理数组或对象格式
+    if (Array.isArray(data)) {
+         data.forEach(item => {
+             const c = item.count || item.num || item.number || item.quantity || item.n;
+             const p = item.price || item.amount || item.money || item.p;
+             if(c && p) rules.push({ count: parseInt(c), price: parseFloat(p) });
+         });
+    } else if (typeof data === 'object') {
+        Object.entries(data).forEach(([k,v]) => {
+             rules.push({ count: parseInt(k), price: parseFloat(v) });
+        });
+    }
+    
+    // 按数量降序排列 (优先匹配大数量)
+    return rules.sort((a,b) => b.count - a.count);
 }
