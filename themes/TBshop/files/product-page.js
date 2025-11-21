@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (商品详情页专属逻辑 - 深度定制版 - 修复Bug)
+// === (商品详情页专属逻辑 - 修复批发价显示 Bug)
 // =============================================
 
 // 全局变量
@@ -171,7 +171,6 @@ function renderProductDetail(p) {
 
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
     
-    // 3. 初始化购买方式按钮和信息显示
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay();
 
@@ -183,12 +182,79 @@ function renderProductDetail(p) {
 }
 
 // =============================================
-// === 交互逻辑 (修复部分)
+// === 交互逻辑
 // =============================================
 
 /**
- * [核心] 根据当前 SKU 更新购买方式按钮
+ * [核心] 解析批发价数据 (修复 [object Object] 问题)
+ * 兼容：字符串 "5=3"、数组 [{num:5, price:3}]、对象 {"5":3}
  */
+function parseWholesaleInfo(config) {
+    if (!config) return null;
+    
+    let rules = [];
+    let data = config;
+
+    // 1. 如果是字符串，尝试 JSON 解析，失败则按逗号分割
+    if (typeof data === 'string') {
+        data = data.trim();
+        if (data.startsWith('[') || data.startsWith('{')) {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                // JSON 解析失败，当做普通字符串处理 "5=3,10=2"
+                data.replace(/，/g, ',').split(',').forEach(item => {
+                    const [n, p] = item.split('=');
+                    if (n && p) rules.push(`${n}个起${p}元/1个`);
+                });
+                return rules.length ? rules.join('，') : data;
+            }
+        } else {
+            // 普通字符串
+            data.replace(/，/g, ',').split(',').forEach(item => {
+                const [n, p] = item.split('=');
+                if (n && p) rules.push(`${n}个起${p}元/1个`);
+            });
+            return rules.length ? rules.join('，') : data;
+        }
+    }
+
+    // 2. 如果是数组或对象（后端API可能已经解析成了JSON）
+    if (typeof data === 'object' && data !== null) {
+        if (Array.isArray(data)) {
+            // 处理数组 [{num:5, price:3}]
+            data.forEach(item => {
+                // 尝试匹配各种可能的字段名
+                const n = item.num || item.number || item.count || item.quantity || item.n || item.key;
+                const p = item.price || item.money || item.amount || item.value || item.p || item.val;
+                
+                if (n !== undefined && p !== undefined) {
+                    rules.push(`${n}个起${p}元/1个`);
+                } else {
+                    // 如果字段名都匹配不上，尝试取 values (风险操作，作为最后的兜底)
+                    const vals = Object.values(item);
+                    if (vals.length >= 2) {
+                        rules.push(`${vals[0]}个起${vals[1]}元/1个`);
+                    }
+                }
+            });
+        } else {
+            // 处理对象 {"5": 3, "10": 2}
+            Object.entries(data).forEach(([k, v]) => {
+                if (!isNaN(k)) { // 假设数字键是数量
+                    rules.push(`${k}个起${v}元/1个`);
+                }
+            });
+        }
+    }
+    
+    if (rules.length > 0) return rules.join('，');
+    
+    // 最终兜底：如果不幸以上都没匹配上，打印 JSON 文本，避免 [object Object]
+    return typeof data === 'object' ? JSON.stringify(data) : String(data);
+}
+
+
 function updateBuyMethodButtons() {
     const container = document.getElementById('buy-method-container');
     if (!container || !currentVariant) return;
@@ -197,7 +263,6 @@ function updateBuyMethodButtons() {
     const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
     const label = currentVariant.selection_label || '自选';
 
-    // 如果当前选了 'select' 但 SKU 不支持，重置
     if (buyMethod === 'select' && !hasSelection) {
         buyMethod = null;
         updateDynamicInfoDisplay(); 
@@ -205,7 +270,7 @@ function updateBuyMethodButtons() {
 
     let html = '';
 
-    // 按钮1：默认随机
+    // 默认随机
     const randomClass = buyMethod === 'random' ? 'btn-danger' : 'btn-outline-secondary';
     html += `
         <button class="btn btn-sm ${randomClass} me-2 mb-1 method-btn" 
@@ -214,7 +279,7 @@ function updateBuyMethodButtons() {
         </button>
     `;
 
-    // 按钮2：自选 (如果有配置)
+    // 自选
     if (hasSelection) {
         const selectClass = buyMethod === 'select' ? 'btn-danger' : 'btn-outline-secondary';
         html += `
@@ -228,25 +293,16 @@ function updateBuyMethodButtons() {
     container.innerHTML = html;
 }
 
-/**
- * [核心] 切换购买方式 (支持取消选中)
- */
 function selectBuyMethod(type, btn) {
     if (buyMethod === type) {
         buyMethod = null; // 取消选中
-        updateBuyMethodButtons(); 
-        updateDynamicInfoDisplay(); 
-        return;
+    } else {
+        buyMethod = type;
     }
-
-    buyMethod = type;
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay(); 
 }
 
-/**
- * [核心修复] 更新价格下方的动态信息栏 (解决 trim 报错)
- */
 function updateDynamicInfoDisplay() {
     const displayDiv = document.getElementById('dynamic-info-display');
     if (!displayDiv) return;
@@ -258,48 +314,16 @@ function updateDynamicInfoDisplay() {
 
     displayDiv.style.display = 'block';
 
-    // --- 情况 A: 默认随机 -> 显示批发优惠 ---
+    // --- 默认随机 -> 显示批发优惠 ---
     if (buyMethod === 'random') {
-        const wConfig = currentVariant.wholesale_config;
-        let parsedText = '';
-        let hasPromo = false;
+        // 使用新的解析函数
+        const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
 
-        // [修复点]：增加强制类型转换，防止 wConfig 不是字符串导致报错
-        let strConfig = '';
-        if (wConfig !== null && wConfig !== undefined) {
-            strConfig = String(wConfig).trim();
-        }
-
-        if (strConfig !== '' && strConfig !== 'null') {
-            // [解析逻辑] 尝试解析 "5=3,10=2" 格式
-            // 兼容中文逗号，去除空格
-            const rules = strConfig.replace(/\s+/g, '').split(/[,，]/).filter(r => r !== '');
-            const formattedRules = [];
-
-            rules.forEach(rule => {
-                const parts = rule.split('=');
-                if (parts.length === 2) {
-                    const count = parts[0];
-                    const price = parts[1];
-                    // 格式化为：5个起3元/1个
-                    formattedRules.push(`${count}个起${price}元/1个`);
-                } else {
-                    // 如果格式不对，保留原文本，或者可以尝试解析更复杂的格式
-                    if(rule.length > 0) formattedRules.push(rule);
-                }
-            });
-
-            if (formattedRules.length > 0) {
-                parsedText = formattedRules.join('，');
-                hasPromo = true;
-            }
-        }
-
-        if (hasPromo) {
+        if (promoText && promoText !== '[]' && promoText !== '{}') {
             displayDiv.innerHTML = `
                 <span style="color:#dc3545; font-size:13px; font-weight:500;">
                     <i class="fa fa-tag me-1"></i>
-                    批发优惠: ${parsedText}
+                    批发优惠: ${promoText}
                 </span>
             `;
         } else {
@@ -311,7 +335,7 @@ function updateDynamicInfoDisplay() {
         }
     } 
     
-    // --- 情况 B: 自选 -> 显示加价信息 ---
+    // --- 自选 -> 显示加价信息 ---
     else if (buyMethod === 'select') {
         const label = currentVariant.selection_label || '自选';
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
@@ -343,7 +367,6 @@ function selectSku(index, btn) {
     document.getElementById('p-stock').innerText = variant.stock;
     if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
 
-    // [核心] 切换规格后，刷新购买方式按钮及信息
     updateBuyMethodButtons();
     updateDynamicInfoDisplay();
 }
