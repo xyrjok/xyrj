@@ -254,7 +254,8 @@ function updateBuyMethodButtons() {
     // 按钮2：自选
     if (showSelect) {
         const selectClass = buyMethod === 'select' ? 'btn-danger' : 'btn-outline-secondary';
-        html += `<button class="btn btn-sm ${selectClass} mb-1 method-btn" data-type="select" onclick="selectBuyMethod('select', this)">${label}</button>`;
+        // [修改] 增加显示加价金额
+        html += `<button class="btn btn-sm ${selectClass} mb-1 method-btn" data-type="select" onclick="selectBuyMethod('select', this)">${label} (加价${markup.toFixed(2)}元)</button>`;
     }
     container.innerHTML = html;
 }
@@ -366,7 +367,8 @@ function updateDynamicInfoDisplay() {
             // [还原样式]
             leftHtml = `<span style="${redStyle}"><i class="fa fa-tag me-1"></i>批发优惠: ${promoText}</span>`;
         } else {
-            leftHtml = `<span style="color:#999; font-size:13px;"><i class="fa fa-info-circle me-1"></i> 暂无批发优惠</span>`;
+            // [修改]：无批发优惠时，使用红色样式(redStyle)和对号图标(fa-check-circle)
+            leftHtml = `<span style="${redStyle}"><i class="fa fa-check-circle me-1"></i> 暂无批发优惠</span>`;
         }
     } else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
