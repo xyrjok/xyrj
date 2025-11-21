@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终样式修正版 - 红色图标样式 + 紧挨显示)
+// === (最终修改版 - 向上滑出弹窗 + 样式修正)
 // =============================================
 
 // 全局变量
@@ -282,21 +282,66 @@ function selectBuyMethod(type, btn) {
     updateRealTimePrice();
 }
 
-// 打开号码选择器
+// [修改] 打开号码选择器 (向上滑出 + 自动高度)
 async function openNumberSelector() {
     const modal = document.getElementById('number-selector-modal');
     const listContainer = document.getElementById('ns-list-container');
     const titleEl = document.getElementById('product-title-el');
+    const buyMethodEl = document.getElementById('buy-method-wrapper');
     
     if (!modal || !currentVariant) return;
 
-    // 动态定位 top (放在标题下面一点)
-    if (titleEl) {
-        modal.style.top = (titleEl.offsetTop + titleEl.offsetHeight + 15) + 'px';
+    // 1. 强制样式配置 (确保布局符合要求)
+    modal.style.display = 'flex';
+    modal.style.flexDirection = 'column';
+    modal.style.position = 'absolute';
+    modal.style.left = '16px';  // 对应 p-3 padding
+    modal.style.right = '16px'; // 对应 p-3 padding
+    modal.style.width = 'auto';
+    modal.style.zIndex = '100';
+    modal.style.background = '#fff';
+    modal.style.boxShadow = '0 -4px 20px rgba(0,0,0,0.15)';
+    modal.style.border = '1px solid #eee';
+    modal.style.borderRadius = '8px 8px 0 0'; // 上方圆角
+    modal.style.overflow = 'hidden';
+    modal.style.transition = 'height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s'; // 平滑过渡
+
+    // 设置内部容器滚动
+    const nsBody = modal.querySelector('.ns-body');
+    if(nsBody) {
+        nsBody.style.overflowY = 'auto';
+        nsBody.style.flex = '1';
     }
 
+    // 2. 计算定位 (锚定在购买方式上方)
+    // parent 是 .col-md-7, position: relative
+    const parent = modal.offsetParent || modal.parentElement;
+    const parentHeight = parent.clientHeight;
+    const buyTop = buyMethodEl.offsetTop; // 购买方式距离父容器顶部的距离
+    const titleBottom = titleEl.offsetTop + titleEl.offsetHeight; // 标题底部位置
+
+    // 底部定位：父容器高度 - 购买方式Top = 购买方式上方
+    const bottomPos = parentHeight - buyTop;
+    modal.style.bottom = bottomPos + 'px';
+    modal.style.top = 'auto'; // 清除之前的 top 设置
+
+    // 最大高度：购买方式Top - 标题Bottom - 间距
+    const maxHeight = buyTop - titleBottom - 15; 
+    modal.style.maxHeight = maxHeight + 'px';
+
+    // 3. 初始状态 (高度0)
     modal.classList.add('active');
+    modal.style.height = '0px';
+    modal.style.opacity = '0';
+    
+    // 4. 显示加载中并展开一点高度
     listContainer.innerHTML = '<div class="text-center w-100 mt-3"><i class="fa fa-spinner fa-spin"></i> 加载中...</div>';
+    
+    // 强制重绘后开始动画
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+        modal.style.height = Math.min(100, maxHeight) + 'px'; // 预先展开一点显示loading
+    });
 
     try {
         const res = await fetch(`/api/shop/cards/notes?variant_id=${currentVariant.id}`);
@@ -306,21 +351,41 @@ async function openNumberSelector() {
             let html = '';
             data.forEach(item => {
                 const isSelected = selectedSpecificCardId === item.id ? 'selected' : '';
-                html += `<div class="ns-item ${isSelected}" onclick="selectNumberItem(${item.id}, '${item.note}')">${item.note}</div>`;
+                // 增加 cursor:pointer 优化体验
+                html += `<div class="ns-item ${isSelected}" style="cursor:pointer;" onclick="selectNumberItem(${item.id}, '${item.note}')">${item.note}</div>`;
             });
             listContainer.innerHTML = html;
         } else {
             listContainer.innerHTML = '<div class="text-center w-100 mt-3 text-muted">暂无可自选号码</div>';
         }
+
+        // 5. 数据加载完毕，计算实际内容高度并展开
+        // header高度约为40px，加上list实际高度
+        const headerHeight = modal.querySelector('.ns-header').offsetHeight || 40;
+        const contentHeight = listContainer.scrollHeight + headerHeight + 10; // +10 buffer
+        
+        const finalHeight = Math.min(contentHeight, maxHeight);
+        modal.style.height = finalHeight + 'px';
+
     } catch (e) {
+        console.error(e);
         listContainer.innerHTML = '<div class="text-center w-100 mt-3 text-danger">加载失败</div>';
     }
 }
 
-// 关闭号码选择器
+// [修改] 关闭号码选择器 (增加收起动画)
 function closeNumberSelector() {
     const modal = document.getElementById('number-selector-modal');
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+        // 先把高度设为0，触发 transition
+        modal.style.height = '0px';
+        modal.style.opacity = '0';
+        
+        // 动画结束后移除 active 类
+        setTimeout(() => {
+            modal.classList.remove('active');
+        }, 300); // 300ms 对应 transition 时间
+    }
 }
 
 // 选中某个号码
