@@ -1,15 +1,14 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (商品详情页 - 增加卡密自选滑出面板版)
+// === (商品详情页专属逻辑 - 初始不选 & 价格区间版)
 // =============================================
 
 // 全局变量
 let currentProduct = null;   // 当前商品数据
-let currentVariant = null;   // 当前选中的 SKU
+let currentVariant = null;   // 当前选中的 SKU (初始为 null)
 let quantity = 1;            // 购买数量
-let buyMethod = null;        // 购买方式: null | 'random' | 'select'
-let paymentMethod = 'alipay'; 
-let selectedCardInfo = null; // [新增] 当前选中的具体卡密信息
+let buyMethod = null;        // 购买方式: null (未选) | 'random' | 'select'
+let paymentMethod = 'alipay'; // 默认支付方式
 
 // 页面启动入口
 async function initProductPage() {
@@ -53,88 +52,44 @@ function renderProductDetail(p) {
     
     if (!container) return;
 
-    // 1. 初始状态
-    currentVariant = null;
-    buyMethod = null;
-    selectedCardInfo = null;
-
-    // 计算价格范围和库存
+    // 1. [修改] 初始不默认选中规格，计算价格区间
+    currentVariant = null; 
     let priceDisplay = '0.00';
     let totalStock = 0;
+
     if (p.variants && p.variants.length > 0) {
+        // 计算总库存
+        totalStock = p.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
+        
+        // 计算价格区间
         const prices = p.variants.map(v => parseFloat(v.price));
-        const min = Math.min(...prices);
-        const max = Math.max(...prices);
-        priceDisplay = min === max ? min.toFixed(2) : `${min.toFixed(2)}-${max.toFixed(2)}`;
-        totalStock = p.variants.reduce((acc, v) => acc + (v.stock || 0), 0);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        
+        if (minPrice !== maxPrice) {
+            priceDisplay = `${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`;
+        } else {
+            priceDisplay = minPrice.toFixed(2);
+        }
     }
 
-    const defaultImg = (p.variants && p.variants[0] && p.variants[0].image_url) ? p.variants[0].image_url : p.image_url;
-
-    // 2. 构建 HTML
-    // 注意：为 col-md-7 添加 position-relative 以支持面板绝对定位
+    // 2. 构建 HTML 结构
     const html = `
-        <style>
-            /* [新增] 自选卡密面板样式 */
-            #card-selector-panel {
-                position: absolute;
-                bottom: 100px; /* 初始位置在购买方式上方 */
-                left: 15px;
-                right: 15px;
-                background: #fff;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-                z-index: 10;
-                max-height: 0;
-                opacity: 0;
-                overflow: hidden;
-                transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-                display: flex;
-                flex-direction: column;
-            }
-            #card-selector-panel.active {
-                max-height: 400px; /* 面板最大高度 */
-                opacity: 1;
-                bottom: 150px; /* 向上滑出的终点位置，需根据实际布局微调 */
-                padding: 15px;
-            }
-            .card-item-btn {
-                text-align: left;
-                margin-bottom: 8px;
-                font-size: 13px;
-                white-space: normal;
-                border: 1px solid #eee;
-                transition: all 0.2s;
-            }
-            .card-item-btn:hover {
-                border-color: #dc3545;
-                background-color: #fff5f5;
-            }
-            .card-item-btn.active {
-                border-color: #dc3545;
-                background-color: #dc3545;
-                color: #fff;
-            }
-            /* 让右侧详情栏相对定位 */
-            .product-detail-col { position: relative; }
-        </style>
-
         <div class="module-box product-showcase">
             <div class="row g-0">
                 <div class="col-md-5">
                     <div class="p-3">
                         <div class="main-img-wrap border rounded mb-2" style="position:relative; padding-bottom:100%; overflow:hidden;">
-                            <img id="p-main-img" src="${defaultImg}" class="position-absolute w-100 h-100" style="object-fit:contain; top:0; left:0;">
+                            <img id="p-main-img" src="${p.image_url}" class="position-absolute w-100 h-100" style="object-fit:contain; top:0; left:0;">
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-7 product-detail-col">
-                    <div class="p-3" style="height: 100%; display: flex; flex-direction: column;">
-                        <h5 class="fw-bold mb-2" id="product-title" style="line-height:1.4;">${p.name}</h5>
+                <div class="col-md-7">
+                    <div class="p-3">
+                        <h5 class="fw-bold mb-2" style="line-height:1.4;">${p.name}</h5>
                         
-                        <div class="tb-tags-row mb-3">
+                        <div class="tb-tags-row mb-3" id="p-tags-container" style="min-height:20px;">
                             ${renderProductTags(p.tags)}
                         </div>
 
@@ -144,7 +99,8 @@ function renderProductDetail(p) {
                                     <span class="fw-bold me-1" style="font-size: 18px;">¥</span>
                                     <span class="fs-1 fw-bold" id="p-display-price" style="line-height: 1;">${priceDisplay}</span>
                                 </div>
-                                <div class="text-muted small d-flex flex-column align-items-end">
+
+                                <div class="text-muted small d-flex flex-column align-items-end" style="font-size: 13px;">
                                     <div class="mb-1">
                                         <span>库存: <span id="p-stock">${totalStock}</span></span>
                                         <span class="mx-2">|</span>
@@ -152,30 +108,22 @@ function renderProductDetail(p) {
                                     </div>
                                 </div>
                             </div>
-                            <div id="dynamic-info-display" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;"></div>
+
+                            <div id="dynamic-info-display" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
+                                </div>
                         </div>
 
                         <div class="sku-section mb-4">
                             <div class="mb-2 text-secondary small">选择规格 <span class="fw-normal text-muted" style="font-size: 0.9em;">(共${p.variants ? p.variants.length : 0}个)</span>：</div>
                             <div class="sku-list d-flex flex-wrap" id="sku-btn-list">
-                                ${renderSkuButtons(p.variants, -1)}
-                            </div>
+                                ${renderSkuButtons(p.variants, -1)} </div>
+                            <div id="spec-pagination-area" class="spec-pagination-container"></div>
                         </div>
 
-                        <div id="card-selector-panel">
-                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                                <span class="fw-bold small">请选择预设信息</span>
-                                <button type="button" class="btn-close btn-sm" onclick="closeCardPanel()" aria-label="Close"></button>
-                            </div>
-                            <div id="card-list-content" style="overflow-y: auto; flex-grow: 1;">
-                                <div class="text-center text-muted small py-3">请先选择规格</div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3 d-flex align-items-center flex-wrap mt-auto" style="position: relative; z-index: 11; background: #fff;">
+                        <div class="mb-3 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">购买方式：</span>
                             <div class="d-flex align-items-center flex-wrap" id="buy-method-container">
-                                ${renderBuyMethodButtons_Preview(p)}
+                                <span class="text-muted small" style="padding: 5px 0;">请先选择规格</span>
                             </div>
                         </div>
 
@@ -193,19 +141,26 @@ function renderProductDetail(p) {
                             <div class="d-flex align-items-center flex-wrap" id="payment-method-list">
                                 <div class="payment-option active" onclick="selectPayment('alipay', this)">
                                     <i class="fab fa-alipay" style="color:#1678ff;"></i>
+                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
                                 <div class="payment-option" onclick="selectPayment('wxpay', this)">
                                     <i class="fab fa-weixin" style="color:#09bb07;"></i>
+                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
                                 <div class="payment-option" onclick="selectPayment('usdt', this)">
                                     <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
+                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="action-btns d-flex gap-2 mt-2">
-                            <button class="btn btn-warning flex-grow-1 text-white fw-bold py-2" onclick="addToCart()"><i class="fa fa-cart-plus"></i> 加入购物车</button>
-                            <button class="btn btn-danger flex-grow-1 fw-bold py-2" onclick="buyNow()">立即购买</button>
+                        <div class="action-btns d-flex gap-2 mt-4">
+                            <button class="btn btn-warning flex-grow-1 text-white fw-bold py-2" onclick="addToCart()">
+                                <i class="fa fa-cart-plus"></i> 加入购物车
+                            </button>
+                            <button class="btn btn-danger flex-grow-1 fw-bold py-2" onclick="buyNow()">
+                                立即购买
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -213,354 +168,551 @@ function renderProductDetail(p) {
         </div>
 
         <div class="module-box mt-3">
-            <div class="border-bottom pb-2 mb-3"><span class="fw-bold border-bottom border-3 border-danger pb-2 px-1">商品详情</span></div>
-            <div class="product-desc p-2">${p.description || '暂无详细介绍'}</div>
+            <div class="border-bottom pb-2 mb-3">
+                <span class="fw-bold border-bottom border-3 border-danger pb-2 px-1">商品详情</span>
+            </div>
+            <div class="product-desc p-2" style="overflow-x:auto;">
+                ${p.description || '<div class="text-center text-muted py-5">暂无详细介绍</div>'}
+            </div>
         </div>
     `;
 
     container.innerHTML = html;
     if(loading) loading.style.display = 'none';
     container.style.display = 'block';
+
+    if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
     
-    // 初始化动态定位：设置面板滑出的终点位置（商品标题下方）
+    // 3. 初始化购买方式按钮和信息显示
+    // 初始状态下由于没有 currentVariant，购买方式区域会显示提示
+    updateBuyMethodButtons(); 
+    updateDynamicInfoDisplay();
+
     setTimeout(() => {
-        const titleEl = document.getElementById('product-title');
-        const panelEl = document.getElementById('card-selector-panel');
-        const buyMethodEl = document.getElementById('buy-method-container').parentElement;
-        
-        if(titleEl && panelEl && buyMethodEl) {
-            // 动态计算 top 和 bottom，使其滑出时正好覆盖中间区域
-            // 这里简单通过 CSS bottom 控制，如果需要精确到标题下方，可以动态设置 height
-            // 下面的代码会在点击“自选”时动态调整面板高度
+         if (typeof initSpecPagination === 'function') {
+             initSpecPagination('#sku-btn-list', '.sku-btn', 6);
+         }
+    }, 100);
+}
+
+// =============================================
+// === 交互逻辑 (核心修改)
+// =============================================
+
+function parseWholesaleInfo(config) {
+    if (!config) return null;
+    
+    let rules = [];
+    let data = config;
+
+    if (typeof data === 'string') {
+        data = data.trim();
+        if (data.startsWith('[') || data.startsWith('{')) {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                data.replace(/，/g, ',').split(',').forEach(item => {
+                    const [n, p] = item.split('=');
+                    if (n && p) rules.push(`${n}个起${p}元/1个`);
+                });
+                return rules.length ? rules.join('，') : data;
+            }
+        } else {
+            data.replace(/，/g, ',').split(',').forEach(item => {
+                const [n, p] = item.split('=');
+                if (n && p) rules.push(`${n}个起${p}元/1个`);
+            });
+            return rules.length ? rules.join('，') : data;
         }
-    }, 200);
-
-    updateRealTimePrice();
-}
-
-// =============================================
-// === 交互逻辑
-// =============================================
-
-// 渲染购买方式按钮（预览用）
-function renderBuyMethodButtons_Preview(p) {
-    // 即使未选规格，也显示按钮，点击时提示
-    // 检查是否有任意规格支持自选
-    let hasSelectable = false;
-    if (p.variants) {
-        hasSelectable = p.variants.some(v => parseFloat(v.custom_markup||0) > 0);
     }
 
-    let html = `
-        <button class="btn btn-sm btn-outline-secondary me-2 mb-1 method-btn" 
-            onclick="selectBuyMethod('random', this)">默认随机</button>
-    `;
-    if (hasSelectable) {
-        html += `
-            <button class="btn btn-sm btn-outline-secondary mb-1 method-btn" 
-                onclick="selectBuyMethod('select', this)">自选号码/卡密</button>
-        `;
+    if (typeof data === 'object' && data !== null) {
+        if (Array.isArray(data)) {
+            data.forEach(item => {
+                const n = item.num || item.number || item.count || item.quantity || item.n || item.key;
+                const p = item.price || item.money || item.amount || item.value || item.p || item.val;
+                if (n !== undefined && p !== undefined) {
+                    rules.push(`${n}个起${p}元/1个`);
+                } else {
+                    const vals = Object.values(item);
+                    if (vals.length >= 2) rules.push(`${vals[0]}个起${vals[1]}元/1个`);
+                }
+            });
+        } else {
+            Object.entries(data).forEach(([k, v]) => {
+                if (!isNaN(k)) rules.push(`${k}个起${v}元/1个`);
+            });
+        }
     }
-    return html;
+    
+    if (rules.length > 0) return rules.join('，');
+    return typeof data === 'object' ? JSON.stringify(data) : String(data);
 }
 
-// 核心：切换购买方式
-function selectBuyMethod(type, btn) {
+function updateBuyMethodButtons() {
+    const container = document.getElementById('buy-method-container');
+    if (!container) return;
+
+    // 如果没有选择规格，清空购买方式并显示提示（或者保留为空）
     if (!currentVariant) {
-        alert('请先选择商品规格');
+        container.innerHTML = '<span class="text-muted small" style="padding: 5px 0;">请先选择规格</span>';
+        buyMethod = null;
         return;
     }
-
-    // 切换选中状态
-    const isSame = (buyMethod === type);
-    buyMethod = isSame ? null : type;
-
-    // 重置具体选中的卡密
-    selectedCardInfo = null; 
-
-    // UI 更新
-    renderBuyButtonsState();
-    
-    const panel = document.getElementById('card-selector-panel');
-
-    if (buyMethod === 'select') {
-        // 1. [需求] 自选 -> 面板向上滑出
-        // 渲染可选卡密列表
-        renderCardListInPanel();
-        
-        // 计算滑动高度：从购买方式上方滑到标题下方
-        const titleEl = document.getElementById('product-title');
-        const methodEl = btn.closest('.d-flex.align-items-center'); // 购买方式容器
-        
-        if (titleEl && methodEl) {
-            // 简单的视觉处理：让面板铺满中间区域
-            // 通过添加 active 类触发 CSS 动画
-            panel.classList.add('active');
-            // 可以动态设置 bottom 距离使其看起来像滑上去
-            // CSS 中 bottom: 100px -> 150px 或者使用 top 计算
-        }
-    } else {
-        // 2. 随机或取消 -> 面板收起
-        panel.classList.remove('active');
-    }
-
-    updateRealTimePrice();
-}
-
-// 渲染按钮选中态
-function renderBuyButtonsState() {
-    const container = document.getElementById('buy-method-container');
-    if (!currentVariant) return;
 
     const markup = parseFloat(currentVariant.custom_markup || 0);
     const showSelect = markup > 0;
-    let label = currentVariant.selection_label || '自选号码/卡密';
+
+    let label = currentVariant.selection_label;
+    if (!label || label.trim() === '') {
+        label = '自选卡密/号码';
+    } else {
+        label = label.trim();
+    }
+
+    if (buyMethod === 'select' && !showSelect) {
+        buyMethod = null;
+    }
 
     let html = '';
-    const randomClass = buyMethod === 'random' ? 'btn-danger' : 'btn-outline-secondary';
-    html += `<button class="btn btn-sm ${randomClass} me-2 mb-1" onclick="selectBuyMethod('random', this)">默认随机</button>`;
 
+    // 按钮1：默认随机
+    const randomClass = buyMethod === 'random' ? 'btn-danger' : 'btn-outline-secondary';
+    html += `
+        <button class="btn btn-sm ${randomClass} me-2 mb-1 method-btn" 
+            data-type="random" onclick="selectBuyMethod('random', this)">
+            默认随机
+        </button>
+    `;
+
+    // 按钮2：自选
     if (showSelect) {
         const selectClass = buyMethod === 'select' ? 'btn-danger' : 'btn-outline-secondary';
-        html += `<button class="btn btn-sm ${selectClass} mb-1" onclick="selectBuyMethod('select', this)">${label} (加价${markup.toFixed(2)}元)</button>`;
+        html += `
+            <button class="btn btn-sm ${selectClass} mb-1 method-btn" 
+                data-type="select" onclick="selectBuyMethod('select', this)">
+                ${label} (加价${markup.toFixed(2)}元)
+            </button>
+        `;
     }
+
     container.innerHTML = html;
 }
 
-// [新增] 渲染面板中的卡密列表
-function renderCardListInPanel() {
-    const listContainer = document.getElementById('card-list-content');
-    if (!listContainer || !currentVariant) return;
-
-    // 获取该规格下的卡密数据
-    // 假设数据在 currentProduct.cards 或 currentVariant.cards 中
-    // 这里需要根据您实际的数据结构调整。
-    // 如果 API 返回的 product 对象里直接包含 cards 列表，我们需要筛选属于当前 variant_id 的
-    let availableCards = [];
-    
-    if (currentProduct.cards) {
-        // 筛选：属于当前规格 + 未售出 (status=0 或 'unsold')
-        availableCards = currentProduct.cards.filter(c => 
-            (c.variant_id == currentVariant.id) && (c.status === 0 || c.status === 'unsold')
-        );
-    } else if (currentVariant.cards) {
-        availableCards = currentVariant.cards.filter(c => c.status === 0 || c.status === 'unsold');
+function selectBuyMethod(type, btn) {
+    // [修改] 支持手动取消：如果点击的是当前已选中的，则设为 null
+    if (buyMethod === type) {
+        buyMethod = null; 
+    } else {
+        buyMethod = type;
     }
+    
+    updateBuyMethodButtons(); 
+    updateDynamicInfoDisplay(); 
+    updateRealTimePrice();
+}
 
-    if (availableCards.length === 0) {
-        listContainer.innerHTML = '<div class="text-center text-muted py-3">暂无可选库存</div>';
+function updateDynamicInfoDisplay() {
+    const displayDiv = document.getElementById('dynamic-info-display');
+    if (!displayDiv) return;
+
+    if (buyMethod === null || !currentVariant) {
+        displayDiv.style.display = 'none';
         return;
     }
 
-    // 生成列表 HTML
-    let html = '<div class="d-flex flex-column">';
-    availableCards.forEach(card => {
-        // 获取预设显示信息：优先取 info, summary, description, 或者截取 content
-        const displayInfo = card.info || card.summary || card.description || (card.content ? card.content.substring(0, 20) + '...' : '卡密');
+    displayDiv.style.display = 'block';
+
+    if (buyMethod === 'random') {
+        const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
+        if (promoText && promoText !== '[]' && promoText !== '{}') {
+            displayDiv.innerHTML = `
+                <span style="color:#dc3545; font-size:13px; font-weight:500;">
+                    <i class="fa fa-tag me-1"></i>
+                    批发优惠: ${promoText}
+                </span>
+            `;
+        } else {
+            displayDiv.innerHTML = `
+                <span style="color:#999; font-size:13px;">
+                    <i class="fa fa-info-circle me-1"></i> 暂无批发优惠
+                </span>
+            `;
+        }
+    } else if (buyMethod === 'select') {
+        let label = currentVariant.selection_label;
+        if (!label || label.trim() === '') {
+            label = '自选卡密/号码';
+        } else {
+            label = label.trim();
+        }
+
+        const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
         
-        html += `
-            <button class="btn card-item-btn ${selectedCardInfo && selectedCardInfo.id === card.id ? 'active' : ''}" 
-                onclick="selectSpecificCard('${card.id}', '${displayInfo.replace(/'/g, "\\'")}')">
-                ${displayInfo}
-            </button>
+        displayDiv.innerHTML = `
+            <span style="color:#dc3545; font-size:13px; font-weight:500;">
+                <i class="fa fa-check-circle me-1"></i>
+                ${label} (加价 ${markup}元)
+            </span>
         `;
-    });
-    html += '</div>';
-    listContainer.innerHTML = html;
+    }
 }
 
-// [新增] 选择具体卡密
-function selectSpecificCard(cardId, infoText) {
-    // 记录选中
-    selectedCardInfo = { id: cardId, text: infoText };
-    
-    // 更新列表选中态
-    const btns = document.querySelectorAll('.card-item-btn');
-    btns.forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
-
-    // 更新价格下方的显示
-    updateRealTimePrice();
-}
-
-// 关闭面板
-function closeCardPanel() {
-    const panel = document.getElementById('card-selector-panel');
-    if(panel) panel.classList.remove('active');
-    buyMethod = null;
-    selectedCardInfo = null;
-    renderBuyButtonsState();
-    updateRealTimePrice();
-}
-
-// 规格选择
 function selectSku(index, btn) {
     if (!currentProduct) return;
-    const variant = currentProduct.variants[index];
 
-    if (currentVariant && currentVariant.id === variant.id) {
-        // 取消选中
+    // [修改] 检查是否点击了已选中的规格 -> 执行取消操作
+    if (currentVariant && currentVariant.id === currentProduct.variants[index].id) {
+        // 1. 重置变量
         currentVariant = null;
         buyMethod = null;
-        selectedCardInfo = null;
-        closeCardPanel();
-        
+
+        // 2. 重置 UI
         document.querySelectorAll('.sku-btn').forEach(b => {
-            b.classList.remove('btn-danger');
+            b.classList.remove('btn-danger', 'active');
             b.classList.add('btn-outline-secondary');
         });
+        
+        // 3. 重置为主图和总库存
+        document.getElementById('p-main-img').src = currentProduct.image_url;
+        const totalStock = currentProduct.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
+        document.getElementById('p-stock').innerText = totalStock;
+
+        // 4. 刷新区域
+        updateBuyMethodButtons();
+        updateDynamicInfoDisplay();
         updateRealTimePrice();
-        // 恢复库存显示
-        const total = currentProduct.variants.reduce((a,b)=>a+(b.stock||0),0);
-        document.getElementById('p-stock').innerText = total;
         return;
     }
-
-    // 选中新规格
-    currentVariant = variant;
-    buyMethod = null; // 重置购买方式
-    selectedCardInfo = null;
-    closeCardPanel(); // 切换规格时关闭面板
-
+    
+    // [正常选择逻辑]
     document.querySelectorAll('.sku-btn').forEach(b => {
-        b.classList.remove('btn-danger');
+        b.classList.remove('btn-danger', 'active');
         b.classList.add('btn-outline-secondary');
-        b.classList.remove('active');
     });
     btn.classList.remove('btn-outline-secondary');
     btn.classList.add('btn-danger');
 
-    document.getElementById('p-stock').innerText = variant.stock;
-    if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
+    const variant = currentProduct.variants[index];
+    currentVariant = variant;
+    
+    // 如果有专用图则切换，否则用主图
+    const imgUrl = variant.image_url || currentProduct.image_url;
+    document.getElementById('p-main-img').src = imgUrl;
 
-    renderBuyButtonsState();
+    document.getElementById('p-stock').innerText = variant.stock;
+
+    // 重置购买方式 (换规格后需要重新选购买方式)
+    buyMethod = null;
+
+    updateBuyMethodButtons();
+    updateDynamicInfoDisplay();
     updateRealTimePrice();
 }
 
-// 实时价格与信息显示 (核心修改点)
+function renderSkuButtons(variants, selectedIdx = -1) {
+    if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
+    
+    return variants.map((v, index) => {
+        const isOOS = v.stock <= 0;
+        // [修改] selectedIdx 为 -1 时不选中任何
+        const isSelected = (selectedIdx !== -1) && (index === selectedIdx);
+
+        let btnClass = isSelected ? 'btn-danger' : 'btn-outline-secondary';
+        if (isOOS) btnClass += ' no-stock';
+        
+        const name = v.name || v.specs || `规格${index+1}`;
+        const badgeHtml = isOOS ? '<span class="sku-oos-badge">缺货</span>' : '';
+        
+        return `
+            <button class="btn btn-sm ${btnClass} me-2 mb-2 sku-btn" 
+                data-idx="${index}" 
+                onclick="${isOOS ? '' : `selectSku(${index}, this)`}" 
+                ${isOOS ? 'disabled' : ''}>
+                ${name}
+                ${badgeHtml}
+            </button>
+        `;
+    }).join('');
+}
+
+function renderProductTags(tags) {
+    if (!tags) return '';
+    let tagList = [];
+    if (typeof tags === 'string') {
+        tagList = tags.split(',').filter(t => t.trim() !== '');
+    } else if (Array.isArray(tags)) {
+        tagList = tags;
+    }
+    if (tagList.length === 0) return '';
+    return tagList.map(tagStr => {
+        let borderColor = '#dc3545'; 
+        let bgColor = '#dc3545';     
+        let textColor = '#ffffff';   
+        let text = tagStr.trim();
+        const b1Match = text.match(/b1#([0-9a-fA-F]{3,6})/);
+        if (b1Match) {
+            borderColor = '#' + b1Match[1];
+            text = text.replace(b1Match[0], '').trim();
+        }
+        const b2Match = text.match(/b2#([0-9a-fA-F]{3,6})/);
+        if (b2Match) {
+            bgColor = '#' + b2Match[1];
+            text = text.replace(b2Match[0], '').trim();
+        }
+        const colorMatch = text.match(/#([0-9a-fA-F]{3,6})$/);
+        if (colorMatch) {
+            textColor = '#' + colorMatch[1];
+            text = text.substring(0, colorMatch.index).trim();
+        }
+        if (!text) return '';
+        return `<span class="dynamic-tag" style="display: inline-block; margin-right: 6px; margin-bottom: 4px; padding: 1px 5px; border: 1px solid ${borderColor}; background-color: ${bgColor}; color: ${textColor}; border-radius: 3px; font-size: 11px; line-height: normal;">${text}</span>`;
+    }).join('');
+}
+
+async function loadSidebarRecommendations() {
+    try {
+        const res = await fetch('/api/shop/products');
+        const allProducts = await res.json();
+        if (typeof renderSidebarTopSales === 'function') renderSidebarTopSales(allProducts);
+        if (typeof checkSidebarStatus === 'function') checkSidebarStatus();
+    } catch(e) { console.warn('Sidebar load failed', e); }
+}
+
+function selectPayment(type, el) {
+    paymentMethod = type;
+    const list = document.getElementById('payment-method-list');
+    list.querySelectorAll('.payment-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    el.classList.add('active');
+}
+
+function changeQty(delta) {
+    let newQty = quantity + delta;
+    if (newQty < 1) newQty = 1;
+    if (currentVariant && newQty > currentVariant.stock) {
+        alert('库存不足');
+        newQty = currentVariant.stock;
+    }
+    quantity = newQty;
+    document.getElementById('buy-qty').value = quantity;
+    
+    updateRealTimePrice();
+}
+
+function addToCart() {
+    if (!currentVariant) { alert('请先选择规格'); return; }
+    if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
+    if (buyMethod === null) { alert('请选择购买方式'); return; }
+
+    let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
+    const existingItem = cart.find(item => item.variant_id === currentVariant.id);
+    
+    if (existingItem) {
+        existingItem.quantity += quantity;
+    } else {
+        cart.push({
+            product_id: currentProduct.id,
+            variant_id: currentVariant.id,
+            name: currentProduct.name,
+            variant_name: currentVariant.name || currentVariant.specs,
+            price: currentVariant.price,
+            image: currentVariant.image_url || currentProduct.image_url,
+            quantity: quantity
+        });
+    }
+
+    localStorage.setItem('tbShopCart', JSON.stringify(cart));
+    if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
+    
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa fa-check"></i> 已加入';
+    btn.classList.add('btn-success');
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('btn-success');
+    }, 1500);
+}
+
+function buyNow() {
+    if (!currentVariant) { alert('请先选择规格'); return; }
+    if (buyMethod === null) { alert('请选择购买方式'); return; }
+    addToCart();
+    setTimeout(() => {
+        window.location.href = '/cart.html';
+    }, 200);
+}
+
+function animateValue(id, end) {
+    const el = document.getElementById(id);
+    if(el) el.innerText = end; 
+}
+
+function showError(msg) {
+    const container = document.getElementById('product-loading');
+    if (container) container.innerHTML = `<div class="text-danger py-5"><i class="fa fa-exclamation-triangle"></i> ${msg}</div>`;
+}
+
+function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
+    const container = document.querySelector(containerSelector);
+    const paginationArea = document.getElementById('spec-pagination-area');
+    if (!container || !paginationArea) return;
+
+    let items = Array.from(container.querySelectorAll(itemSelector));
+    if (items.length === 0) return;
+    let currentPage = 1;
+    let totalPages = 1;
+    
+    function calculatePages() {
+        items.forEach(item => item.style.display = '');
+        let rows = [];
+        let lastTop = -1;
+        let currentRow = [];
+        items.forEach(item => {
+            let currentTop = item.offsetTop;
+            if (lastTop !== -1 && Math.abs(currentTop - lastTop) > 5) {
+                rows.push(currentRow);
+                currentRow = [];
+            }
+            currentRow.push(item);
+            lastTop = currentTop;
+        });
+        if (currentRow.length > 0) rows.push(currentRow);
+        totalPages = Math.ceil(rows.length / rowsPerPage);
+        if (totalPages <= 1) {
+            paginationArea.style.display = 'none';
+            items.forEach(item => item.style.display = ''); 
+            return;
+        }
+        paginationArea.style.display = 'block';
+        renderPage(rows);
+        renderControls(rows);
+    }
+    function renderPage(rows) {
+        const startRow = (currentPage - 1) * rowsPerPage;
+        const endRow = startRow + rowsPerPage;
+        rows.forEach((row, index) => {
+            const shouldShow = index >= startRow && index < endRow;
+            row.forEach(item => {
+                item.style.display = shouldShow ? '' : 'none';
+            });
+        });
+    }
+    function renderControls(rows) {
+        let html = '';
+        html += `<span class="spec-pagination-btn ${currentPage === 1 ? 'disabled' : ''}" onclick="goToSpecPage(1)">首页</span>`;
+        html += `<span class="spec-pagination-btn ${currentPage === 1 ? 'disabled' : ''}" onclick="goToSpecPage(${currentPage - 1})">上一页</span>`;
+        html += `<span style="margin:0 8px; color:#666; font-size:14px;">${currentPage} / ${totalPages}</span>`;
+        html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${currentPage + 1})">下一页</span>`;
+        html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${totalPages})">尾页</span>`;
+        paginationArea.innerHTML = html;
+        window.goToSpecPage = function(page) {
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                renderPage(rows);
+                renderControls(rows);
+            }
+        };
+    }
+    calculatePages();
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(calculatePages, 300);
+    });
+}
+
+
+// =============================================
+// === 新增功能：实时价格计算与批发逻辑
+// =============================================
+
 function updateRealTimePrice() {
     const priceEl = document.getElementById('p-display-price');
-    const infoEl = document.getElementById('dynamic-info-display');
-    
-    // 1. 未选规格：显示区间
+    if (!priceEl) return;
+
+    // 1. [修改] 如果未选规格，显示价格区间
     if (!currentVariant) {
-        infoEl.style.display = 'none';
-        if (currentProduct && currentProduct.variants) {
+        if (currentProduct && currentProduct.variants && currentProduct.variants.length > 0) {
             const prices = currentProduct.variants.map(v => parseFloat(v.price));
-            const min = Math.min(...prices);
-            const max = Math.max(...prices);
-            priceEl.innerHTML = min === max ? min.toFixed(2) : `${min.toFixed(2)}-${max.toFixed(2)}`;
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            if (minPrice !== maxPrice) {
+                priceEl.innerText = `${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`;
+            } else {
+                priceEl.innerText = minPrice.toFixed(2);
+            }
+        } else {
+            priceEl.innerText = '0.00';
         }
         return;
     }
 
-    // 2. 已选规格：基础计算
+    // 2. 已选规格，计算具体价格
     let finalPrice = parseFloat(currentVariant.price);
     let displayHTML = finalPrice.toFixed(2);
-    let infoHTML = '';
 
-    // 3. 根据购买方式分支
+    // 逻辑 A: 默认随机 -> 检查批发价
     if (buyMethod === 'random') {
-        // [需求] 默认随机 -> 显示批发优惠 + 已选规格 (无预设信息)
-        const rules = parseWholesaleData(currentVariant.wholesale_config);
-        let wholesaleText = '';
-        
-        // 计算批发价
+        const rules = parseWholesaleDataForCalc(currentVariant.wholesale_config);
         if (rules.length > 0) {
             const rule = rules.find(r => quantity >= r.count);
             if (rule) {
                 finalPrice = parseFloat(rule.price);
                 displayHTML = finalPrice.toFixed(2);
             }
-            // 生成批发文案 "5个起0.03元/1个..."
-            wholesaleText = rules.map(r => `${r.count}个起${r.price}元/1个`).join('，');
         }
-
-        // 信息栏：批发优惠 + 规格
-        infoHTML = `
-            <span style="color:#dc3545; font-size:13px;">
-                ${wholesaleText ? `<i class="fa fa-tag"></i> 批发优惠: ${wholesaleText}` : ''}
-            </span>
-            <div style="margin-top:4px; color:#666; font-size:13px;">
-                已选：${currentVariant.name || currentVariant.specs}
-            </div>
-        `;
-
-    } else if (buyMethod === 'select') {
-        // [需求] 自选 -> 价格显示公式，信息栏显示 预设信息
+    }
+    
+    // 逻辑 B: 自选规格 -> 显示加价公式
+    else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0);
-        const totalPrice = finalPrice + markup;
-
-        // 价格公式：售价 + 加价 = 最终价 (不带￥符号，仅最前面有)
-        displayHTML = `<span style="font-size:0.5em; color:#666; vertical-align: middle;">${finalPrice.toFixed(2)} + ${markup.toFixed(2)} = </span>${totalPrice.toFixed(2)}`;
-
-        // 信息栏：自选标签 + 规格 + 预设信息
-        let label = currentVariant.selection_label || '自选';
-        let cardInfoText = selectedCardInfo ? selectedCardInfo.text : '请选择下方卡密';
-        
-        infoHTML = `
-            <span style="color:#dc3545; font-size:13px;">
-                <i class="fa fa-check-circle"></i> ${label} (加价${markup.toFixed(2)}元)
-            </span>
-            <div style="margin-top:4px; color:#666; font-size:13px;">
-                已选：${currentVariant.name || currentVariant.specs} 
-                ${selectedCardInfo ? `<span class="text-dark fw-bold ms-1">+ ${cardInfoText}</span>` : ''}
-            </div>
-        `;
-    } else {
-        // 未选购买方式：仅显示规格
-        infoHTML = `<div style="color:#666; font-size:13px;">已选：${currentVariant.name || currentVariant.specs}</div>`;
+        if (markup > 0) {
+            // 基础价 = 最终价 - 加价
+            const basePrice = finalPrice - markup;
+            
+            // [修改] 格式：售价 + 加价 = 最终价 (不带￥)
+            // 外层 HTML 已经有个红色的 ¥，这里只显示数字部分
+            displayHTML = `<span style="font-size:0.5em; color:#666; vertical-align: middle;">${basePrice.toFixed(2)} + ${markup.toFixed(2)} = </span>${finalPrice.toFixed(2)}`;
+        }
     }
 
     priceEl.innerHTML = displayHTML;
-    infoEl.style.display = 'block';
-    infoEl.innerHTML = infoHTML;
 }
 
-// 辅助工具
-function renderSkuButtons(variants, selectedIdx) {
-    if (!variants || variants.length === 0) return '';
-    return variants.map((v, index) => {
-        const isOOS = v.stock <= 0;
-        const isSelected = index === selectedIdx; 
-        let btnClass = isSelected ? 'btn-danger' : 'btn-outline-secondary';
-        if (isOOS) btnClass += ' no-stock';
-        return `<button class="btn btn-sm ${btnClass} me-2 mb-2 sku-btn" onclick="${isOOS?'':`selectSku(${index}, this)`}" ${isOOS?'disabled':''}>${v.name||v.specs||'规格'+(index+1)}</button>`;
-    }).join('');
-}
-function renderProductTags(tags) {
-    if (!tags) return '';
-    const list = Array.isArray(tags) ? tags : tags.split(',');
-    return list.map(t => `<span class="badge bg-danger me-1">${t}</span>`).join('');
-}
-function changeQty(d) {
-    quantity = Math.max(1, quantity + d);
-    document.getElementById('buy-qty').value = quantity;
-    updateRealTimePrice();
-}
-function selectPayment(t, e) {
-    paymentMethod = t;
-    document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('active'));
-    e.classList.add('active');
-}
-function parseWholesaleData(config) {
-    // 简化的解析逻辑
-    if(!config) return [];
+// 辅助函数：解析批发数据为数组 [{count:10, price:5}, ...]
+function parseWholesaleDataForCalc(config) {
     let rules = [];
-    try {
-        let data = (typeof config === 'string' && (config.startsWith('{')||config.startsWith('['))) ? JSON.parse(config) : config;
-        if(typeof data === 'string') {
-            data.split(/[,，]/).forEach(s => {
-                const [k,v] = s.split('=');
-                if(k&&v) rules.push({count:parseInt(k), price:parseFloat(v)});
-            });
-        } else if(Array.isArray(data)) {
-            data.forEach(i => rules.push({count:parseInt(i.count||i.num), price:parseFloat(i.price)}));
-        }
-    } catch(e){}
-    return rules.sort((a,b)=>b.count-a.count);
+    if (!config) return rules;
+    
+    let data = config;
+    if (typeof data === 'string') {
+        try { 
+            if (data.startsWith('[') || data.startsWith('{')) {
+                data = JSON.parse(data); 
+            } else {
+                data.split(/[,，]/).forEach(p => {
+                    const [k, v] = p.split('=');
+                    if(k && v) rules.push({ count: parseInt(k), price: parseFloat(v) });
+                });
+                return rules.sort((a,b) => b.count - a.count);
+            }
+        } catch(e) { return []; }
+    }
+    
+    if (Array.isArray(data)) {
+         data.forEach(item => {
+             const c = item.count || item.num || item.number || item.quantity || item.n;
+             const p = item.price || item.amount || item.money || item.p;
+             if(c && p) rules.push({ count: parseInt(c), price: parseFloat(p) });
+         });
+    } else if (typeof data === 'object') {
+        Object.entries(data).forEach(([k,v]) => {
+             rules.push({ count: parseInt(k), price: parseFloat(v) });
+        });
+    }
+    
+    return rules.sort((a,b) => b.count - a.count);
 }
-
-// 购物车与购买逻辑保持不变 (addToCart, buyNow) ...
-function addToCart() { /* ...原逻辑... */ }
-function buyNow() { /* ...原逻辑... */ }
