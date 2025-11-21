@@ -918,9 +918,9 @@ a:hover { color: var(--tb-orange); }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 4px 12px; /* 内边距，控制图标周围空间 */
-    height: 34px;      /* 固定高度 */
-    min-width: 60px;   /* 最小宽度 */
+    padding: 1px 6px; /* 内边距，控制图标周围空间 */
+    height: 38px;      /* 固定高度 */
+    min-width: 38px;   /* 最小宽度 */
     font-size: 25px;
     border: 1px solid #ddd; /* 默认灰色边框 */
     border-radius: 4px;
