@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终修改版 - 向上滑出弹窗 + 样式修正)
+// === (最终版 - 适配外部CSS + 向上滑出 + 收起按钮)
 // =============================================
 
 // 全局变量
@@ -70,7 +70,8 @@ function renderProductDetail(p) {
     }
 
     // 2. 构建 HTML 结构
-    // [注意] col-md-7 增加了 style="position:relative;" 用于弹窗绝对定位
+    // [注意] 移除了之前的 <style> 标签，样式由 custom-theme.css 控制
+    // [注意] .ns-footer 移除了内联样式
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -104,6 +105,9 @@ function renderProductDetail(p) {
                                 <div id="ns-list-container" class="ns-grid">
                                     <div class="text-center w-100 mt-3 text-muted">请先选择规格</div>
                                 </div>
+                            </div>
+                            <div class="ns-footer" onclick="closeNumberSelector()">
+                                ︽ 收起
                             </div>
                         </div>
 
@@ -254,7 +258,6 @@ function updateBuyMethodButtons() {
     // 按钮2：自选
     if (showSelect) {
         const selectClass = buyMethod === 'select' ? 'btn-danger' : 'btn-outline-secondary';
-        // [修改]：按钮文字增加显示加价金额
         html += `<button class="btn btn-sm ${selectClass} mb-1 method-btn" data-type="select" onclick="selectBuyMethod('select', this)">${label} (加价${markup.toFixed(2)}元)</button>`;
     }
     container.innerHTML = html;
@@ -282,7 +285,7 @@ function selectBuyMethod(type, btn) {
     updateRealTimePrice();
 }
 
-// [修改] 打开号码选择器 (向上滑出 + 自动高度)
+// 打开号码选择器 (向上滑出 + 自动高度 + 计算底部按钮高度)
 async function openNumberSelector() {
     const modal = document.getElementById('number-selector-modal');
     const listContainer = document.getElementById('ns-list-container');
@@ -291,20 +294,20 @@ async function openNumberSelector() {
     
     if (!modal || !currentVariant) return;
 
-    // 1. 强制样式配置 (确保布局符合要求)
+    // 1. 强制样式配置
     modal.style.display = 'flex';
     modal.style.flexDirection = 'column';
     modal.style.position = 'absolute';
-    modal.style.left = '16px';  // 对应 p-3 padding
-    modal.style.right = '16px'; // 对应 p-3 padding
+    modal.style.left = '16px'; 
+    modal.style.right = '16px';
     modal.style.width = 'auto';
     modal.style.zIndex = '100';
     modal.style.background = '#fff';
     modal.style.boxShadow = '0 -4px 20px rgba(0,0,0,0.15)';
     modal.style.border = '1px solid #eee';
-    modal.style.borderRadius = '8px 8px 0 0'; // 上方圆角
+    modal.style.borderRadius = '8px 8px 0 0';
     modal.style.overflow = 'hidden';
-    modal.style.transition = 'height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s'; // 平滑过渡
+    modal.style.transition = 'height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s';
 
     // 设置内部容器滚动
     const nsBody = modal.querySelector('.ns-body');
@@ -314,33 +317,31 @@ async function openNumberSelector() {
     }
 
     // 2. 计算定位 (锚定在购买方式上方)
-    // parent 是 .col-md-7, position: relative
     const parent = modal.offsetParent || modal.parentElement;
     const parentHeight = parent.clientHeight;
-    const buyTop = buyMethodEl.offsetTop; // 购买方式距离父容器顶部的距离
-    const titleBottom = titleEl.offsetTop + titleEl.offsetHeight; // 标题底部位置
+    const buyTop = buyMethodEl.offsetTop; 
+    const titleBottom = titleEl.offsetTop + titleEl.offsetHeight; 
 
-    // 底部定位：父容器高度 - 购买方式Top = 购买方式上方
+    // 底部定位
     const bottomPos = parentHeight - buyTop;
     modal.style.bottom = bottomPos + 'px';
-    modal.style.top = 'auto'; // 清除之前的 top 设置
+    modal.style.top = 'auto';
 
-    // 最大高度：购买方式Top - 标题Bottom - 间距
+    // 最大高度
     const maxHeight = buyTop - titleBottom - 15; 
     modal.style.maxHeight = maxHeight + 'px';
 
-    // 3. 初始状态 (高度0)
+    // 3. 初始状态
     modal.classList.add('active');
     modal.style.height = '0px';
     modal.style.opacity = '0';
     
-    // 4. 显示加载中并展开一点高度
+    // 4. 显示加载中
     listContainer.innerHTML = '<div class="text-center w-100 mt-3"><i class="fa fa-spinner fa-spin"></i> 加载中...</div>';
     
-    // 强制重绘后开始动画
     requestAnimationFrame(() => {
         modal.style.opacity = '1';
-        modal.style.height = Math.min(100, maxHeight) + 'px'; // 预先展开一点显示loading
+        modal.style.height = Math.min(100, maxHeight) + 'px';
     });
 
     try {
@@ -351,7 +352,6 @@ async function openNumberSelector() {
             let html = '';
             data.forEach(item => {
                 const isSelected = selectedSpecificCardId === item.id ? 'selected' : '';
-                // 增加 cursor:pointer 优化体验
                 html += `<div class="ns-item ${isSelected}" style="cursor:pointer;" onclick="selectNumberItem(${item.id}, '${item.note}')">${item.note}</div>`;
             });
             listContainer.innerHTML = html;
@@ -359,10 +359,13 @@ async function openNumberSelector() {
             listContainer.innerHTML = '<div class="text-center w-100 mt-3 text-muted">暂无可自选号码</div>';
         }
 
-        // 5. 数据加载完毕，计算实际内容高度并展开
-        // header高度约为40px，加上list实际高度
+        // 5. 数据加载完毕，计算实际高度 (含 Header + Content + Footer)
         const headerHeight = modal.querySelector('.ns-header').offsetHeight || 40;
-        const contentHeight = listContainer.scrollHeight + headerHeight + 10; // +10 buffer
+        // 获取 footer 高度 (因为CSS现在已经有了，offsetHeight 能正确获取)
+        const footerHeight = modal.querySelector('.ns-footer') ? modal.querySelector('.ns-footer').offsetHeight : 0;
+        
+        // 计算总内容高度
+        const contentHeight = listContainer.scrollHeight + headerHeight + footerHeight + 20; 
         
         const finalHeight = Math.min(contentHeight, maxHeight);
         modal.style.height = finalHeight + 'px';
@@ -373,18 +376,14 @@ async function openNumberSelector() {
     }
 }
 
-// [修改] 关闭号码选择器 (增加收起动画)
 function closeNumberSelector() {
     const modal = document.getElementById('number-selector-modal');
     if (modal) {
-        // 先把高度设为0，触发 transition
         modal.style.height = '0px';
         modal.style.opacity = '0';
-        
-        // 动画结束后移除 active 类
         setTimeout(() => {
             modal.classList.remove('active');
-        }, 300); // 300ms 对应 transition 时间
+        }, 300); 
     }
 }
 
@@ -393,25 +392,21 @@ function selectNumberItem(id, note) {
     selectedSpecificCardId = id;
     selectedSpecificCardInfo = note;
     
-    // 高亮
     const items = document.querySelectorAll('.ns-item');
     items.forEach(el => el.classList.remove('selected'));
     event.target.classList.add('selected');
     
-    // 更新显示
     updateDynamicInfoDisplay();
     updateRealTimePrice();
     
-    // 关闭弹窗
     setTimeout(closeNumberSelector, 200);
 }
 
-// [修改] 动态更新价格下方的文字
+// 动态更新价格下方的文字
 function updateDynamicInfoDisplay() {
     const displayDiv = document.getElementById('dynamic-info-display');
     if (!displayDiv) return;
 
-    // 1. 初始/未全选状态：显示提示
     if (!currentVariant || buyMethod === null) {
         displayDiv.style.display = 'block';
         displayDiv.innerHTML = '<span style="color:#999; font-size:13px;"><i class="fa fa-info-circle me-1"></i> 请选择规格和购买方式</span>';
@@ -421,43 +416,34 @@ function updateDynamicInfoDisplay() {
     displayDiv.style.display = 'block';
     const specName = currentVariant.name || currentVariant.specs || '默认规格';
 
-    // 准备左侧内容 (红色样式 + 图标)
     let leftHtml = '';
-    // 定义您要求的样式
     const redStyle = 'color:#dc3545; font-size:13px; font-weight:500;';
     
     if (buyMethod === 'random') {
         const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
         if (promoText) {
-            // [还原样式]
             leftHtml = `<span style="${redStyle}"><i class="fa fa-tag me-1"></i>批发优惠: ${promoText}</span>`;
         } else {
-            // [修改]：无批发优惠时，显示红色对号和“默认随机”
             leftHtml = `<span style="${redStyle}"><i class="fa fa-check-circle me-1"></i> 默认随机</span>`;
         }
     } else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
         let label = currentVariant.selection_label || '自选卡密/号码';
-        // [还原样式]
         leftHtml = `<span style="${redStyle}"><i class="fa fa-check-circle me-1"></i>${label} (加价 ${markup}元)</span>`;
     }
 
-    // 准备右侧内容 (已选 info)
     let rightInfo = specName;
     if (buyMethod === 'select' && selectedSpecificCardInfo) {
         rightInfo += ` + ${selectedSpecificCardInfo}`;
     }
 
-    // [修改] 拼接逻辑：挨着显示，用 margin-left 分隔
     const rightHtml = `<span style="color:#666; font-size:12px; margin-left:12px;">已选: ${rightInfo}</span>`;
-    
     displayDiv.innerHTML = leftHtml + rightHtml;
 }
 
 function selectSku(index, btn) {
     if (!currentProduct) return;
 
-    // 取消选中逻辑
     if (currentVariant && currentVariant.id === currentProduct.variants[index].id) {
         currentVariant = null;
         buyMethod = null;
@@ -480,7 +466,6 @@ function selectSku(index, btn) {
         return;
     }
     
-    // 选中逻辑
     document.querySelectorAll('.sku-btn').forEach(b => {
         b.classList.remove('btn-danger', 'active');
         b.classList.add('btn-outline-secondary');
@@ -495,7 +480,6 @@ function selectSku(index, btn) {
     document.getElementById('p-main-img').src = imgUrl;
     document.getElementById('p-stock').innerText = variant.stock;
 
-    // 切换规格重置购买方式
     buyMethod = null;
     selectedSpecificCardId = null;
     selectedSpecificCardInfo = '';
@@ -552,7 +536,6 @@ function changeQty(delta) {
     let newQty = quantity + delta;
     if (newQty < 1) newQty = 1;
     
-    // 自选模式限购1个
     if (buyMethod === 'select') {
         newQty = 1;
     } else {
@@ -567,29 +550,25 @@ function changeQty(delta) {
     updateRealTimePrice();
 }
 
-// 加入购物车逻辑
 function addToCart() {
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
     if (buyMethod === null) { alert('请选择购买方式'); return; }
 
-    // 自选模式校验
     if (buyMethod === 'select') {
         if (!selectedSpecificCardId) {
             alert('请选择一个号码/卡密');
-            openNumberSelector(); // 自动打开弹窗
+            openNumberSelector(); 
             return;
         }
     }
 
     let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
     
-    // 检查是否已存在
     let existingItem = null;
     if (buyMethod === 'random') {
         existingItem = cart.find(item => item.variant_id === currentVariant.id && item.buyMode === 'random');
     } 
-    // 自选模式视为独立项，不合并
 
     if (existingItem) {
         existingItem.quantity += quantity;
@@ -599,7 +578,7 @@ function addToCart() {
             variant_id: currentVariant.id,
             name: currentProduct.name,
             variant_name: currentVariant.name || currentVariant.specs,
-            price: currentVariant.price, // 基础价格
+            price: currentVariant.price,
             image: currentVariant.image_url || currentProduct.image_url,
             quantity: quantity,
             buyMode: buyMethod,
@@ -641,7 +620,6 @@ function showError(msg) {
     if (container) container.innerHTML = `<div class="text-danger py-5"><i class="fa fa-exclamation-triangle"></i> ${msg}</div>`;
 }
 
-// 分页逻辑
 function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
     const container = document.querySelector(containerSelector);
     const paginationArea = document.getElementById('spec-pagination-area');
@@ -715,10 +693,6 @@ async function loadSidebarRecommendations() {
     } catch(e) {}
 }
 
-// =============================================
-// === 实时价格计算
-// =============================================
-
 function updateRealTimePrice() {
     const priceEl = document.getElementById('p-display-price');
     if (!priceEl) return;
@@ -738,7 +712,6 @@ function updateRealTimePrice() {
     let finalPrice = parseFloat(currentVariant.price);
     let displayHTML = finalPrice.toFixed(2);
 
-    // 逻辑 A: 默认随机 -> 检查批发价
     if (buyMethod === 'random') {
         const rules = parseWholesaleDataForCalc(currentVariant.wholesale_config);
         if (rules.length > 0) {
@@ -749,7 +722,6 @@ function updateRealTimePrice() {
             }
         }
     }
-    // 逻辑 B: 自选规格 -> 显示加价公式
     else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0);
         if (markup > 0) {
