@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (商品详情页专属逻辑 - 修复批发价显示 Bug)
+// === (商品详情页专属逻辑 - 自选逻辑深度优化版)
 // =============================================
 
 // 全局变量
@@ -171,6 +171,7 @@ function renderProductDetail(p) {
 
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
     
+    // 3. 初始化购买方式按钮和信息显示
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay();
 
@@ -182,12 +183,11 @@ function renderProductDetail(p) {
 }
 
 // =============================================
-// === 交互逻辑
+// === 交互逻辑 (核心修改)
 // =============================================
 
 /**
- * [核心] 解析批发价数据 (修复 [object Object] 问题)
- * 兼容：字符串 "5=3"、数组 [{num:5, price:3}]、对象 {"5":3}
+ * [核心] 解析批发价数据
  */
 function parseWholesaleInfo(config) {
     if (!config) return null;
@@ -195,14 +195,14 @@ function parseWholesaleInfo(config) {
     let rules = [];
     let data = config;
 
-    // 1. 如果是字符串，尝试 JSON 解析，失败则按逗号分割
+    // 1. 如果是字符串，尝试 JSON 解析
     if (typeof data === 'string') {
         data = data.trim();
         if (data.startsWith('[') || data.startsWith('{')) {
             try {
                 data = JSON.parse(data);
             } catch (e) {
-                // JSON 解析失败，当做普通字符串处理 "5=3,10=2"
+                // 普通字符串处理 "5=3,10=2"
                 data.replace(/，/g, ',').split(',').forEach(item => {
                     const [n, p] = item.split('=');
                     if (n && p) rules.push(`${n}个起${p}元/1个`);
@@ -210,7 +210,6 @@ function parseWholesaleInfo(config) {
                 return rules.length ? rules.join('，') : data;
             }
         } else {
-            // 普通字符串
             data.replace(/，/g, ',').split(',').forEach(item => {
                 const [n, p] = item.split('=');
                 if (n && p) rules.push(`${n}个起${p}元/1个`);
@@ -219,58 +218,64 @@ function parseWholesaleInfo(config) {
         }
     }
 
-    // 2. 如果是数组或对象（后端API可能已经解析成了JSON）
+    // 2. 数组或对象
     if (typeof data === 'object' && data !== null) {
         if (Array.isArray(data)) {
-            // 处理数组 [{num:5, price:3}]
             data.forEach(item => {
-                // 尝试匹配各种可能的字段名
                 const n = item.num || item.number || item.count || item.quantity || item.n || item.key;
                 const p = item.price || item.money || item.amount || item.value || item.p || item.val;
-                
                 if (n !== undefined && p !== undefined) {
                     rules.push(`${n}个起${p}元/1个`);
                 } else {
-                    // 如果字段名都匹配不上，尝试取 values (风险操作，作为最后的兜底)
                     const vals = Object.values(item);
-                    if (vals.length >= 2) {
-                        rules.push(`${vals[0]}个起${vals[1]}元/1个`);
-                    }
+                    if (vals.length >= 2) rules.push(`${vals[0]}个起${vals[1]}元/1个`);
                 }
             });
         } else {
-            // 处理对象 {"5": 3, "10": 2}
             Object.entries(data).forEach(([k, v]) => {
-                if (!isNaN(k)) { // 假设数字键是数量
-                    rules.push(`${k}个起${v}元/1个`);
-                }
+                if (!isNaN(k)) rules.push(`${k}个起${v}元/1个`);
             });
         }
     }
     
     if (rules.length > 0) return rules.join('，');
-    
-    // 最终兜底：如果不幸以上都没匹配上，打印 JSON 文本，避免 [object Object]
     return typeof data === 'object' ? JSON.stringify(data) : String(data);
 }
 
-
+/**
+ * [核心逻辑] 更新购买方式按钮
+ * 规则：
+ * 1. 默认随机：始终显示
+ * 2. 自选：只有当加价数值 (custom_markup) > 0 时才显示
+ * 3. 标签文案：有自定义则显示自定义，无则显示“自选卡密/号码”
+ */
 function updateBuyMethodButtons() {
     const container = document.getElementById('buy-method-container');
     if (!container || !currentVariant) return;
 
-    const hasSelection = currentVariant.selection_label && currentVariant.selection_label.trim() !== '';
-    const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
-    const label = currentVariant.selection_label || '自选';
+    // 获取加价数值，默认为 0
+    const markup = parseFloat(currentVariant.custom_markup || 0);
+    
+    // [关键判断] 是否显示自选按钮：仅当加价 > 0 时显示
+    const showSelect = markup > 0;
 
-    if (buyMethod === 'select' && !hasSelection) {
+    // 获取自选标签文案，如果没填则默认
+    let label = currentVariant.selection_label;
+    if (!label || label.trim() === '') {
+        label = '自选卡密/号码';
+    } else {
+        label = label.trim();
+    }
+
+    // 如果当前选了 'select' 但现在不满足显示条件，重置选择
+    if (buyMethod === 'select' && !showSelect) {
         buyMethod = null;
         updateDynamicInfoDisplay(); 
     }
 
     let html = '';
 
-    // 默认随机
+    // 按钮1：默认随机
     const randomClass = buyMethod === 'random' ? 'btn-danger' : 'btn-outline-secondary';
     html += `
         <button class="btn btn-sm ${randomClass} me-2 mb-1 method-btn" 
@@ -279,13 +284,13 @@ function updateBuyMethodButtons() {
         </button>
     `;
 
-    // 自选
-    if (hasSelection) {
+    // 按钮2：自选 (条件显示)
+    if (showSelect) {
         const selectClass = buyMethod === 'select' ? 'btn-danger' : 'btn-outline-secondary';
         html += `
             <button class="btn btn-sm ${selectClass} mb-1 method-btn" 
                 data-type="select" onclick="selectBuyMethod('select', this)">
-                ${label} (加价${markup}元)
+                ${label} (加价${markup.toFixed(2)}元)
             </button>
         `;
     }
@@ -293,6 +298,9 @@ function updateBuyMethodButtons() {
     container.innerHTML = html;
 }
 
+/**
+ * [核心] 切换购买方式 (支持取消选中)
+ */
 function selectBuyMethod(type, btn) {
     if (buyMethod === type) {
         buyMethod = null; // 取消选中
@@ -303,6 +311,9 @@ function selectBuyMethod(type, btn) {
     updateDynamicInfoDisplay(); 
 }
 
+/**
+ * [核心] 更新价格下方的动态信息栏
+ */
 function updateDynamicInfoDisplay() {
     const displayDiv = document.getElementById('dynamic-info-display');
     if (!displayDiv) return;
@@ -314,9 +325,8 @@ function updateDynamicInfoDisplay() {
 
     displayDiv.style.display = 'block';
 
-    // --- 默认随机 -> 显示批发优惠 ---
+    // --- 情况 A: 默认随机 -> 显示批发优惠 ---
     if (buyMethod === 'random') {
-        // 使用新的解析函数
         const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
 
         if (promoText && promoText !== '[]' && promoText !== '{}') {
@@ -335,11 +345,19 @@ function updateDynamicInfoDisplay() {
         }
     } 
     
-    // --- 自选 -> 显示加价信息 ---
+    // --- 情况 B: 自选 -> 显示加价信息 ---
     else if (buyMethod === 'select') {
-        const label = currentVariant.selection_label || '自选';
+        // 同样的逻辑处理标签文案
+        let label = currentVariant.selection_label;
+        if (!label || label.trim() === '') {
+            label = '自选卡密/号码';
+        } else {
+            label = label.trim();
+        }
+
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
         
+        // 显示在价格下方
         displayDiv.innerHTML = `
             <span style="color:#dc3545; font-size:13px; font-weight:500;">
                 <i class="fa fa-check-circle me-1"></i>
@@ -367,6 +385,7 @@ function selectSku(index, btn) {
     document.getElementById('p-stock').innerText = variant.stock;
     if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
 
+    // 切换规格时刷新
     updateBuyMethodButtons();
     updateDynamicInfoDisplay();
 }
