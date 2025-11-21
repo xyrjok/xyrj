@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终样式修正版 - 红色图标样式 + 紧挨显示)
+// === (最终修改版 - 修复提示文字与已选信息显示)
 // =============================================
 
 // 全局变量
@@ -190,7 +190,7 @@ function renderProductDetail(p) {
 
     // 3. 初始化后续逻辑
     updateBuyMethodButtons(); 
-    updateDynamicInfoDisplay(); 
+    updateDynamicInfoDisplay(); // 初始化时会显示"请选择规格..."
     
     // 侧边栏推荐
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
@@ -340,12 +340,12 @@ function selectNumberItem(id, note) {
     setTimeout(closeNumberSelector, 200);
 }
 
-// [修改] 动态更新价格下方的文字 (核心修改)
+// [修改] 动态更新价格下方的文字 (核心需求)
 function updateDynamicInfoDisplay() {
     const displayDiv = document.getElementById('dynamic-info-display');
     if (!displayDiv) return;
 
-    // 1. 初始/未全选状态：显示提示
+    // [修改 2] 初始/未全选状态：显示提示文字
     if (!currentVariant || buyMethod === null) {
         displayDiv.style.display = 'block';
         displayDiv.innerHTML = '<span style="color:#999; font-size:13px;"><i class="fa fa-info-circle me-1"></i> 请选择规格和购买方式</span>';
@@ -355,36 +355,33 @@ function updateDynamicInfoDisplay() {
     displayDiv.style.display = 'block';
     const specName = currentVariant.name || currentVariant.specs || '默认规格';
 
-    // 准备左侧内容 (红色样式 + 图标)
+    // 构建左侧 (样式效果：优惠/加价)
     let leftHtml = '';
-    // 定义您要求的样式
-    const redStyle = 'color:#dc3545; font-size:13px; font-weight:500;';
-    
     if (buyMethod === 'random') {
         const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
         if (promoText) {
-            // [还原样式]
-            leftHtml = `<span style="${redStyle}"><i class="fa fa-tag me-1"></i>批发优惠: ${promoText}</span>`;
-        } else {
-            leftHtml = `<span style="color:#999; font-size:13px;"><i class="fa fa-info-circle me-1"></i> 暂无批发优惠</span>`;
+            leftHtml = `<span style="color:#dc3545;">批发优惠: ${promoText}</span>`;
         }
     } else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
-        let label = currentVariant.selection_label || '自选卡密/号码';
-        // [还原样式]
-        leftHtml = `<span style="${redStyle}"><i class="fa fa-check-circle me-1"></i>${label} (加价 ${markup}元)</span>`;
+        leftHtml = `<span style="color:#dc3545;">加价 ${markup}元</span>`;
     }
 
-    // 准备右侧内容 (已选 info)
+    // 构建右侧 (已选规格 + 预设信息)
+    // [修改 1] 规则：显示已选规格 + 卡密/号码预设信息内容（没有则不显示）
     let rightInfo = specName;
     if (buyMethod === 'select' && selectedSpecificCardInfo) {
         rightInfo += ` + ${selectedSpecificCardInfo}`;
     }
 
-    // [修改] 拼接逻辑：挨着显示，用 margin-left 分隔
-    const rightHtml = `<span style="color:#666; font-size:12px; margin-left:12px;">已选: ${rightInfo}</span>`;
+    let html = '';
+    if (leftHtml) html += leftHtml;
     
-    displayDiv.innerHTML = leftHtml + rightHtml;
+    // 右侧文本 float right
+    html += `<span style="float:right; color:#333; font-weight:500; font-size:12px; margin-top:2px;">已选: ${rightInfo}</span>`;
+    html += `<div style="clear:both;"></div>`; // 清除浮动
+    
+    displayDiv.innerHTML = html;
 }
 
 function selectSku(index, btn) {
