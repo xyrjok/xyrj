@@ -1,3 +1,5 @@
+/* type: uploaded file */
+/* fileName: themes/TBshop/files/custom-theme.css */
 /* === 全局配色 & 基础 === */
 :root {
     --tb-orange: #ff5000;
@@ -113,9 +115,7 @@ a:hover { color: var(--tb-orange); }
 .module-title {
     font-size: 16px;
     font-weight: bold;
-    /* border-left: 4px solid var(--tb-orange); */ /* 移除 */
     border-left: none; /* 修改 */
-    /* padding-left: 10px; */ /* 移除 */
     padding-left: 14px; /* 修改：4px竖条宽度 + 10px间距 */
     margin-bottom: 12px;
     display: flex; justify-content: space-between; align-items: center;
@@ -1098,10 +1098,25 @@ a:hover { color: var(--tb-orange); }
 }
 
 .ns-item.selected {
-    background-color: #e6f7ff;
-    border-color: #1890ff;
-    color: #1890ff;
-    font-weight: bold;
+    background-color: #dc3545; /* 红底 */
+    border-color: #dc3545;     /* 红边框 */
+    color: #fff;               /* 白字 */
+    font-weight: normal;       /* 正常字体 */
+}
+
+/* [修改 2] 新增：收起按钮样式 */
+.ns-footer {
+    text-align: center;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+    cursor: pointer;
+    color: #999;
+    font-size: 13px;
+    background: #fff;
+}
+.ns-footer:hover {
+    background-color: #f8f9fa;
+    color: #333;
 }
 
 /* 调整价格栏，使其作为定位参考（如果需要的话，目前主要靠 col-md-7 的 relative） */
