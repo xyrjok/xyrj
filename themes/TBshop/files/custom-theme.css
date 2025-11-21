@@ -921,6 +921,7 @@ a:hover { color: var(--tb-orange); }
     padding: 4px 12px; /* 内边距，控制图标周围空间 */
     height: 34px;      /* 固定高度 */
     min-width: 60px;   /* 最小宽度 */
+    font-size: 25px;
     border: 1px solid #ddd; /* 默认灰色边框 */
     border-radius: 4px;
     margin-right: 12px;
@@ -940,7 +941,7 @@ a:hover { color: var(--tb-orange); }
 }
 
 /* 支付图标图片或字体大小 */
-.payment-option i { font-size: 20px; } 
+/*.payment-option i { font-size: 20px; } */
 .payment-option img { height: 20px; width: auto; object-fit: contain; }
 
 /* 右上角圆底白对勾 */
