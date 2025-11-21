@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (商品详情页专属逻辑 - 动画与动态信息增强版)
+// === (商品详情页专属逻辑 - 交互优化版)
 // =============================================
 
 // 全局变量
@@ -52,26 +52,30 @@ function renderProductDetail(p) {
     
     if (!container) return;
 
-    // 1. 初始状态
+    // 1. 初始不自动选中规格，计算价格范围
     currentVariant = null; 
     buyMethod = null;      
     
-    // 计算价格范围
+    let minPrice = 0, maxPrice = 0;
     let initialPriceDisplay = '0.00';
     let initialStock = 0;
+
     if (p.variants && p.variants.length > 0) {
         const prices = p.variants.map(v => parseFloat(v.price));
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
-        initialPriceDisplay = minPrice === maxPrice ? minPrice.toFixed(2) : `${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`;
+        minPrice = Math.min(...prices);
+        maxPrice = Math.max(...prices);
+        
+        if (minPrice === maxPrice) {
+            initialPriceDisplay = minPrice.toFixed(2);
+        } else {
+            initialPriceDisplay = `${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`;
+        }
         initialStock = p.variants.reduce((acc, v) => acc + (v.stock || 0), 0);
     }
 
     const defaultImg = (p.variants && p.variants[0] && p.variants[0].image_url) ? p.variants[0].image_url : p.image_url;
 
-    // 2. 构建 HTML
-    // [修改点1] 给标题添加 ID: p-title
-    // [修改点2] 添加 preset-info-module 容器
+    // 2. 构建 HTML 结构 (添加了 id 以便 DOM 操作)
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -83,20 +87,17 @@ function renderProductDetail(p) {
                     </div>
                 </div>
 
-                <div class="col-md-7">
+                <div class="col-md-7" id="product-info-column">
                     <div class="p-3">
-                        <h5 id="p-title" class="fw-bold mb-2" style="line-height:1.4;">${p.name}</h5>
-                        
-                        <div id="preset-info-module" class="alert alert-info border-0 bg-light text-dark mb-3 small" style="display:none; border-left: 4px solid #17a2b8 !important;">
-                            <div class="fw-bold mb-1"><i class="fa fa-info-circle me-1"></i> 预设信息 / 卡密详情：</div>
-                            <div id="preset-info-content" style="word-break: break-all;"></div>
+                        <div id="product-title-row">
+                            <h5 class="fw-bold mb-2" style="line-height:1.4;">${p.name}</h5>
                         </div>
-
+                        
                         <div class="tb-tags-row mb-3" id="p-tags-container" style="min-height:20px;">
                             ${renderProductTags(p.tags)}
                         </div>
 
-                        <div class="price-bar bg-light p-3 rounded mb-3">
+                        <div class="price-bar bg-light p-3 rounded mb-3" id="price-bar-container">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div class="d-flex align-items-baseline text-danger">
                                     <span class="fw-bold me-1" style="font-size: 18px;">¥</span>
@@ -116,7 +117,7 @@ function renderProductDetail(p) {
                             </div>
                         </div>
 
-                        <div class="sku-section mb-4">
+                        <div class="sku-section mb-4" id="sku-module-container">
                             <div class="mb-2 text-secondary small" id="spec-label">选择规格 <span class="fw-normal text-muted" style="font-size: 0.9em;">(共${p.variants ? p.variants.length : 0}个)</span>：</div>
                             <div class="sku-list d-flex flex-wrap" id="sku-btn-list">
                                 ${renderSkuButtons(p.variants, -1)}
@@ -124,12 +125,10 @@ function renderProductDetail(p) {
                             <div id="spec-pagination-area" class="spec-pagination-container"></div>
                         </div>
 
-                        <div id="preset-info-origin"></div>
-
-                        <div class="mb-3 d-flex align-items-center flex-wrap">
+                        <div class="mb-3 d-flex align-items-center flex-wrap" id="buy-method-wrapper">
                             <span class="text-secondary small me-3 text-nowrap">购买方式：</span>
                             <div class="d-flex align-items-center flex-wrap" id="buy-method-container">
-                                </div>
+                            </div>
                         </div>
 
                         <div class="mb-3 d-flex align-items-center">
@@ -202,52 +201,17 @@ function renderProductDetail(p) {
 // === 交互逻辑
 // =============================================
 
-/**
- * [新增] 控制预设信息模块的位置和显示
- * 逻辑：选择"自选"时，移动到标题下方并显示；否则隐藏（或移回原位）
- */
-function movePresetInfoModule(mode) {
-    const module = document.getElementById('preset-info-module');
-    const title = document.getElementById('p-title');
-    const origin = document.getElementById('preset-info-origin');
-    const contentDiv = document.getElementById('preset-info-content');
-
-    if (!module || !title || !origin) return;
-
-    // 获取预设信息 (假设在 variant.description 或 variant.preset_info 中)
-    // 如果您的数据字段不同，请修改此处。例如 variant.card_info
-    const infoText = currentVariant ? (currentVariant.description || currentVariant.preset_info || '暂无特殊预设信息') : '';
-
-    if (mode === 'select' && currentVariant) {
-        // 1. 填充内容
-        contentDiv.innerHTML = infoText;
-
-        // 2. 移动 DOM 节点：插到标题后面
-        if (title.nextElementSibling !== module) {
-            title.after(module);
-        }
-        
-        // 3. 显示
-        module.style.display = 'block';
-        // 可以添加简单的 CSS 动画类来实现平滑下滑，这里直接显示
-    } else {
-        // 1. 隐藏
-        module.style.display = 'none';
-        
-        // 2. (可选) 移回原位，保持 DOM 结构整洁
-        origin.appendChild(module);
-    }
-}
-
 function parseWholesaleInfo(config) {
     if (!config) return null;
     let rules = [];
     let data = config;
+
     if (typeof data === 'string') {
         data = data.trim();
         if (data.startsWith('[') || data.startsWith('{')) {
-            try { data = JSON.parse(data); } 
-            catch (e) { 
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
                 data.replace(/，/g, ',').split(',').forEach(item => {
                     const [n, p] = item.split('=');
                     if (n && p) rules.push(`${n}个起${p}元/1个`);
@@ -262,12 +226,18 @@ function parseWholesaleInfo(config) {
             return rules.length ? rules.join('，') : data;
         }
     }
+
     if (typeof data === 'object' && data !== null) {
         if (Array.isArray(data)) {
             data.forEach(item => {
-                const n = item.num || item.number || item.count || item.quantity || item.n;
-                const p = item.price || item.money || item.amount || item.value || item.p;
-                if (n !== undefined && p !== undefined) rules.push(`${n}个起${p}元/1个`);
+                const n = item.num || item.number || item.count || item.quantity || item.n || item.key;
+                const p = item.price || item.money || item.amount || item.value || item.p || item.val;
+                if (n !== undefined && p !== undefined) {
+                    rules.push(`${n}个起${p}元/1个`);
+                } else {
+                    const vals = Object.values(item);
+                    if (vals.length >= 2) rules.push(`${vals[0]}个起${vals[1]}元/1个`);
+                }
             });
         } else {
             Object.entries(data).forEach(([k, v]) => {
@@ -295,46 +265,88 @@ function updateBuyMethodButtons() {
 
     const markup = parseFloat(targetVariant.custom_markup || 0);
     const showSelect = markup > 0;
+
     let label = targetVariant.selection_label;
-    label = (!label || label.trim() === '') ? '自选卡密/号码' : label.trim();
+    if (!label || label.trim() === '') label = '自选卡密/号码';
+    else label = label.trim();
 
     if (buyMethod === 'select' && !showSelect) buyMethod = null;
 
     let html = '';
     const randomClass = buyMethod === 'random' ? 'btn-danger' : 'btn-outline-secondary';
-    html += `<button class="btn btn-sm ${randomClass} me-2 mb-1 method-btn" data-type="random" onclick="selectBuyMethod('random', this)">默认随机</button>`;
+    html += `
+        <button class="btn btn-sm ${randomClass} me-2 mb-1 method-btn" 
+            data-type="random" onclick="selectBuyMethod('random', this)">
+            默认随机
+        </button>
+    `;
 
     if (showSelect) {
         const selectClass = buyMethod === 'select' ? 'btn-danger' : 'btn-outline-secondary';
-        html += `<button class="btn btn-sm ${selectClass} mb-1 method-btn" data-type="select" onclick="selectBuyMethod('select', this)">${label} (加价${markup.toFixed(2)}元)</button>`;
+        html += `
+            <button class="btn btn-sm ${selectClass} mb-1 method-btn" 
+                data-type="select" onclick="selectBuyMethod('select', this)">
+                ${label} (加价${markup.toFixed(2)}元)
+            </button>
+        `;
     }
 
     container.innerHTML = html;
 }
 
+/**
+ * [核心修改] 切换购买方式 & 触发模块移动
+ */
 function selectBuyMethod(type, btn) {
     if (!currentVariant) {
         alert('请先选择商品规格');
         return;
     }
+
+    // 切换逻辑
     if (buyMethod === type) {
         buyMethod = null; // 取消选中
     } else {
         buyMethod = type;
     }
 
-    // 触发动画和模块移动
-    movePresetInfoModule(buyMethod);
-    
+    // [功能 1] 模块位置移动逻辑
+    moveSkuModuleBasedOnMethod();
+
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay(); 
     updateRealTimePrice(); 
 }
 
 /**
+ * [新功能] 根据购买方式移动规格模块
+ */
+function moveSkuModuleBasedOnMethod() {
+    const skuModule = document.getElementById('sku-module-container');
+    const titleRow = document.getElementById('product-title-row');
+    const buyMethodWrapper = document.getElementById('buy-method-wrapper');
+    const priceBar = document.getElementById('price-bar-container');
+
+    if (!skuModule || !titleRow || !buyMethodWrapper || !priceBar) return;
+
+    // 自选模式：模块移动到标题下方
+    if (buyMethod === 'select') {
+        // insertAfter logic: insert before the next sibling of titleRow
+        if (titleRow.nextSibling) {
+            titleRow.parentNode.insertBefore(skuModule, titleRow.nextSibling);
+        } else {
+            titleRow.parentNode.appendChild(skuModule);
+        }
+    } 
+    // 默认随机 或 未选：模块恢复到原位 (购买方式上方 / 价格栏下方)
+    else {
+        // 插入到 buyMethodWrapper 之前
+        buyMethodWrapper.parentNode.insertBefore(skuModule, buyMethodWrapper);
+    }
+}
+
+/**
  * [核心修改] 更新价格下方的动态信息栏
- * 需求1：自选 -> 显示 "已选规格 + 预设信息"
- * 需求2：随机 -> 显示 "批发优惠 + 已选规格" (无预设信息)
  */
 function updateDynamicInfoDisplay() {
     const displayDiv = document.getElementById('dynamic-info-display');
@@ -346,51 +358,53 @@ function updateDynamicInfoDisplay() {
     }
 
     displayDiv.style.display = 'block';
-    const specName = currentVariant.name || currentVariant.specs || '默认规格';
+
+    // 准备已选规格的显示文字
+    const specName = currentVariant.name || '';
+    // 假设 specs 字段包含卡密/号码预设信息，如果没有 specs 则只显示 name
+    const presetInfo = currentVariant.specs ? ` ${currentVariant.specs}` : '';
+    
+    // 样式：灰色小字显示
+    const selectedHtml = `<span style="color:#333; font-weight:bold; margin-left:8px;">[已选: ${specName}${presetInfo}]</span>`;
+    const selectedHtmlNoPreset = `<span style="color:#333; font-weight:bold; margin-left:8px;">[已选: ${specName}]</span>`;
 
     // --- 情况 A: 默认随机 ---
+    // 需求: 显示批发优惠 + 已选规格(无预设信息)
     if (buyMethod === 'random') {
         const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
-        
-        // 构造显示 HTML
-        let html = '';
-        
-        // 1. 批发优惠
-        if (promoText && promoText !== '[]' && promoText !== '{}') {
-            html += `<span style="color:#dc3545; font-weight:500;"><i class="fa fa-tag me-1"></i>批发优惠: ${promoText}</span>`;
-        } else {
-            html += `<span style="color:#999;"><i class="fa fa-info-circle me-1"></i>暂无批发优惠</span>`;
-        }
-        
-        // 2. 后面显示 已选规格 (灰色，区分开)
-        html += ` <span style="color:#666; margin-left:8px; border-left:1px solid #ccc; padding-left:8px;">已选: ${specName}</span>`;
+        let promoHtml = '';
 
-        displayDiv.innerHTML = `<div style="font-size:13px; line-height:1.5;">${html}</div>`;
+        if (promoText && promoText !== '[]' && promoText !== '{}') {
+            promoHtml = `批发优惠: ${promoText}`;
+        } else {
+            promoHtml = `暂无批发优惠`;
+        }
+
+        displayDiv.innerHTML = `
+            <span style="color:#dc3545; font-size:13px; font-weight:500;">
+                <i class="fa fa-tag me-1"></i>
+                ${promoHtml}
+            </span>
+            ${selectedHtmlNoPreset}
+        `;
     } 
     
-    // --- 情况 B: 自选 (显示预设信息) ---
+    // --- 情况 B: 自选 ---
+    // 需求: 显示标签(加价) + 已选规格 + 预设信息内容
     else if (buyMethod === 'select') {
         let label = currentVariant.selection_label;
-        label = (!label || label.trim() === '') ? '自选卡密/号码' : label.trim();
+        if (!label || label.trim() === '') label = '自选卡密/号码';
+        else label = label.trim();
+
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
         
-        // 获取预设信息 (与上面 movePresetInfoModule 保持一致)
-        const presetInfo = currentVariant.description || currentVariant.preset_info || ''; 
-
-        let html = '';
-        
-        // 1. 标签 + 加价
-        html += `<span style="color:#dc3545; font-weight:500;"><i class="fa fa-check-circle me-1"></i>${label} (加价 ${markup}元)</span>`;
-        
-        // 2. 已选规格
-        html += ` <span style="color:#666; margin-left:8px; border-left:1px solid #ccc; padding-left:8px;">已选: ${specName}</span>`;
-        
-        // 3. 预设信息 (如果有)
-        if (presetInfo) {
-             html += ` <span style="color:#007bff; margin-left:8px; border-left:1px solid #ccc; padding-left:8px;">${presetInfo}</span>`;
-        }
-
-        displayDiv.innerHTML = `<div style="font-size:13px; line-height:1.5;">${html}</div>`;
+        displayDiv.innerHTML = `
+            <span style="color:#dc3545; font-size:13px; font-weight:500;">
+                <i class="fa fa-check-circle me-1"></i>
+                ${label} (加价 ${markup}元)
+            </span>
+            ${selectedHtml}
+        `;
     }
 }
 
@@ -398,23 +412,28 @@ function selectSku(index, btn) {
     if (!currentProduct) return;
     const variant = currentProduct.variants[index];
 
+    // 取消选中逻辑
     if (currentVariant && currentVariant.id === variant.id) {
-        // 取消选中
         currentVariant = null;
         buyMethod = null; 
+        
         document.querySelectorAll('.sku-btn').forEach(b => {
             b.classList.remove('btn-danger');
             b.classList.add('btn-outline-secondary');
         });
-        document.getElementById('p-stock').innerText = currentProduct.variants.reduce((acc, v) => acc + (v.stock || 0), 0);
-        
-        movePresetInfoModule(null); // 隐藏信息模块
+
+        const totalStock = currentProduct.variants.reduce((acc, v) => acc + (v.stock || 0), 0);
+        document.getElementById('p-stock').innerText = totalStock;
+
+        // 重置位置
+        moveSkuModuleBasedOnMethod();
         updateBuyMethodButtons();
         updateDynamicInfoDisplay();
         updateRealTimePrice(); 
         return;
     }
 
+    // 选中逻辑
     currentVariant = variant;
     
     document.querySelectorAll('.sku-btn').forEach(b => {
@@ -429,14 +448,10 @@ function selectSku(index, btn) {
     document.getElementById('p-stock').innerText = variant.stock;
     if (variant.image_url) document.getElementById('p-main-img').src = variant.image_url;
 
-    // 切换规格时，如果当前是自选模式，需要更新信息模块的内容
-    movePresetInfoModule(buyMethod);
-    
+    // 切换规格时，如果当前是自选模式，需要更新显示的预设信息
     updateBuyMethodButtons();
     updateDynamicInfoDisplay();
 }
-
-// --- 辅助函数 ---
 
 function renderSkuButtons(variants, selectedIdx = -1) {
     if (!variants || variants.length === 0) return '<span class="text-muted">默认规格</span>';
@@ -451,7 +466,15 @@ function renderSkuButtons(variants, selectedIdx = -1) {
         const name = v.name || v.specs || `规格${index+1}`;
         const badgeHtml = isOOS ? '<span class="sku-oos-badge">缺货</span>' : '';
         
-        return `<button class="btn btn-sm ${btnClass} me-2 mb-2 sku-btn" data-idx="${index}" onclick="${isOOS ? '' : `selectSku(${index}, this)`}" ${isOOS ? 'disabled' : ''}>${name}${badgeHtml}</button>`;
+        return `
+            <button class="btn btn-sm ${btnClass} me-2 mb-2 sku-btn" 
+                data-idx="${index}" 
+                onclick="${isOOS ? '' : `selectSku(${index}, this)`}" 
+                ${isOOS ? 'disabled' : ''}>
+                ${name}
+                ${badgeHtml}
+            </button>
+        `;
     }).join('');
 }
 
@@ -516,6 +539,7 @@ function changeQty(delta) {
     }
     quantity = newQty;
     document.getElementById('buy-qty').value = quantity;
+    
     updateRealTimePrice();
 }
 
@@ -561,11 +585,6 @@ function buyNow() {
     setTimeout(() => {
         window.location.href = '/cart.html';
     }, 200);
-}
-
-function animateValue(id, end) {
-    const el = document.getElementById(id);
-    if(el) el.innerText = end; 
 }
 
 function showError(msg) {
@@ -642,27 +661,33 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
     });
 }
 
-
 // =============================================
-// === 实时价格计算与批发逻辑
+// === 价格计算与实时显示
 // =============================================
 
 function updateRealTimePrice() {
     const priceEl = document.getElementById('p-display-price');
     if (!priceEl) return;
 
+    // 未选规格：显示范围
     if (!currentVariant) {
         if (!currentProduct || !currentProduct.variants) return;
         const prices = currentProduct.variants.map(v => parseFloat(v.price));
         const min = Math.min(...prices);
         const max = Math.max(...prices);
-        priceEl.innerHTML = min === max ? min.toFixed(2) : `${min.toFixed(2)}-${max.toFixed(2)}`;
+        if (min === max) {
+            priceEl.innerHTML = min.toFixed(2);
+        } else {
+            priceEl.innerHTML = `${min.toFixed(2)}-${max.toFixed(2)}`;
+        }
         return;
     }
     
+    // 已选规格：基础售价
     let finalPrice = parseFloat(currentVariant.price);
     let displayHTML = finalPrice.toFixed(2); 
 
+    // 默认随机 -> 检查批发价
     if (buyMethod === 'random') {
         const rules = parseWholesaleDataForCalc(currentVariant.wholesale_config);
         if (rules.length > 0) {
@@ -673,6 +698,8 @@ function updateRealTimePrice() {
             }
         }
     }
+    
+    // 自选规格 -> 显示加价公式
     else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0);
         if (markup > 0) {
