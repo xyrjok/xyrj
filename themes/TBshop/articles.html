@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章中心 - TB Shop</title>
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/css/all.min.css" rel="stylesheet">
+    <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
+    
+    <script src="/themes/TBshop/files/common.js" defer></script>
+    <script src="/themes/TBshop/files/articles-page.js" defer></script>
+
+    <style>
+        /* === 文章列表专用样式 === */
+        .article-item {
+            transition: background-color 0.2s;
+        }
+        .article-item:hover {
+            background-color: #fcfcfc;
+        }
+        /* 移除最后一个元素的底边框 */
+        .article-item:last-child {
+            border-bottom: none !important;
+        }
+
+        /* 文章左侧缩略图容器 */
+        .art-item-img {
+            width: 160px;
+            height: 100px;
+            flex-shrink: 0;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #eee;
+            position: relative;
+        }
+        .art-item-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .art-item-img:hover img {
+            transform: scale(1.05);
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .art-item-img {
+                width: 100px; /* 移动端缩小图片 */
+                height: 70px;
+                margin-right: 10px !important;
+            }
+            .art-item-desc {
+                display: none; /* 移动端隐藏摘要，只显示标题和元数据 */
+            }
+            .art-item-title {
+                font-size: 14px;
+                line-height: 1.4;
+                margin-bottom: 5px !important;
+                height: 40px; /* 限制两行 */
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="mobile-header d-lg-none" id="global-mobile-header"></header>
+    <div class="mobile-sidebar d-lg-none" id="mobile-sidebar"></div>
+    <div class="mobile-overlay d-lg-none" id="mobile-overlay" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></div>
+    <header class="tb-header d-none d-lg-block" id="global-pc-header"></header>
+
+    <div class="container mt-4 mb-5">
+        <div class="row gx-3">
+            <div class="col-lg-9">
+                
+                <div class="module-box mb-3">
+                    <div class="category-bar" id="article-cat-container">
+                        <div class="cat-pill active" onclick="filterArticles('all', this)">全部文章</div>
+                        </div>
+                </div>
+
+                <div class="module-box p-0" style="overflow: hidden; min-height: 500px;">
+                    <div class="module-title p-3 border-bottom mb-0">
+                        热门文章
+                    </div>
+                    <div id="article-list-container">
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa fa-spinner fa-spin"></i> 加载中...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-lg-3 d-none d-lg-block">
+                <div id="sidebar-wrapper"> 
+                    <div id="global-sidebar-right"></div>
+                </div> 
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer" id="global-footer"></footer>
+    <nav class="mobile-bottom-nav d-lg-none" id="global-mobile-nav"></nav>
+
+    <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
+    <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
+        <div class="mcs-header">
+            <span class="mcs-title">联系客服</span>
+            <i class="fa fa-times mcs-close" id="mobile-contact-close-btn" onclick="togglePanel('mobile-contact-sheet', 'mobile-contact-overlay')"></i>
+        </div>
+        <div class="mcs-content" id="mobile-contact-content"><p>加载中...</p></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 渲染布局
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof renderCommonLayout === 'function') {
+                renderCommonLayout('articles'); // 高亮菜单
+            }
+        });
+    </script>
+</body>
+</html>
