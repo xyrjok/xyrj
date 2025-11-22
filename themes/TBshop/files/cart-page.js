@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (最终版：UI颜色优化 + 逻辑修复)
+// === (关键修复版：解决结算API报错 + 支持合并支付)
 // =============================================
 
 let cart = [];
@@ -53,58 +53,50 @@ function syncInputs(id1, id2) {
 }
 
 /**
- * 标准化商品数据对象
- * 解决字段名不一致问题 (variantName vs variant_name 等)
+ * [关键修复] 标准化商品数据对象
+ * 既要满足前端显示(name, sku, img)，又要满足后端接口需求(variantId, selectedCardId)
  */
 function normalizeItem(item) {
     return {
-        // 标题兼容
+        // --- 后端接口必需字段 (API Required) ---
+        // 兼容 product-page.js 存入时的 variant_id (下划线) 或可能存在的驼峰
+        variantId: item.variant_id || item.variantId, 
+        productName: item.productName || item.name || item.title || '未命名商品',
+        variantName: item.variant_name || item.variantName || item.skuName || item.variant || '默认规格',
+        selectedCardId: item.selectedCardId || null, // 自选号码ID
+
+        // --- 前端显示字段 (Display) ---
+        // 为了兼容渲染函数，映射到通用字段名
         name: item.productName || item.name || item.title || '未命名商品',
-        
-        // 规格兼容：优先读取 product-page.js 写入的 variant_name
-        sku: item.variant_name || item.variantName || item.variant || item.skuName || '默认规格',
-        
-        // 图片兼容
+        sku: item.variant_name || item.variantName || item.skuName || item.variant || '默认规格',
         img: item.img || item.image || item.thumb || item.pic || '/assets/img/no-image.png',
         
-        // 价格与数量
+        // --- 通用字段 ---
         price: parseFloat(item.price || 0),
         quantity: parseInt(item.quantity || 1),
-        
-        // 购买模式与预设信息
         buyMode: item.buyMode || 'auto',
         
-        // 预设信息：读取 selectedCardInfo
+        // 预设信息显示 (前端用)
         inputData: item.selectedCardInfo || item.selectedCardNote || item.input_data || item.customInfo || '',
         
-        // 原始引用
+        // 选中状态
         checked: item.checked !== false
     };
 }
 
 /**
  * 支付方式选择逻辑
- * 使用 data-method 属性精确定位，防止点击失效
  */
 function selectCartPayment(method, el) {
     cartPaymentMethod = method;
-    
-    // 定义所有包含支付选项的容器 ID (PC 和 Mobile)
     const containers = ['cart-payment-list', 'cart-payment-list-pc', 'cart-payment-list-mobile'];
-    
     containers.forEach(id => {
         const container = document.getElementById(id);
         if (!container) return;
-        
-        // 1. 移除该容器内所有选项的 active 状态
         const boxes = container.querySelectorAll('.payment-select-box');
         boxes.forEach(box => box.classList.remove('active'));
-        
-        // 2. 根据 method 找到对应的选项并激活
         const target = container.querySelector(`.payment-select-box[data-method="${method}"]`);
-        if (target) {
-            target.classList.add('active');
-        }
+        if (target) target.classList.add('active');
     });
 }
 
@@ -147,11 +139,8 @@ function loadCart() {
 function renderPCItem(rawItem, index) {
     const item = normalizeItem(rawItem);
     const subtotal = (item.price * item.quantity).toFixed(2);
-    
-    // 规格显示
     const specDisplay = `<span class="text-muted">${item.sku}</span>`;
     
-    // [修改] 预设信息/随机发货 显示为红色 (text-danger)
     let extraInfo = '';
     if (item.buyMode === 'select') {
         extraInfo = item.inputData ? 
@@ -204,7 +193,6 @@ function renderPCItem(rawItem, index) {
  */
 function renderMobileItem(rawItem, index) {
     const item = normalizeItem(rawItem);
-    
     let infoText = '';
     if (item.buyMode === 'select') {
         infoText = item.inputData ? `已选: ${item.inputData}` : '未选号码';
@@ -360,6 +348,7 @@ async function handleCheckout() {
     btns.forEach(b => { b.disabled = true; b.innerText = '提交中...'; });
     
     try {
+        // [修复] 这里的 normalizeItem 现在会包含 variantId 等关键字段
         const payload = {
             items: selected.map(normalizeItem), 
             contact: contact,
@@ -378,6 +367,7 @@ async function handleCheckout() {
         const remaining = cart.filter(i => i.checked === false);
         localStorage.setItem('tbShopCart', JSON.stringify(remaining));
         
+        // 跳转到收银台，此处 data.order_id 即为合并后的订单号
         window.location.href = `pay.html?order_id=${data.order_id}&method=${cartPaymentMethod}`;
     } catch(e) {
         alert('结算失败: ' + e.message);
