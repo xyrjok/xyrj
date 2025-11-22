@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终完整版：兼容性优化 - 移除gap - 新增PC端购物车图标)
+// === (最终完整版：兼容性优化 - 移除gap - 新增PC端无框购物车图标)
 // =============================================
 
 // 全局变量
@@ -172,10 +172,10 @@ function renderProductDetail(p) {
                             </div>
                         </div>
 
-                        <div class="action-btns d-flex mt-4">
-                            <a href="/cart.html" class="btn d-none d-lg-flex align-items-center justify-content-center me-2 position-relative rounded" style="width: 48px; background-color: #dc3545; border: none; color: #fff; text-decoration: none;">
-                                <i class="far fa-shopping-cart" style="font-size: 1.2rem;"></i>
-                                <span id="pc-detail-cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-white text-danger border border-danger" style="display: none; font-size: 10px; padding: 2px 4px; transform: translate(-30%, -30%) !important;">0</span>
+                        <div class="action-btns d-flex mt-4 align-items-center">
+                            <a href="/cart.html" class="d-none d-lg-flex align-items-center justify-content-center me-3 position-relative p-0" style="border: none; background: none; color: #dc3545; text-decoration: none;">
+                                <i class="far fa-shopping-cart" style="font-size: 1.5rem;"></i>
+                                <span id="pc-detail-cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger text-white" style="display: none; font-size: 10px; padding: 3px 6px; transform: translate(-50%, -50%) !important;">0</span>
                             </a>
                             
                             <button class="btn btn-warning flex-grow-1 text-white fw-bold py-2 me-2" onclick="addToCart()">
@@ -209,7 +209,7 @@ function renderProductDetail(p) {
     updateDynamicInfoDisplay(); 
     updatePcDetailCartBadge(); // [新增] 初始化PC端详情页购物车角标
     
-    // 回显缓存信息 (如果有的话就回显，提升体验)
+    // 回显缓存信息
     const cachedContact = localStorage.getItem('userContact');
     const cachedPass = localStorage.getItem('userPassword');
     if(cachedContact) {
@@ -275,11 +275,9 @@ function updateBuyMethodButtons() {
     if (buyMethod === 'select' && !showSelect) buyMethod = null;
 
     let html = '';
-    // 按钮1：默认随机
     const randomClass = buyMethod === 'random' ? 'btn-danger' : 'btn-outline-secondary';
     html += `<button class="btn btn-sm ${randomClass} me-2 mb-1 method-btn" data-type="random" onclick="selectBuyMethod('random', this)">默认随机</button>`;
 
-    // 按钮2：自选
     if (showSelect) {
         const selectClass = buyMethod === 'select' ? 'btn-danger' : 'btn-outline-secondary';
         html += `<button class="btn btn-sm ${selectClass} mb-1 method-btn" data-type="select" onclick="selectBuyMethod('select', this)">${label} (加价${markup.toFixed(2)}元)</button>`;
@@ -315,7 +313,6 @@ async function openNumberSelector() {
     
     if (!modal || !currentVariant) return;
 
-    // 样式配置
     modal.style.display = 'flex';
     modal.style.flexDirection = 'column';
     modal.style.position = 'absolute';
@@ -336,7 +333,6 @@ async function openNumberSelector() {
         nsBody.style.flex = '1';
     }
 
-    // 定位
     const parent = modal.offsetParent || modal.parentElement;
     const parentHeight = parent.clientHeight;
     const buyTop = buyMethodEl.offsetTop; 
@@ -561,15 +557,12 @@ function changeQty(delta) {
 
 // =============================================
 // === 1. [重点] 加入购物车
-// === 逻辑：不强制校验联系人/密码/支付方式
-// === 但如果有填，尝试保存到缓存
 // =============================================
 function addToCart() {
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
     if (buyMethod === null) { alert('请选择购买方式'); return; }
 
-    // 仅自选模式需要校验号码
     if (buyMethod === 'select') {
         if (!selectedSpecificCardId) {
             alert('请选择一个号码/卡密');
@@ -578,13 +571,11 @@ function addToCart() {
         }
     }
 
-    // 尝试保存信息（如果用户填了），但不校验
     const contactEl = document.getElementById('p-contact');
     const passEl = document.getElementById('p-password');
     if (contactEl && passEl) {
         const c = contactEl.value.trim();
         const p = passEl.value.trim();
-        // 只要不为空，就保存；为空也没关系，不报错
         if(c) localStorage.setItem('userContact', c);
         if(p) localStorage.setItem('userPassword', p);
     }
@@ -630,7 +621,6 @@ function addToCart() {
 
 // =============================================
 // === 2. [重点] 立即购买
-// === 逻辑：强制校验所有信息，直连后端下单
 // =============================================
 async function buyNow() {
     if (!currentVariant) { alert('请先选择规格'); return; }
@@ -644,7 +634,6 @@ async function buyNow() {
         }
     }
 
-    // 强制获取并校验联系人与密码
     const contactEl = document.getElementById('p-contact');
     const passEl = document.getElementById('p-password');
     
@@ -667,11 +656,9 @@ async function buyNow() {
         return;
     }
 
-    // 保存到本地
     localStorage.setItem('userContact', contact);
     localStorage.setItem('userPassword', password);
 
-    // UI Loading
     const btn = event.currentTarget || event.target;
     const originalContent = btn.innerHTML;
     btn.disabled = true;
@@ -682,7 +669,7 @@ async function buyNow() {
         quantity: quantity,
         contact: contact,
         query_password: password,
-        payment_method: paymentMethod, // 传递当前页面选中的支付方式
+        payment_method: paymentMethod, 
         card_id: (buyMethod === 'select') ? selectedSpecificCardId : null
     };
 
@@ -700,7 +687,6 @@ async function buyNow() {
             btn.disabled = false;
             btn.innerHTML = originalContent;
         } else {
-            // 跳转支付页，带上 method 参数
             window.location.href = `/pay.html?order_id=${data.order_id}&method=${paymentMethod}`;
         }
 
