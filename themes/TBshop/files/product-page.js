@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终完整版：兼容性优化 - 移除gap)
+// === (最终完整版：兼容性优化 - 移除gap - 新增PC端购物车图标)
 // =============================================
 
 // 全局变量
@@ -94,7 +94,6 @@ function renderProductDetail(p) {
                             <span>销量: ${p.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
                         </div>
 
-                        <!-- 自选号码弹窗 -->
                         <div id="number-selector-modal" class="number-selector-overlay">
                             <div class="ns-header">
                                 <span>请选择号码</span>
@@ -146,8 +145,6 @@ function renderProductDetail(p) {
                             </div>
                         </div>
                         
-                        <!-- 信息输入区域 (仅立即购买强制要求) -->
-                        <!-- [修改] 移除 d-flex gap-2，改用 flex + margin -->
                         <div class="mb-3 d-flex align-items-center">
                             <span class="text-secondary small me-3">信息：</span>
                             <div class="d-flex flex-grow-1">
@@ -156,7 +153,6 @@ function renderProductDetail(p) {
                             </div>
                         </div>
 
-                        <!-- 支付方式 (仅立即购买使用) -->
                         <div class="mb-4 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">支付方式：</span>
                             <div class="d-flex align-items-center flex-wrap" id="payment-method-list">
@@ -176,8 +172,12 @@ function renderProductDetail(p) {
                             </div>
                         </div>
 
-                        <!-- [修改] 移除 gap-2，改用 me-2 -->
                         <div class="action-btns d-flex mt-4">
+                            <a href="/cart.html" class="btn d-none d-lg-flex align-items-center justify-content-center me-2 position-relative rounded" style="width: 48px; background-color: #dc3545; border: none; color: #fff; text-decoration: none;">
+                                <i class="far fa-shopping-cart" style="font-size: 1.2rem;"></i>
+                                <span id="pc-detail-cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-white text-danger border border-danger" style="display: none; font-size: 10px; padding: 2px 4px; transform: translate(-30%, -30%) !important;">0</span>
+                            </a>
+                            
                             <button class="btn btn-warning flex-grow-1 text-white fw-bold py-2 me-2" onclick="addToCart()">
                                 <i class="fa fa-cart-plus"></i> 加入购物车
                             </button>
@@ -207,6 +207,7 @@ function renderProductDetail(p) {
     // 3. 初始化后续逻辑
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay(); 
+    updatePcDetailCartBadge(); // [新增] 初始化PC端详情页购物车角标
     
     // 回显缓存信息 (如果有的话就回显，提升体验)
     const cachedContact = localStorage.getItem('userContact');
@@ -614,6 +615,7 @@ function addToCart() {
 
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
     if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
+    updatePcDetailCartBadge(); // [新增] 更新本页面的购物车图标数量
     
     // UI 反馈
     const btn = event.target;
@@ -860,4 +862,24 @@ function parseWholesaleDataForCalc(config) {
         Object.entries(data).forEach(([k,v]) => { rules.push({ count: parseInt(k), price: parseFloat(v) }); });
     }
     return rules.sort((a,b) => b.count - a.count);
+}
+
+// [新增] 更新PC端详情页购物车图标角标
+function updatePcDetailCartBadge() {
+    const badge = document.getElementById('pc-detail-cart-badge');
+    if (!badge) return;
+    try {
+        const cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
+        // 这里使用 cart.length 表示商品种类数量
+        const count = cart.length; 
+        
+        if (count > 0) {
+            badge.innerText = count;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch(e) {
+        console.error('更新角标失败', e);
+    }
 }
