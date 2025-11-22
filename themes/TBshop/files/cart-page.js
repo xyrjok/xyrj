@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (修复版：字段名兼容 + 支付选择修复)
+// === (最终版：UI颜色优化 + 逻辑修复)
 // =============================================
 
 let cart = [];
@@ -53,8 +53,8 @@ function syncInputs(id1, id2) {
 }
 
 /**
- * [修复1] 标准化商品数据对象
- * 增加 variant_name 和 selectedCardInfo 的映射
+ * 标准化商品数据对象
+ * 解决字段名不一致问题 (variantName vs variant_name 等)
  */
 function normalizeItem(item) {
     return {
@@ -74,7 +74,7 @@ function normalizeItem(item) {
         // 购买模式与预设信息
         buyMode: item.buyMode || 'auto',
         
-        // [重点修改] 预设信息：读取 selectedCardInfo
+        // 预设信息：读取 selectedCardInfo
         inputData: item.selectedCardInfo || item.selectedCardNote || item.input_data || item.customInfo || '',
         
         // 原始引用
@@ -83,8 +83,8 @@ function normalizeItem(item) {
 }
 
 /**
- * [修复2] 支付方式选择逻辑
- * 改用 data-method 属性来精确定位元素，避免点击失效
+ * 支付方式选择逻辑
+ * 使用 data-method 属性精确定位，防止点击失效
  */
 function selectCartPayment(method, el) {
     cartPaymentMethod = method;
@@ -101,7 +101,6 @@ function selectCartPayment(method, el) {
         boxes.forEach(box => box.classList.remove('active'));
         
         // 2. 根据 method 找到对应的选项并激活
-        // 需配合 HTML 中的 data-method 属性使用
         const target = container.querySelector(`.payment-select-box[data-method="${method}"]`);
         if (target) {
             target.classList.add('active');
@@ -149,17 +148,17 @@ function renderPCItem(rawItem, index) {
     const item = normalizeItem(rawItem);
     const subtotal = (item.price * item.quantity).toFixed(2);
     
-    // 显示逻辑优化
+    // 规格显示
     const specDisplay = `<span class="text-muted">${item.sku}</span>`;
     
-    // 如果是自选模式且有输入信息，则显示输入信息；否则显示购买模式
+    // [修改] 预设信息/随机发货 显示为红色 (text-danger)
     let extraInfo = '';
     if (item.buyMode === 'select') {
         extraInfo = item.inputData ? 
-            `<span class="text-primary ms-1">[已选: ${item.inputData}]</span>` : 
+            `<span class="text-danger ms-1">[已选: ${item.inputData}]</span>` : 
             `<span class="text-danger ms-1">[未选号码]</span>`;
     } else if (item.buyMode === 'random') {
-        extraInfo = `<span class="text-muted ms-1">[随机发货]</span>`;
+        extraInfo = `<span class="text-danger ms-1">[随机发货]</span>`;
     }
     
     return `
@@ -225,7 +224,7 @@ function renderMobileItem(rawItem, index) {
             <div class="flex-grow-1 ms-2">
                 <div class="text-truncate mb-1" style="font-size:14px; font-weight:bold; max-width:200px;">${item.name}</div>
                 <div class="small text-muted bg-light px-2 py-1 rounded d-inline-block mb-2" style="font-size:12px;">
-                    ${item.sku} <span class="text-primary">(${infoText})</span>
+                    ${item.sku} <span class="text-danger">(${infoText})</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-end">
                     <div class="text-danger fw-bold">¥${item.price.toFixed(2)}</div>
