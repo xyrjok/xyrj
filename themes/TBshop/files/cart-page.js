@@ -300,7 +300,7 @@ async function handleCheckout() {
     const paymentMethod = document.querySelector('input[name="payment"]:checked');
     
     if (!contactInfo) return alert('请填写联系方式');
-    if (!queryPassword || queryPassword.length < 6) return alert('请设置6位以上的查单密码');
+    if (!queryPassword || queryPassword.length <= 1) return alert('请设置1位以上的查单密码');
     
     // 保存用户信息
     localStorage.setItem('userContact', contactInfo);
