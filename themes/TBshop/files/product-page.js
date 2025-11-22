@@ -177,7 +177,7 @@ function renderProductDetail(p) {
 
                         <div class="action-btns d-flex gap-2 mt-4">
                             <button class="btn btn-warning flex-grow-1 text-white fw-bold py-2" onclick="addToCart()">
-                                <i class="fa fa-cart-plus"></i> 加入购物车
+                                <i class="far fa-cart-plus"></i> 加入购物车
                             </button>
                             <button class="btn btn-danger flex-grow-1 fw-bold py-2" onclick="buyNow()">
                                 立即购买
