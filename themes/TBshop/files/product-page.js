@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终完整版：兼容性优化 - 移除gap - 新增PC端无框购物车图标)
+// === (最终完整版：兼容性优化 - 修复按钮等宽问题)
 // =============================================
 
 // 全局变量
@@ -173,15 +173,15 @@ function renderProductDetail(p) {
                         </div>
 
                         <div class="action-btns d-flex mt-4 align-items-center">
-                            <a href="/cart.html" class="d-none d-lg-flex align-items-center justify-content-center me-3 position-relative p-0" style="border: none; background: none; color: #dc3545; text-decoration: none;">
+                            <a href="/cart.html" class="d-none d-lg-flex align-items-center justify-content-center me-3 position-relative p-0" style="border: none; background: none; color: #dc3545; text-decoration: none; width: 40px; height: 40px;">
                                 <i class="far fa-shopping-cart" style="font-size: 1.5rem;"></i>
                                 <span id="pc-detail-cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger text-white" style="display: none; font-size: 10px; padding: 3px 6px; transform: translate(-50%, -50%) !important;">0</span>
                             </a>
                             
-                            <button class="btn btn-warning flex-grow-1 text-white fw-bold py-2 me-2" onclick="addToCart()">
+                            <button class="btn btn-warning text-white fw-bold py-2 me-2" style="flex: 1 1 0%;" onclick="addToCart()">
                                 <i class="fa fa-cart-plus"></i> 加入购物车
                             </button>
-                            <button class="btn btn-danger flex-grow-1 fw-bold py-2" onclick="buyNow()">
+                            <button class="btn btn-danger fw-bold py-2" style="flex: 1 1 0%;" onclick="buyNow()">
                                 立即购买
                             </button>
                         </div>
