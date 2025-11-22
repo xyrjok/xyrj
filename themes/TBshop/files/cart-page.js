@@ -1,49 +1,44 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (购物车页 - 含结算表单逻辑 - 重构版)
+// === (修复版：兼容字段名 + 显示逻辑优化)
 // =============================================
 
 let cart = [];
 let isEditing = false;
-let cartPaymentMethod = 'alipay_f2f'; // 默认支付方式
+let cartPaymentMethod = 'alipay_f2f';
 
 /**
- * 页面加载总入口
+ * 页面加载
  */
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. 加载配置并渲染公共头尾
+    // 1. 加载配置
     try {
         const configRes = await fetch('/api/shop/config');
         const siteConfig = await configRes.json();
-        
-        // 优先使用 common.js 中的 renderCommonLayout 如果存在
         if (typeof renderCommonLayout === 'function') {
-            renderCommonLayout('cart'); // 传入 'cart' 标识
+            renderCommonLayout('cart');
         } else if (typeof renderGlobalHeaders === 'function') {
-            // 降级兼容
             renderGlobalHeaders(siteConfig);
         }
-    } catch (e) { console.error('Failed to load config', e); }
+    } catch (e) { console.error('Config load error', e); }
 
     // 2. 加载购物车
     loadCart();
 
-    // 3. 加载联系人缓存 (自动回填到 PC 和 Mobile 输入框)
+    // 3. 恢复联系人信息
     const cachedContact = localStorage.getItem('userContact');
     const cachedPass = localStorage.getItem('userPassword');
     
-    // 辅助函数：同步设置多个 input 的值
-    const setInputVal = (ids, val) => {
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.value = val;
-        });
-    };
+    if (cachedContact) {
+        const inputs = [document.getElementById('contact-info'), document.getElementById('contact-info-mobile')];
+        inputs.forEach(el => { if(el) el.value = cachedContact; });
+    }
+    if (cachedPass) {
+        const inputs = [document.getElementById('query-password'), document.getElementById('query-password-mobile')];
+        inputs.forEach(el => { if(el) el.value = cachedPass; });
+    }
 
-    if (cachedContact) setInputVal(['contact-info', 'contact-info-mobile'], cachedContact);
-    if (cachedPass) setInputVal(['query-password', 'query-password-mobile'], cachedPass);
-
-    // 监听输入框同步 (PC输入时同步到Mobile，反之亦然)
+    // 监听输入同步
     syncInputs('contact-info', 'contact-info-mobile');
     syncInputs('query-password', 'query-password-mobile');
 });
@@ -58,56 +53,54 @@ function syncInputs(id1, id2) {
 }
 
 /**
- * 支付方式选择逻辑
+ * 核心修复：标准化商品数据对象
+ * 解决字段名不一致导致的图片/标题不显示问题
  */
-function selectCartPayment(method, el) {
-    cartPaymentMethod = method;
-    
-    // UI 更新：同时更新 PC 和 Mobile 的选中状态
-    // 找到所有支付方式列表容器
-    const containers = [
-        document.getElementById('cart-payment-list-pc'),
-        document.getElementById('cart-payment-list-mobile')
-    ];
-    
-    containers.forEach(container => {
-        if(!container) return;
-        const boxes = container.querySelectorAll('.payment-select-box');
-        // 移除所有 active
-        boxes.forEach(box => box.classList.remove('active'));
+function normalizeItem(item) {
+    return {
+        // 标题兼容：productName 或 name 或 title
+        name: item.productName || item.name || item.title || '未命名商品',
         
-        // 根据点击的 method 类型，激活对应的 box (简单的根据 onclick 属性匹配)
-        // 这里为了简化，假设点击的元素已经传进来了，我们手动高亮所有相同支付方式的块
-        boxes.forEach(box => {
-            if(box.getAttribute('onclick').includes(`'${method}'`)) {
-                box.classList.add('active');
-            }
-        });
-    });
+        // 规格兼容：variantName 或 skuName 或 sku
+        sku: item.variantName || item.variant || item.skuName || '默认规格',
+        
+        // 图片兼容：img 或 image 或 thumb 或 pic
+        img: item.img || item.image || item.thumb || item.pic || '/assets/img/no-image.png',
+        
+        // 价格与数量
+        price: parseFloat(item.price || 0),
+        quantity: parseInt(item.quantity || 1),
+        
+        // 购买模式与预设信息
+        buyMode: item.buyMode || 'auto',
+        // 预设信息 (如选号的号码，或者输入的充值账号)
+        inputData: item.selectedCardNote || item.input_data || item.customInfo || '',
+        
+        // 原始引用
+        checked: item.checked !== false // 默认为 true
+    };
 }
 
 /**
- * 加载并渲染购物车
+ * 加载购物车并渲染
  */
 function loadCart() {
     try {
         cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
-        cart.forEach(item => {
-            if (item.checked === undefined) item.checked = true;
-        });
+        console.log("Debug Cart Data:", cart); // 调试用：在控制台查看真实数据
     } catch (e) {
         cart = [];
-        console.error("购物车数据解析失败", e);
+        console.error("Cart parse error", e);
     }
     
     const listMobile = document.getElementById('cart-list-mobile');
     const listPC = document.getElementById('cart-list-pc');
-    const emptyHtml = '<div class="text-center p-5 text-muted">购物车还是空的，快去逛逛吧~</div>';
-    const emptyRowPC = `<tr><td colspan="6" class="text-center p-5 text-muted">购物车空空如也</td></tr>`;
+    const emptyHtmlMobile = '<div class="text-center p-5 text-muted">购物车空空如也</div>';
+    const emptyHtmlPC = '<tr><td colspan="6" class="text-center p-5 text-muted">购物车空空如也</td></tr>';
     
     if (cart.length === 0) {
-        if(listMobile) listMobile.innerHTML = emptyHtml;
-        if(listPC) listPC.innerHTML = emptyRowPC;
+        if(listMobile) listMobile.innerHTML = emptyHtmlMobile;
+        if(listPC) listPC.innerHTML = emptyHtmlPC;
     } else {
         if(listMobile) listMobile.innerHTML = cart.map((item, index) => renderMobileItem(item, index)).join('');
         if(listPC) listPC.innerHTML = cart.map((item, index) => renderPCItem(item, index)).join('');
@@ -123,269 +116,257 @@ function loadCart() {
 }
 
 /**
- * 绑定事件
+ * 渲染 PC 端列表项
  */
+function renderPCItem(rawItem, index) {
+    const item = normalizeItem(rawItem);
+    const subtotal = (item.price * item.quantity).toFixed(2);
+    
+    // 构建“已选”显示逻辑：规格 + (预设信息 或 "默认随机")
+    const specDisplay = `<span class="text-muted">${item.sku}</span>`;
+    const extraInfo = item.inputData ? `<span class="text-primary ms-1">[${item.inputData}]</span>` : `<span class="text-muted ms-1">[默认随机]</span>`;
+    
+    return `
+    <tr>
+        <td class="ps-3">
+            <input class="form-check-input cart-item-check-input" type="checkbox" data-index="${index}" ${item.checked ? 'checked' : ''}>
+        </td>
+        <td>
+            <div class="d-flex align-items-center">
+                <img src="${item.img}" class="pc-item-img me-2" alt="img" 
+                     onerror="this.src='/assets/img/no-image.png'" 
+                     style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #eee;">
+                <div>
+                    <div class="pc-cart-title text-dark" style="font-size:13px; font-weight:500;">${item.name}</div>
+                    <div class="pc-cart-sku small" style="font-size:12px; color:#888;">
+                        已选：${specDisplay}${extraInfo}
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td class="text-muted" style="font-size:13px;">¥${item.price.toFixed(2)}</td>
+        <td>
+            <div class="stepper" style="width:90px; height:26px; border:1px solid #ddd; display:flex; border-radius:3px;">
+                <div class="stepper-btn minus d-flex align-items-center justify-content-center bg-light" 
+                     data-index="${index}" style="width:26px; cursor:pointer; border-right:1px solid #ddd;">-</div>
+                <input type="number" class="stepper-input text-center border-0" value="${item.quantity}" data-index="${index}" 
+                       style="width:36px; font-size:13px; outline:none;">
+                <div class="stepper-btn plus d-flex align-items-center justify-content-center bg-light" 
+                     data-index="${index}" style="width:26px; cursor:pointer; border-left:1px solid #ddd;">+</div>
+            </div>
+        </td>
+        <td><strong class="text-danger small">¥${subtotal}</strong></td>
+        <td>
+            <a href="javascript:void(0)" class="delete-btn text-muted small text-decoration-none" data-index="${index}">
+                <i class="fa fa-trash-alt"></i>
+            </a>
+        </td>
+    </tr>`;
+}
+
+/**
+ * 渲染移动端列表项
+ */
+function renderMobileItem(rawItem, index) {
+    const item = normalizeItem(rawItem);
+    
+    // 构建“已选”显示逻辑
+    const infoText = item.inputData ? item.inputData : '默认随机';
+    
+    return `
+    <div class="cart-item bg-white p-3 mb-2 rounded shadow-sm position-relative">
+        <div class="d-flex">
+            <div class="me-2 d-flex align-items-center">
+                <input class="form-check-input cart-item-check-input" type="checkbox" data-index="${index}" ${item.checked ? 'checked' : ''}>
+            </div>
+            <img src="${item.img}" class="rounded" alt="img" 
+                 onerror="this.src='/assets/img/no-image.png'"
+                 style="width:70px; height:70px; object-fit:cover; border:1px solid #f0f0f0;">
+            <div class="flex-grow-1 ms-2">
+                <div class="text-truncate mb-1" style="font-size:14px; font-weight:bold; max-width:200px;">${item.name}</div>
+                <div class="small text-muted bg-light px-2 py-1 rounded d-inline-block mb-2" style="font-size:12px;">
+                    已选：${item.sku} <span class="text-primary">(${infoText})</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div class="text-danger fw-bold">¥${item.price.toFixed(2)}</div>
+                    <div class="stepper d-flex border rounded" style="height:24px;">
+                        <div class="stepper-btn minus px-2 d-flex align-items-center bg-light cursor-pointer" data-index="${index}">-</div>
+                        <input type="number" class="stepper-input text-center border-0 border-start border-end" value="${item.quantity}" data-index="${index}" style="width:30px; font-size:12px; outline:none;">
+                        <div class="stepper-btn plus px-2 d-flex align-items-center bg-light cursor-pointer" data-index="${index}">+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="delete-btn btn btn-sm text-muted position-absolute top-0 end-0 mt-2 me-2" 
+                data-index="${index}" style="display:${isEditing?'block':'none'}">
+            <i class="fa fa-times"></i>
+        </button>
+    </div>`;
+}
+
+/**
+ * 交互逻辑与之前保持一致
+ */
+function selectCartPayment(method, el) {
+    cartPaymentMethod = method;
+    const lists = [document.getElementById('cart-payment-list-pc'), document.getElementById('cart-payment-list-mobile')];
+    lists.forEach(list => {
+        if(!list) return;
+        list.querySelectorAll('.payment-select-box').forEach(box => box.classList.remove('active'));
+        // 简单匹配：如果onclick内容包含该方法名
+        const target = Array.from(list.children).find(child => 
+            child.querySelector('.payment-select-box').getAttribute('onclick').includes(`'${method}'`)
+        );
+        if(target) target.querySelector('.payment-select-box').classList.add('active');
+    });
+}
+
 function bindEvents() {
-    // 复选框事件
+    // 复选框
     document.querySelectorAll('.cart-item-check-input').forEach(chk => {
         chk.addEventListener('change', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            if(cart[index]) {
-                cart[index].checked = e.target.checked;
+            const idx = e.target.dataset.index;
+            if(cart[idx]) {
+                cart[idx].checked = e.target.checked;
                 updateTotal();
             }
         });
     });
-
-    // 加减按钮事件
+    
+    // 数量加减
     document.querySelectorAll('.stepper-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // 防止双击选中文字
-            e.preventDefault(); 
+            e.preventDefault();
             const idx = e.target.dataset.index;
             const isPlus = e.target.classList.contains('plus');
             changeQty(idx, isPlus ? 1 : -1);
         });
     });
     
-    // 数量输入框手动输入事件
+    // 数量输入
     document.querySelectorAll('.stepper-input').forEach(input => {
-        // 聚焦时全选内容
-        input.addEventListener('focus', (e) => e.target.select());
-        
-        // 失焦或回车时提交
-        input.addEventListener('change', (e) => {
-            let newQty = parseInt(e.target.value);
-            if (isNaN(newQty) || newQty < 1) newQty = 1;
-            changeQty(e.target.dataset.index, 0, newQty);
+        input.addEventListener('focus', e => e.target.select());
+        input.addEventListener('change', e => {
+            let val = parseInt(e.target.value);
+            if(isNaN(val) || val < 1) val = 1;
+            changeQty(e.target.dataset.index, 0, val);
         });
     });
     
-    // 删除按钮
+    // 删除
     document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => deleteItem(e.target.dataset.index));
+        btn.addEventListener('click', e => {
+            // 找到最近的包含data-index的元素（因为可能点击的是i标签）
+            const target = e.target.closest('.delete-btn');
+            if(target) deleteItem(target.dataset.index);
+        });
     });
 }
 
-/**
- * 渲染移动端项目
- */
-function renderMobileItem(item, index) {
-    const price = parseFloat(item.price) || 0;
-    const qty = parseInt(item.quantity) || 1;
-    const isSelectMode = item.buyMode === 'select';
-    // 优先使用 item.img (规格图)，没有则用默认
-    const displayImg = item.img || '/assets/img/no-image.png';
-    
-    return `
-    <div class="cart-item">
-        <div class="cart-item-check">
-            <input class="form-check-input cart-item-check-input" type="checkbox" data-index="${index}" ${item.checked ? 'checked' : ''}>
-        </div>
-        <img src="${displayImg}" class="cart-item-img" alt="商品图片">
-        <div class="cart-item-info">
-            <div class="cart-item-title" style="font-size:14px;">${item.productName || '未命名商品'}</div>
-            <div class="cart-item-sku small text-muted">${item.variantName || '默认规格'}</div>
-            ${isSelectMode ? `<div class="cart-item-note small text-primary">自选: ${item.selectedCardNote || '已选号码'}</div>` : ''}
-            <div class="cart-item-footer mt-2">
-                <div class="cart-item-price text-danger fw-bold">¥${price.toFixed(2)}</div>
-                ${isSelectMode ? `<span class="small text-muted">x 1</span>` : `
-                <div class="stepper">
-                    <div class="stepper-btn minus" data-index="${index}">-</div>
-                    <input type="number" class="stepper-input" value="${qty}" data-index="${index}">
-                    <div class="stepper-btn plus" data-index="${index}">+</div>
-                </div>
-                `}
-            </div>
-            <button class="btn btn-sm btn-light text-danger border delete-btn" data-index="${index}" style="display: ${isEditing ? 'block' : 'none'}; float: right; margin-top: -25px;">删除</button>
-        </div>
-    </div>`;
-}
-
-/**
- * 渲染PC端项目 (按要求修改字体和样式)
- */
-function renderPCItem(item, index) {
-    const price = parseFloat(item.price) || 0;
-    const qty = parseInt(item.quantity) || 1;
-    const subtotal = (price * qty).toFixed(2);
-    const isSelectMode = item.buyMode === 'select';
-    const displayImg = item.img || '/assets/img/no-image.png';
-    
-    return `
-    <tr>
-        <td class="ps-3"><input class="form-check-input cart-item-check-input" type="checkbox" data-index="${index}" ${item.checked ? 'checked' : ''}></td>
-        <td>
-            <div class="d-flex align-items-center">
-                <img src="${displayImg}" class="pc-item-img me-2" alt="img">
-                <div>
-                    <div class="pc-cart-title">${item.productName || '未命名商品'}</div>
-                    <div class="pc-cart-sku">${item.variantName || '默认规格'}</div>
-                    ${isSelectMode ? `<div class="small text-primary" style="font-size:12px;">自选: ${item.selectedCardNote || '已选号码'}</div>` : ''}
-                </div>
-            </div>
-        </td>
-        <td><span class="text-muted">¥${price.toFixed(2)}</span></td>
-        <td>
-            ${isSelectMode ? `<span class="small ms-2">1</span>` : `
-            <div class="stepper">
-                <div class="stepper-btn minus" data-index="${index}">-</div>
-                <input type="number" class="stepper-input" value="${qty}" data-index="${index}">
-                <div class="stepper-btn plus" data-index="${index}">+</div>
-            </div>
-            `}
-        </td>
-        <td><strong class="text-danger small">¥${subtotal}</strong></td>
-        <td><a href="javascript:void(0)" class="text-muted delete-btn small text-decoration-none hover-danger" data-index="${index}"><i class="fa fa-trash"></i></a></td>
-    </tr>`;
-}
-
-function toggleEdit(view) {
+function toggleEdit() {
     isEditing = !isEditing;
-    const btnMobile = document.getElementById('edit-btn-mobile');
-    const text = isEditing ? '完成' : '管理';
-    if(btnMobile) btnMobile.innerText = text;
-    
-    // 刷新列表以显示/隐藏删除按钮
-    loadCart();
+    const btn = document.getElementById('edit-btn-mobile');
+    if(btn) btn.innerText = isEditing ? '完成' : '管理';
+    loadCart(); // 重新渲染以切换删除按钮显示状态
 }
 
-function toggleCheckAll(checkbox) {
-    const isChecked = checkbox.checked;
-    ['check-all-pc', 'check-all-mobile-footer'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.checked = isChecked;
-    });
-
-    cart.forEach(item => item.checked = isChecked);
-    document.querySelectorAll('.cart-item-check-input').forEach(chk => chk.checked = isChecked);
+function toggleCheckAll(source) {
+    const checked = source.checked;
+    cart.forEach(item => item.checked = checked);
+    document.querySelectorAll('.cart-item-check-input').forEach(c => c.checked = checked);
+    document.getElementById('check-all-pc').checked = checked;
+    const mobileAll = document.getElementById('check-all-mobile-footer');
+    if(mobileAll) mobileAll.checked = checked;
     updateTotal();
 }
 
 function updateTotal() {
-    let totalPrice = 0;
-    let checkedCount = 0;
-    
+    let total = 0;
+    let count = 0;
     cart.forEach(item => {
-        if (item.checked) {
-            totalPrice += (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
-            checkedCount += 1;
+        if(item.checked !== false) { // 默认为checked
+            const p = parseFloat(item.price) || 0;
+            const q = parseInt(item.quantity) || 1;
+            total += p * q;
+            count++;
         }
     });
-
-    // Mobile
-    const totalEl = document.getElementById('total-price-mobile');
-    if(totalEl) totalEl.innerText = totalPrice.toFixed(2);
     
-    const countEl = document.getElementById('checkout-count-mobile');
-    if(countEl) countEl.innerText = checkedCount;
-
-    // PC
-    const totalElPC = document.getElementById('total-price-pc');
-    if(totalElPC) totalElPC.innerText = totalPrice.toFixed(2);
+    // 更新 PC 和 Mobile 的总价/数量
+    const ids = [
+        { t: 'total-price-pc', c: 'checkout-count-pc' },
+        { t: 'total-price-mobile', c: 'checkout-count-mobile' }
+    ];
     
-    const countElPC = document.getElementById('checkout-count-pc');
-    if(countElPC) countElPC.innerText = checkedCount;
-    
-    const allChecked = cart.length > 0 && cart.every(item => item.checked);
-    ['check-all-pc', 'check-all-mobile-footer'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.checked = allChecked;
+    ids.forEach(obj => {
+        const tEl = document.getElementById(obj.t);
+        const cEl = document.getElementById(obj.c);
+        if(tEl) tEl.innerText = total.toFixed(2);
+        if(cEl) cEl.innerText = count;
     });
     
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
 }
 
-function changeQty(index, delta, absoluteVal = null) {
-    if (!cart[index] || cart[index].buyMode === 'select') return;
+function changeQty(idx, delta, absVal=null) {
+    if(!cart[idx]) return;
+    let q = parseInt(cart[idx].quantity) || 1;
+    if(absVal !== null) q = absVal;
+    else q += delta;
+    if(q < 1) q = 1;
     
-    let qty = parseInt(cart[index].quantity) || 1;
-    if (absoluteVal !== null) {
-        qty = absoluteVal;
-    } else {
-        qty += delta;
-    }
-    
-    if (qty < 1) qty = 1;
-    cart[index].quantity = qty;
-    loadCart(); 
+    cart[idx].quantity = q;
+    loadCart();
 }
 
-function deleteItem(index) {
-    if (!cart[index]) return;
-    // 简单确认，也可以去掉
-    if (confirm(`确定要删除该商品吗？`)) {
-        cart.splice(index, 1);
+function deleteItem(idx) {
+    if(confirm('确定删除该商品吗？')) {
+        cart.splice(idx, 1);
         localStorage.setItem('tbShopCart', JSON.stringify(cart));
         loadCart();
-        if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
     }
 }
 
-/**
- * 结算
- */
 async function handleCheckout() {
-    const selectedItems = cart.filter(item => item.checked);
-    if (selectedItems.length === 0) return alert('请至少选择一件商品');
+    const selected = cart.filter(i => i.checked !== false);
+    if(selected.length === 0) return alert('请选择要结算的商品');
     
-    // 1. 获取页面上输入的联系方式和密码 (优先取PC端输入框，如果隐藏则取Mobile，但我们做了同步所以取任意一个非空即可)
-    let contact = document.getElementById('contact-info').value.trim() || document.getElementById('contact-info-mobile').value.trim();
-    let password = document.getElementById('query-password').value.trim() || document.getElementById('query-password-mobile').value.trim();
+    const contact = document.getElementById('contact-info').value.trim() || document.getElementById('contact-info-mobile').value.trim();
+    const pass = document.getElementById('query-password').value.trim() || document.getElementById('query-password-mobile').value.trim();
     
-    if (!contact) {
-        alert('请填写联系方式');
-        return;
-    }
-    if (!password || password.length <= 1) {
-        alert('请设置查单密码 (需大于1位)');
-        return;
-    }
+    if(!contact) return alert('请输入联系方式');
+    if(!pass || pass.length < 2) return alert('请输入查单密码 (至少2位)');
     
-    // 2. 保存用户信息到缓存
     localStorage.setItem('userContact', contact);
-    localStorage.setItem('userPassword', password);
-
-    // 3. UI 反馈 (PC和Mobile按钮都禁用)
-    const btns = [document.getElementById('checkout-btn-mobile'), document.querySelector('.checkout-section button')];
-    btns.forEach(btn => {
-        if(btn) {
-            btn.disabled = true;
-            btn.innerText = '提交中...';
-        }
-    });
+    localStorage.setItem('userPassword', pass);
+    
+    // 按钮 Loading 态
+    const btns = document.querySelectorAll('button[onclick="handleCheckout()"]');
+    btns.forEach(b => { b.disabled = true; b.innerText = '提交中...'; });
     
     try {
         const payload = {
-            items: selectedItems,
+            items: selected.map(normalizeItem), // 确保发送给后端的也是标准格式
             contact: contact,
-            query_password: password,
-            payment_method: cartPaymentMethod 
+            query_password: pass,
+            payment_method: cartPaymentMethod
         };
         
-        const res = await fetch('/api/shop/cart/checkout', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(payload) 
+        const res = await fetch('/api/shop/cart/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
+        const data = await res.json();
+        if(data.error) throw new Error(data.error);
         
-        const order = await res.json();
-        if(order.error) throw new Error(order.error);
-
-        // 4. 结算成功，移除购物车中已选商品
-        const remaining = cart.filter(item => !item.checked);
+        // 移除已结算商品
+        const remaining = cart.filter(i => i.checked === false);
         localStorage.setItem('tbShopCart', JSON.stringify(remaining));
-
-        // 5. 跳转支付
-        window.location.href = `pay.html?order_id=${order.order_id}&method=${cartPaymentMethod}`;
         
-    } catch (e) {
-        alert('订单创建失败: ' + e.message);
-        btns.forEach(btn => {
-            if(btn) {
-                btn.disabled = false;
-                btn.innerText = '立即结算';
-            }
-        });
+        window.location.href = `pay.html?order_id=${data.order_id}&method=${cartPaymentMethod}`;
+    } catch(e) {
+        alert('结算失败: ' + e.message);
+        btns.forEach(b => { b.disabled = false; b.innerText = '立即结算'; });
     }
 }
