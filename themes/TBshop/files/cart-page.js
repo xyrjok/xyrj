@@ -1,11 +1,11 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (修复版：兼容字段名 + 显示逻辑优化)
+// === (修复版：字段名兼容 + 支付选择修复)
 // =============================================
 
 let cart = [];
 let isEditing = false;
-let cartPaymentMethod = 'alipay_f2f';
+let cartPaymentMethod = 'alipay_f2f'; // 默认选中支付宝
 
 /**
  * 页面加载
@@ -53,18 +53,18 @@ function syncInputs(id1, id2) {
 }
 
 /**
- * 核心修复：标准化商品数据对象
- * 解决字段名不一致导致的图片/标题不显示问题
+ * [修复1] 标准化商品数据对象
+ * 增加 variant_name 和 selectedCardInfo 的映射
  */
 function normalizeItem(item) {
     return {
-        // 标题兼容：productName 或 name 或 title
+        // 标题兼容
         name: item.productName || item.name || item.title || '未命名商品',
         
-        // 规格兼容：variantName 或 skuName 或 sku
-        sku: item.variantName || item.variant || item.skuName || '默认规格',
+        // 规格兼容：优先读取 product-page.js 写入的 variant_name
+        sku: item.variant_name || item.variantName || item.variant || item.skuName || '默认规格',
         
-        // 图片兼容：img 或 image 或 thumb 或 pic
+        // 图片兼容
         img: item.img || item.image || item.thumb || item.pic || '/assets/img/no-image.png',
         
         // 价格与数量
@@ -73,12 +73,40 @@ function normalizeItem(item) {
         
         // 购买模式与预设信息
         buyMode: item.buyMode || 'auto',
-        // 预设信息 (如选号的号码，或者输入的充值账号)
-        inputData: item.selectedCardNote || item.input_data || item.customInfo || '',
+        
+        // [重点修改] 预设信息：读取 selectedCardInfo
+        inputData: item.selectedCardInfo || item.selectedCardNote || item.input_data || item.customInfo || '',
         
         // 原始引用
-        checked: item.checked !== false // 默认为 true
+        checked: item.checked !== false
     };
+}
+
+/**
+ * [修复2] 支付方式选择逻辑
+ * 改用 data-method 属性来精确定位元素，避免点击失效
+ */
+function selectCartPayment(method, el) {
+    cartPaymentMethod = method;
+    
+    // 定义所有包含支付选项的容器 ID (PC 和 Mobile)
+    const containers = ['cart-payment-list', 'cart-payment-list-pc', 'cart-payment-list-mobile'];
+    
+    containers.forEach(id => {
+        const container = document.getElementById(id);
+        if (!container) return;
+        
+        // 1. 移除该容器内所有选项的 active 状态
+        const boxes = container.querySelectorAll('.payment-select-box');
+        boxes.forEach(box => box.classList.remove('active'));
+        
+        // 2. 根据 method 找到对应的选项并激活
+        // 需配合 HTML 中的 data-method 属性使用
+        const target = container.querySelector(`.payment-select-box[data-method="${method}"]`);
+        if (target) {
+            target.classList.add('active');
+        }
+    });
 }
 
 /**
@@ -87,7 +115,6 @@ function normalizeItem(item) {
 function loadCart() {
     try {
         cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
-        console.log("Debug Cart Data:", cart); // 调试用：在控制台查看真实数据
     } catch (e) {
         cart = [];
         console.error("Cart parse error", e);
@@ -122,9 +149,18 @@ function renderPCItem(rawItem, index) {
     const item = normalizeItem(rawItem);
     const subtotal = (item.price * item.quantity).toFixed(2);
     
-    // 构建“已选”显示逻辑：规格 + (预设信息 或 "默认随机")
+    // 显示逻辑优化
     const specDisplay = `<span class="text-muted">${item.sku}</span>`;
-    const extraInfo = item.inputData ? `<span class="text-primary ms-1">[${item.inputData}]</span>` : `<span class="text-muted ms-1">[默认随机]</span>`;
+    
+    // 如果是自选模式且有输入信息，则显示输入信息；否则显示购买模式
+    let extraInfo = '';
+    if (item.buyMode === 'select') {
+        extraInfo = item.inputData ? 
+            `<span class="text-primary ms-1">[已选: ${item.inputData}]</span>` : 
+            `<span class="text-danger ms-1">[未选号码]</span>`;
+    } else if (item.buyMode === 'random') {
+        extraInfo = `<span class="text-muted ms-1">[随机发货]</span>`;
+    }
     
     return `
     <tr>
@@ -139,7 +175,7 @@ function renderPCItem(rawItem, index) {
                 <div>
                     <div class="pc-cart-title text-dark" style="font-size:13px; font-weight:500;">${item.name}</div>
                     <div class="pc-cart-sku small" style="font-size:12px; color:#888;">
-                        已选：${specDisplay}${extraInfo}
+                        ${specDisplay}${extraInfo}
                     </div>
                 </div>
             </div>
@@ -170,8 +206,12 @@ function renderPCItem(rawItem, index) {
 function renderMobileItem(rawItem, index) {
     const item = normalizeItem(rawItem);
     
-    // 构建“已选”显示逻辑
-    const infoText = item.inputData ? item.inputData : '默认随机';
+    let infoText = '';
+    if (item.buyMode === 'select') {
+        infoText = item.inputData ? `已选: ${item.inputData}` : '未选号码';
+    } else {
+        infoText = '随机发货';
+    }
     
     return `
     <div class="cart-item bg-white p-3 mb-2 rounded shadow-sm position-relative">
@@ -185,7 +225,7 @@ function renderMobileItem(rawItem, index) {
             <div class="flex-grow-1 ms-2">
                 <div class="text-truncate mb-1" style="font-size:14px; font-weight:bold; max-width:200px;">${item.name}</div>
                 <div class="small text-muted bg-light px-2 py-1 rounded d-inline-block mb-2" style="font-size:12px;">
-                    已选：${item.sku} <span class="text-primary">(${infoText})</span>
+                    ${item.sku} <span class="text-primary">(${infoText})</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-end">
                     <div class="text-danger fw-bold">¥${item.price.toFixed(2)}</div>
@@ -204,25 +244,7 @@ function renderMobileItem(rawItem, index) {
     </div>`;
 }
 
-/**
- * 交互逻辑与之前保持一致
- */
-function selectCartPayment(method, el) {
-    cartPaymentMethod = method;
-    const lists = [document.getElementById('cart-payment-list-pc'), document.getElementById('cart-payment-list-mobile')];
-    lists.forEach(list => {
-        if(!list) return;
-        list.querySelectorAll('.payment-select-box').forEach(box => box.classList.remove('active'));
-        // 简单匹配：如果onclick内容包含该方法名
-        const target = Array.from(list.children).find(child => 
-            child.querySelector('.payment-select-box').getAttribute('onclick').includes(`'${method}'`)
-        );
-        if(target) target.querySelector('.payment-select-box').classList.add('active');
-    });
-}
-
 function bindEvents() {
-    // 复选框
     document.querySelectorAll('.cart-item-check-input').forEach(chk => {
         chk.addEventListener('change', (e) => {
             const idx = e.target.dataset.index;
@@ -233,7 +255,6 @@ function bindEvents() {
         });
     });
     
-    // 数量加减
     document.querySelectorAll('.stepper-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -243,7 +264,6 @@ function bindEvents() {
         });
     });
     
-    // 数量输入
     document.querySelectorAll('.stepper-input').forEach(input => {
         input.addEventListener('focus', e => e.target.select());
         input.addEventListener('change', e => {
@@ -253,10 +273,8 @@ function bindEvents() {
         });
     });
     
-    // 删除
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', e => {
-            // 找到最近的包含data-index的元素（因为可能点击的是i标签）
             const target = e.target.closest('.delete-btn');
             if(target) deleteItem(target.dataset.index);
         });
@@ -267,7 +285,7 @@ function toggleEdit() {
     isEditing = !isEditing;
     const btn = document.getElementById('edit-btn-mobile');
     if(btn) btn.innerText = isEditing ? '完成' : '管理';
-    loadCart(); // 重新渲染以切换删除按钮显示状态
+    loadCart(); 
 }
 
 function toggleCheckAll(source) {
@@ -284,7 +302,7 @@ function updateTotal() {
     let total = 0;
     let count = 0;
     cart.forEach(item => {
-        if(item.checked !== false) { // 默认为checked
+        if(item.checked !== false) { 
             const p = parseFloat(item.price) || 0;
             const q = parseInt(item.quantity) || 1;
             total += p * q;
@@ -292,7 +310,6 @@ function updateTotal() {
         }
     });
     
-    // 更新 PC 和 Mobile 的总价/数量
     const ids = [
         { t: 'total-price-pc', c: 'checkout-count-pc' },
         { t: 'total-price-mobile', c: 'checkout-count-mobile' }
@@ -340,13 +357,12 @@ async function handleCheckout() {
     localStorage.setItem('userContact', contact);
     localStorage.setItem('userPassword', pass);
     
-    // 按钮 Loading 态
     const btns = document.querySelectorAll('button[onclick="handleCheckout()"]');
     btns.forEach(b => { b.disabled = true; b.innerText = '提交中...'; });
     
     try {
         const payload = {
-            items: selected.map(normalizeItem), // 确保发送给后端的也是标准格式
+            items: selected.map(normalizeItem), 
             contact: contact,
             query_password: pass,
             payment_method: cartPaymentMethod
@@ -360,7 +376,6 @@ async function handleCheckout() {
         const data = await res.json();
         if(data.error) throw new Error(data.error);
         
-        // 移除已结算商品
         const remaining = cart.filter(i => i.checked === false);
         localStorage.setItem('tbShopCart', JSON.stringify(remaining));
         
