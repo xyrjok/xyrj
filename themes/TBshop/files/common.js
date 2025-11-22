@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/common.js
-// === (全局共享JS + 公共布局渲染)
+// === (全局共享JS + 公共布局渲染 - 修复侧边栏文章接口)
 // =============================================
 
 // ============================================================
@@ -181,14 +181,13 @@ function renderCommonLayout(activePage) {
     // 2. 右侧栏特殊处理 (显示隐藏的模块)
     if (document.getElementById('global-sidebar-right')) {
         const extras = ['top-sales-box-container', 'tag-cloud-box-container', 'article-cat-box-container'];
-        // [修改] 增加 'orders', 'pay' 到显示列表
         const showExtras = ['home', 'product', 'article', 'articles', 'orders', 'pay'].includes(activePage);
         if(showExtras) {
              extras.forEach(id => {
                  const el = document.getElementById(id);
                  if(el) el.classList.remove('d-none');
              });
-             // [新增] 自动加载侧边栏数据 (解决空白问题)
+             // 自动加载侧边栏数据
              loadGlobalSidebarData();
         }
     }
@@ -235,7 +234,8 @@ async function loadGlobalSidebarData() {
     const needArticles = document.getElementById('article-cat-list');
     if (needArticles) {
         try {
-            const res = await fetch('/api/shop/articles');
+            // [修正] 这里的接口必须是 /api/shop/articles/list，而不是 /api/shop/articles (后者可能需要管理员权限)
+            const res = await fetch('/api/shop/articles/list');
             const articles = await res.json();
             if (!articles.error) {
                 renderSidebarArticleCats(articles);
