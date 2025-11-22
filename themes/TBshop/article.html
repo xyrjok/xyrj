@@ -17,8 +17,8 @@
     <div class="mobile-overlay d-lg-none" id="mobile-overlay" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></div>
     <header class="tb-header d-none d-lg-block" id="global-pc-header"></header>
 
-    <div class="container mt-4 mb-5">
-        <div class="row gx-3">
+    <div class="container mt-4">
+        <div class="row gx-3" id="main-content-row">
             <div class="col-lg-9">
                 
                 <div class="module-box p-0 overflow-hidden" style="min-height: 600px;">
@@ -71,13 +71,15 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // [修改3] 将 'article_detail' 改为 'article'
+            // 这样 common.js 才会识别并自动加载销量排行、教程分类和标签云
             if (typeof renderCommonLayout === 'function') {
-                renderCommonLayout('article_detail');
+                renderCommonLayout('article');
             }
-            // 加载侧边栏推荐
-            if (typeof renderSidebarTopSales === 'function') {
-                fetch('/api/shop/products').then(r=>r.json()).then(data => renderSidebarTopSales(data));
-            }
+            
+            // [修改4] 删除了这里手动 fetch 产品的代码
+            // 因为 renderCommonLayout('article') 会自动调用 loadGlobalSidebarData() 来完成这件事
+            
             loadArticle();
         });
 
