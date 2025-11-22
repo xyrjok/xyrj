@@ -24,11 +24,10 @@
         }
 
         /* [修复] 针对 p-0 容器内标题红竖位置过偏的问题 */
-        /* 让红竖距离左侧有 1rem (约16px) 的间距，与首页保持视觉一致 */
         .module-box.p-0 .module-title::before {
             left: 1rem !important; 
         }
-        /* 让标题文字相应右移，防止压住红竖 (1rem间距 + 4px宽 + 10px间隙 ≈ 30px) */
+        /* 让标题文字相应右移 */
         .module-box.p-0 .module-title {
             padding-left: 30px !important; 
         }
@@ -41,7 +40,7 @@
             border-radius: 4px;
             overflow: hidden;
             border: 1px solid #eee;
-            position: relative; /* 确保图片定位正常 */
+            position: relative;
         }
         .art-item-img img {
             width: 100%;
@@ -84,7 +83,7 @@
     <header class="tb-header d-none d-lg-block" id="global-pc-header"></header>
 
     <div class="container mt-4 mb-5">
-        <div class="row gx-3">
+        <div class="row gx-3" id="main-content-row">
             <div class="col-lg-9">
                 
                 <div class="module-box mb-3">
