@@ -196,7 +196,7 @@ function renderCommonLayout(activePage) {
     if (headerRight && !document.getElementById('cart-btn-pc')) {
         const cartBtnHtml = `
         <a href="/cart.html" class="icon-btn-pc" id="cart-btn-pc" style="position: relative; margin-left: 0px; color: #ff0036; text-decoration: none;">
-            <i class="fa fa-shopping-cart" style="font-size: 20px;"></i>
+            <i class="far fa-shopping-cart" style="font-size: 20px;"></i>
             <span id="cart-badge-pc" class="badge bg-danger rounded-pill" style="position: absolute; top: -8px; right: -10px; font-size: 9px; padding: 2px 4px; display: none;">0</span>
         </a>`;
         const loginBtn = headerRight.querySelector('.btn-login');
