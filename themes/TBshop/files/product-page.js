@@ -151,8 +151,8 @@ function renderProductDetail(p) {
                         <div class="mb-3 d-flex align-items-center">
                             <span class="text-secondary small me-3">信息：</span>
                             <div class="d-flex flex-grow-1">
-                                <input type="text" class="form-control form-control-sm me-2" id="p-contact" placeholder="联系方式 (仅立即购买需填)">
-                                <input type="text" class="form-control form-control-sm" id="p-password" placeholder="查单密码 (仅立即购买需填)">
+                                <input type="text" class="form-control form-control-sm me-2" id="p-contact" placeholder="联系方式 (查询订单用)">
+                                <input type="text" class="form-control form-control-sm" id="p-password" placeholder="查单密码 (查询订单用)">
                             </div>
                         </div>
 
@@ -172,7 +172,7 @@ function renderProductDetail(p) {
                                     <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
                                     <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
-                                <small class="text-muted ms-2" style="font-size:12px;">(仅立即购买有效)</small>
+                                <small class="text-muted ms-2" style="font-size:12px;"></small>
                             </div>
                         </div>
 
