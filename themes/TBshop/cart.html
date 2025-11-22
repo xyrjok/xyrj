@@ -2,98 +2,163 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="renderer" content="webkit">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>购物车 - TB Shop</title>
-    
     <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="/assets/css/all.min.css" rel="stylesheet">
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
-
+    
     <script src="/themes/TBshop/files/common.js" defer></script>
     <script src="/themes/TBshop/files/cart-page.js" defer></script>
+
+    <style>
+        .payment-select-box {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            background: #fff;
+            margin-bottom: 10px;
+        }
+        .payment-select-box:hover { border-color: #ddd; }
+        .payment-select-box.active {
+            border-color: #ff5000;
+            background-color: #fff5f0;
+        }
+        .payment-select-box .check-icon {
+            color: #ddd;
+            margin-left: auto;
+        }
+        .payment-select-box.active .check-icon {
+            color: #ff5000;
+        }
+        .checkout-section {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
 </head>
-<body>
+<body class="bg-light">
 
     <header class="mobile-header d-lg-none" id="global-mobile-header"></header>
-    
-    <div class="mobile-search-dropdown d-lg-none">
-        <div class="tb-search-group">
-            <input type="text" id="mobile-search-input" class="tb-search-input" placeholder="搜索商品...">
-            <button class="tb-search-btn" onclick="doSearch('mobile')">搜索</button>
-        </div>
-    </div>
-    <div class="mobile-search-overlay d-lg-none" id="mobile-search-overlay" onclick="toggleMobileSearch()"></div>
-
-    <div class="mobile-sidebar d-lg-none" id="mobile-sidebar"></div>
-    <div class="mobile-overlay d-lg-none" id="mobile-overlay" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></div>
-    
     <header class="tb-header d-none d-lg-block" id="global-pc-header"></header>
 
-
-    <div class="container mt-4">
-        <div class="row gx-3" id="main-content-row">
-            
-            <div class="col-lg-9">
+    <div class="container mt-3 mb-5">
+        <div class="row">
+            <div class="col-lg-12">
+                <h4 class="mb-3 fw-bold"><i class="fa fa-shopping-cart text-danger"></i> 购物车</h4>
                 
-                <div class="module-box" style="min-height: 500px;">
-                    <div class="module-title">
-                        <i class="fa fa-shopping-cart text-danger"></i> 我的购物车
-                    </div>
+                <!-- 购物车列表 (PC) -->
+                <div class="d-none d-lg-block bg-white rounded shadow-sm p-3 mb-4">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th scope="col" width="50">
+                                    <input class="form-check-input" type="checkbox" id="check-all-pc" onchange="toggleCheckAll(this)">
+                                </th>
+                                <th scope="col">商品信息</th>
+                                <th scope="col" width="120">单价</th>
+                                <th scope="col" width="150">数量</th>
+                                <th scope="col" width="120">小计</th>
+                                <th scope="col" width="80">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cart-list-pc">
+                            <!-- JS 渲染 -->
+                        </tbody>
+                    </table>
+                </div>
 
-                    <div id="cart-content-area">
-                        <div class="text-center py-5 text-muted">
-                            <i class="fa fa-spinner fa-spin fa-2x"></i><br>
-                            <span class="mt-2 d-block">加载购物车中...</span>
+                <!-- 购物车列表 (Mobile) -->
+                <div class="d-lg-none mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                        <span class="text-muted small">共 <span id="cart-count-mobile">0</span> 件商品</span>
+                        <span class="text-primary small" onclick="toggleEdit('mobile')" id="edit-btn-mobile">管理</span>
+                    </div>
+                    <div id="cart-list-mobile" class="cart-list-mobile">
+                        <!-- JS 渲染 -->
+                    </div>
+                </div>
+
+                <!-- 结算信息填写区域 (新增) -->
+                <div class="checkout-section">
+                    <h5 class="fw-bold border-bottom pb-2 mb-3">填写结算信息</h5>
+                    
+                    <div class="row g-3">
+                        <!-- 联系方式 -->
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">联系方式 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="contact-info" placeholder="请输入QQ/手机/邮箱">
+                            <div class="form-text small">用于查询订单和接收卡密</div>
+                        </div>
+                        
+                        <!-- 查单密码 -->
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">查单密码 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="query-password" placeholder="请设置查单密码">
+                            <div class="form-text small">请牢记，用于查询历史订单</div>
+                        </div>
+
+                        <!-- 支付方式 -->
+                        <div class="col-12 mt-4">
+                            <label class="form-label small text-muted mb-2">支付方式</label>
+                            <div class="row g-2" id="cart-payment-list">
+                                <div class="col-md-4 col-6">
+                                    <div class="payment-select-box active" onclick="selectCartPayment('alipay_f2f', this)">
+                                        <i class="fab fa-alipay text-primary fa-lg me-2"></i>
+                                        <span class="small fw-bold">支付宝</span>
+                                        <i class="fa fa-check-circle check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-6">
+                                    <div class="payment-select-box" onclick="selectCartPayment('wxpay', this)">
+                                        <i class="fab fa-weixin text-success fa-lg me-2"></i>
+                                        <span class="small fw-bold">微信支付</span>
+                                        <i class="fa fa-check-circle check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-6">
+                                    <div class="payment-select-box" onclick="selectCartPayment('usdt', this)">
+                                        <span class="fw-bold text-success me-2" style="font-size:12px;">USDT</span>
+                                        <span class="small fw-bold">USDT</span>
+                                        <i class="fa fa-check-circle check-icon"></i>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
                 </div>
 
             </div>
+        </div>
+    </div>
 
-            <div class="col-lg-3 d-none d-lg-block">
-                <div id="sidebar-wrapper"> 
-                    <div id="global-sidebar-right"></div>
-                </div> 
+    <!-- 底部结算栏 (Mobile & PC Sticky) -->
+    <div class="cart-footer-bar fixed-bottom bg-white border-top py-2 px-3 shadow-lg d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+            <div class="form-check me-3">
+                <input class="form-check-input" type="checkbox" id="check-all-mobile-footer" onchange="toggleCheckAll(this)">
+                <label class="form-check-label small" for="check-all-mobile-footer">全选</label>
+            </div>
+            <div>
+                <span class="small text-muted">合计:</span>
+                <span class="text-danger fw-bold fs-5">¥<span id="total-price-mobile">0.00</span></span>
             </div>
         </div>
+        <button class="btn btn-danger rounded-pill px-4 fw-bold" onclick="handleCheckout()" id="checkout-btn-mobile">
+            结算 (<span id="checkout-count-mobile">0</span>)
+        </button>
     </div>
 
+    <!-- 留出底部空间 -->
+    <div style="height: 80px;"></div>
 
-    <footer class="site-footer" id="global-footer"></footer>
-
-    <nav class="mobile-bottom-nav d-lg-none" id="global-mobile-nav"></nav>
-
-    <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
-    <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
-        <div class="mcs-header">
-            <span class="mcs-title">联系客服</span>
-            <i class="fa fa-times mcs-close" id="mobile-contact-close-btn" onclick="togglePanel('mobile-contact-sheet', 'mobile-contact-overlay')"></i>
-        </div>
-        <div class="mcs-content" id="mobile-contact-content">
-            <p>加载中...</p>
-        </div>
-    </div>
-    
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-sidebar/3.3.1/sticky-sidebar.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 1. 渲染公共布局 (传入 'cart' 激活相关高亮)
-            if (typeof renderCommonLayout === 'function') {
-                renderCommonLayout('cart');
-            }
-
-            // 2. 购物车逻辑通常由 cart-page.js 自动接管 (监听 DOMContentLoaded)
-            // 如果您的 cart-page.js 需要手动初始化，可以在这里调用，例如：
-            // if (typeof initCartPage === 'function') initCartPage();
-        });
-    </script>
-    
 </body>
 </html>
