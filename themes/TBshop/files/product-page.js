@@ -75,7 +75,7 @@ function renderProductDetail(p) {
             <div class="row g-0">
                 <div class="col-md-5">
                     <div class="p-3">
-                        <div class="main-img-wrap rounded mb-2" style="position:relative; padding-bottom:100%; overflow:hidden;">
+                        <div class="main-img-wrap border rounded mb-2" style="position:relative; padding-bottom:100%; overflow:hidden;">
                             <img id="p-main-img" src="${p.image_url}" class="position-absolute w-100 h-100" style="object-fit:contain; top:0; left:0;">
                         </div>
                     </div>
