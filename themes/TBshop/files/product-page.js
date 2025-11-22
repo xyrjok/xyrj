@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终完整版：购物车免填信息 / 立即购买强校验)
+// === (最终完整版：兼容性优化 - 移除gap)
 // =============================================
 
 // 全局变量
@@ -75,7 +75,7 @@ function renderProductDetail(p) {
             <div class="row g-0">
                 <div class="col-md-5">
                     <div class="p-3">
-                        <div class="main-img-wrap border rounded mb-2" style="position:relative; padding-bottom:100%; overflow:hidden;">
+                        <div class="main-img-wrap border rounded mb-2" style="position:relative; padding-bottom:calc(100% - 2px); overflow:hidden;">
                             <img id="p-main-img" src="${p.image_url}" class="position-absolute w-100 h-100" style="object-fit:contain; top:0; left:0;">
                         </div>
                     </div>
@@ -147,10 +147,11 @@ function renderProductDetail(p) {
                         </div>
                         
                         <!-- 信息输入区域 (仅立即购买强制要求) -->
+                        <!-- [修改] 移除 d-flex gap-2，改用 flex + margin -->
                         <div class="mb-3 d-flex align-items-center">
                             <span class="text-secondary small me-3">信息：</span>
-                            <div class="d-flex flex-grow-1 gap-2">
-                                <input type="text" class="form-control form-control-sm" id="p-contact" placeholder="联系方式 (仅立即购买需填)">
+                            <div class="d-flex flex-grow-1">
+                                <input type="text" class="form-control form-control-sm me-2" id="p-contact" placeholder="联系方式 (仅立即购买需填)">
                                 <input type="text" class="form-control form-control-sm" id="p-password" placeholder="查单密码 (仅立即购买需填)">
                             </div>
                         </div>
@@ -175,9 +176,10 @@ function renderProductDetail(p) {
                             </div>
                         </div>
 
-                        <div class="action-btns d-flex gap-2 mt-4">
-                            <button class="btn btn-warning flex-grow-1 text-white fw-bold py-2" onclick="addToCart()">
-                                <i class="far fa-cart-plus"></i> 加入购物车
+                        <!-- [修改] 移除 gap-2，改用 me-2 -->
+                        <div class="action-btns d-flex mt-4">
+                            <button class="btn btn-warning flex-grow-1 text-white fw-bold py-2 me-2" onclick="addToCart()">
+                                <i class="fa fa-cart-plus"></i> 加入购物车
                             </button>
                             <button class="btn btn-danger flex-grow-1 fw-bold py-2" onclick="buyNow()">
                                 立即购买
