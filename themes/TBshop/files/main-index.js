@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/main-index.js
-// === (首页专属业务逻辑 - 已优化)
+// === (首页专属业务逻辑 - 已优化：去除侧边栏冗余逻辑)
 // =============================================
 
 // 全局变量 (供搜索和筛选使用)
@@ -32,25 +32,23 @@ async function initHomePage() {
         // 渲染默认视图 (全部商品)
         renderCategorizedView('all');
 
-        // 填充侧边栏 (调用 common.js 的公共函数)
-        if (typeof renderSidebarTopSales === 'function') renderSidebarTopSales(allProducts);
-        if (typeof renderSidebarTagCloud === 'function') renderSidebarTagCloud(allProducts);
+        // [修改] 侧边栏填充逻辑已移至 common.js 全局处理，此处不再重复调用
+        // 避免双重渲染导致页面抖动或资源浪费
 
     } catch (e) {
         console.error('Products load failed:', e);
         if (prodListArea) prodListArea.innerHTML = '<div class="text-center py-5 text-danger">商品加载失败，请刷新重试</div>';
     }
 
-    // 3. 加载文章数据 (用于侧边栏教程推荐)
+    // 3. 加载文章数据 (用于首页中间的教程推荐)
     try {
         const artRes = await fetch('/api/shop/articles/list');
         const articles = await artRes.json();
 
-        // 填充首页特有的“热门教程”模块
+        // 填充首页特有的“热门教程”模块 (这个是首页独有的，必须保留)
         renderHotArticlesHome(articles);
         
-        // 填充侧边栏分类 (调用 common.js 的公共函数)
-        if (typeof renderSidebarArticleCats === 'function') renderSidebarArticleCats(articles);
+        // [修改] 侧边栏分类填充已移至 common.js 全局处理，此处不再重复调用
 
     } catch (e) { console.warn('Articles load failed:', e); }
 }
@@ -94,7 +92,7 @@ function renderCategoryTabs() {
 }
 
 /**
- * 渲染首页热门文章列表 (首页特有模块)
+ * 渲染首页热门文章列表 (首页特有模块 - 中间部分)
  */
 function renderHotArticlesHome(articles) {
     const listEl = document.getElementById('hot-articles-list');
@@ -127,7 +125,9 @@ function getProductCardHtml(p) {
     const price = mainVariant.price || '0.00';
     
     // 标签处理 (调用 common.js 的 parseTags，如果存在)
-    const tagsHtml = (typeof parseTags === 'function') ? parseTags(p.tags) : ''; 
+    // 注意：如果 common.js 没有 parseTags，这里会报错，建议做容错，或者确保 common.js 里有
+    // 这里简单处理，直接返回空或手动解析
+    const tagsHtml = (typeof parseTags === 'function') ? parseTags(p.tags) : renderTagsLocal(p.tags); 
 
     return `
         <a href="/product.html?id=${p.id}" class="tb-card">
@@ -144,6 +144,17 @@ function getProductCardHtml(p) {
             </div>
         </a>
     `;
+}
+
+// 本地简易标签渲染 (防止 common.js 没加载到 parseTags)
+function renderTagsLocal(tags) {
+    if (!tags) return '';
+    const arr = typeof tags === 'string' ? tags.split(',') : tags;
+    return arr.map(t => {
+        const clean = t.split('#')[0].trim();
+        if(!clean || clean.startsWith('b1') || clean.startsWith('b2')) return '';
+        return `<span class="dynamic-tag" style="border:1px solid #ff5000;color:#ff5000;">${clean}</span>`;
+    }).join('');
 }
 
 /**
