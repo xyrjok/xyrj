@@ -1148,3 +1148,13 @@ header, .tb-header, .mobile-header {
 .container, .main-content {
     flex-shrink: 0; 
 }
+#main-content-row {
+    margin-bottom: 50px; /* 强制给主体内容区域底部增加 50px 留白 */
+}
+
+/* 针对 Sticky Sidebar 极端情况的额外保护 */
+@media (min-width: 992px) {
+    .sidebar-inner {
+        padding-bottom: 1px; /* 防止内部高度计算塌陷 */
+    }
+}
