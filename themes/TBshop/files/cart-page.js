@@ -1,12 +1,13 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (购物车页专属JS - 修复版)
+// === (购物车页 - 含结算表单逻辑)
 // =============================================
 
 let cart = [];
 let isEditing = false;
 let contactInfo = null;
 let queryPassword = null;
+let cartPaymentMethod = 'alipay_f2f'; // 默认支付方式
 
 /**
  * 页面加载总入口
@@ -24,12 +25,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. 加载购物车
     loadCart();
 
-    // 3. 加载联系人缓存
-    contactInfo = localStorage.getItem('userContact');
-    queryPassword = localStorage.getItem('userPassword');
-    if (contactInfo) document.getElementById('contact-info').value = contactInfo;
-    if (queryPassword) document.getElementById('query-password').value = queryPassword;
+    // 3. 加载联系人缓存 (自动回填)
+    const cachedContact = localStorage.getItem('userContact');
+    const cachedPass = localStorage.getItem('userPassword');
+    
+    if (cachedContact) {
+        const el = document.getElementById('contact-info');
+        if(el) el.value = cachedContact;
+    }
+    if (cachedPass) {
+        const el = document.getElementById('query-password');
+        if(el) el.value = cachedPass;
+    }
 });
+
+/**
+ * 支付方式选择逻辑
+ */
+function selectCartPayment(method, el) {
+    cartPaymentMethod = method;
+    // UI 更新
+    const boxes = document.querySelectorAll('.payment-select-box');
+    boxes.forEach(box => box.classList.remove('active'));
+    if(el) el.classList.add('active');
+}
 
 /**
  * 加载并渲染购物车
@@ -37,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 function loadCart() {
     try {
         cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
-        // 初始化选中状态
         cart.forEach(item => {
             if (item.checked === undefined) item.checked = true;
         });
@@ -58,10 +76,8 @@ function loadCart() {
         if(listPC) listPC.innerHTML = cart.map((item, index) => renderPCItem(item, index)).join('');
     }
 
-    // 更新角标
     if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
     
-    // 更新移动端标题数量
     const mobileCount = document.getElementById('cart-count-mobile');
     if (mobileCount) mobileCount.innerText = cart.length;
 
@@ -73,7 +89,6 @@ function loadCart() {
  * 绑定事件
  */
 function bindEvents() {
-    // 复选框
     document.querySelectorAll('.cart-item-check-input').forEach(chk => {
         chk.addEventListener('change', (e) => {
             const index = parseInt(e.target.dataset.index);
@@ -84,7 +99,6 @@ function bindEvents() {
         });
     });
 
-    // 数量加减
     document.querySelectorAll('.stepper-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const idx = e.target.dataset.index;
@@ -93,7 +107,6 @@ function bindEvents() {
         });
     });
     
-    // 数量输入
     document.querySelectorAll('.stepper-input').forEach(input => {
         input.addEventListener('change', (e) => {
             let newQty = parseInt(e.target.value);
@@ -102,7 +115,6 @@ function bindEvents() {
         });
     });
     
-    // 删除
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => deleteItem(e.target.dataset.index));
     });
@@ -112,10 +124,8 @@ function bindEvents() {
  * 渲染移动端项目
  */
 function renderMobileItem(item, index) {
-    // 安全转换数字
     const price = parseFloat(item.price) || 0;
     const qty = parseInt(item.quantity) || 1;
-    const subtotal = (price * qty).toFixed(2);
     const isSelectMode = item.buyMode === 'select';
     
     return `
@@ -147,7 +157,6 @@ function renderMobileItem(item, index) {
  * 渲染PC端项目
  */
 function renderPCItem(item, index) {
-    // 安全转换数字，防止报错
     const price = parseFloat(item.price) || 0;
     const qty = parseInt(item.quantity) || 1;
     const subtotal = (price * qty).toFixed(2);
@@ -181,73 +190,50 @@ function renderPCItem(item, index) {
     </tr>`;
 }
 
-/**
- * 切换管理模式
- */
 function toggleEdit(view) {
     isEditing = !isEditing;
     const btnMobile = document.getElementById('edit-btn-mobile');
-    const btnPC = document.getElementById('edit-btn-pc');
-    
     const text = isEditing ? '完成' : '管理';
     if(btnMobile) btnMobile.innerText = text;
-    if(btnPC) btnPC.innerText = text;
     
     document.querySelectorAll('.delete-btn').forEach(b => {
-        // PC端在表格里，通常一直显示删除或者用hover，这里为了统一逻辑
         if (view === 'mobile') {
             b.style.display = isEditing ? 'block' : 'none';
         }
     });
 }
 
-/**
- * 全选
- */
 function toggleCheckAll(checkbox) {
     const isChecked = checkbox.checked;
-    ['check-all-pc', 'check-all-pc-footer', 'check-all-mobile-footer'].forEach(id => {
+    ['check-all-pc', 'check-all-mobile-footer'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.checked = isChecked;
     });
 
     cart.forEach(item => item.checked = isChecked);
-    
-    // 更新UI选中状态
     document.querySelectorAll('.cart-item-check-input').forEach(chk => chk.checked = isChecked);
-    
     updateTotal();
 }
 
-/**
- * 更新总价
- */
 function updateTotal() {
     let totalPrice = 0;
     let checkedCount = 0;
     
     cart.forEach(item => {
         if (item.checked) {
-            const price = parseFloat(item.price) || 0;
-            const qty = parseInt(item.quantity) || 1;
-            totalPrice += price * qty;
+            totalPrice += (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
             checkedCount += 1;
         }
     });
 
-    ['total-price-mobile', 'total-price-pc'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.innerText = totalPrice.toFixed(2);
-    });
+    const totalEl = document.getElementById('total-price-mobile');
+    if(totalEl) totalEl.innerText = totalPrice.toFixed(2);
     
-    ['checkout-count-mobile', 'checkout-count-pc'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.innerText = checkedCount;
-    });
+    const countEl = document.getElementById('checkout-count-mobile');
+    if(countEl) countEl.innerText = checkedCount;
     
-    // 检查全选状态
     const allChecked = cart.length > 0 && cart.every(item => item.checked);
-    ['check-all-pc', 'check-all-pc-footer', 'check-all-mobile-footer'].forEach(id => {
+    ['check-all-pc', 'check-all-mobile-footer'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.checked = allChecked;
     });
@@ -255,9 +241,6 @@ function updateTotal() {
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
 }
 
-/**
- * 修改数量
- */
 function changeQty(index, delta, absoluteVal = null) {
     if (!cart[index] || cart[index].buyMode === 'select') return;
     
@@ -270,51 +253,62 @@ function changeQty(index, delta, absoluteVal = null) {
     
     if (qty < 1) qty = 1;
     cart[index].quantity = qty;
-    
-    loadCart(); // 重新渲染
+    loadCart(); 
 }
 
-/**
- * 删除
- */
 function deleteItem(index) {
     if (!cart[index]) return;
     if (confirm(`确定要删除 "${cart[index].productName}" 吗？`)) {
         cart.splice(index, 1);
         localStorage.setItem('tbShopCart', JSON.stringify(cart));
         loadCart();
-        // 强制刷新角标
         if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
     }
 }
 
 /**
- * 结算
+ * 结算 (更新版：获取页面上的输入)
  */
 async function handleCheckout() {
     const selectedItems = cart.filter(item => item.checked);
     if (selectedItems.length === 0) return alert('请至少选择一件商品');
     
-    contactInfo = document.getElementById('contact-info').value;
-    queryPassword = document.getElementById('query-password').value;
-    const paymentMethod = document.querySelector('input[name="payment"]:checked');
+    // 1. 获取页面上输入的联系方式和密码
+    const contactInput = document.getElementById('contact-info');
+    const passInput = document.getElementById('query-password');
     
-    if (!contactInfo) return alert('请填写联系方式');
-    if (!queryPassword || queryPassword.length <= 1) return alert('请设置1位以上的查单密码');
+    if (!contactInput || !passInput) return alert('页面加载不完整，请刷新');
     
-    // 保存用户信息
-    localStorage.setItem('userContact', contactInfo);
-    localStorage.setItem('userPassword', queryPassword);
+    const contact = contactInput.value.trim();
+    const password = passInput.value.trim();
+    
+    if (!contact) {
+        alert('请在购物车页面下方填写联系方式');
+        contactInput.focus();
+        return;
+    }
+    if (!password || password.length <= 1) {
+        alert('请在购物车页面下方设置查单密码 (需大于1位)');
+        passInput.focus();
+        return;
+    }
+    
+    // 2. 保存用户信息到缓存 (方便下次)
+    localStorage.setItem('userContact', contact);
+    localStorage.setItem('userPassword', password);
 
-    const btnPC = document.getElementById('checkout-btn-pc');
-    if(btnPC) { btnPC.disabled = true; btnPC.innerText = '提交中...'; }
+    // 3. UI 反馈
+    const btn = document.getElementById('checkout-btn-mobile');
+    const originalText = btn.innerText;
+    btn.disabled = true; 
+    btn.innerText = '提交中...';
     
     try {
         const payload = {
             items: selectedItems,
-            contact: contactInfo,
-            query_password: queryPassword,
-            payment_method: paymentMethod ? paymentMethod.value : 'alipay_f2f'
+            contact: contact,
+            query_password: password,
+            payment_method: cartPaymentMethod // 使用全局选中的支付方式
         };
         
         const res = await fetch('/api/shop/cart/checkout', { 
@@ -326,14 +320,16 @@ async function handleCheckout() {
         const order = await res.json();
         if(order.error) throw new Error(order.error);
 
-        // 移除已结算商品
+        // 4. 结算成功，移除购物车中已选商品
         const remaining = cart.filter(item => !item.checked);
         localStorage.setItem('tbShopCart', JSON.stringify(remaining));
 
-        window.location.href = `pay.html?order_id=${order.order_id}`;
+        // 5. 跳转支付
+        window.location.href = `pay.html?order_id=${order.order_id}&method=${cartPaymentMethod}`;
         
     } catch (e) {
         alert('订单创建失败: ' + e.message);
-        if(btnPC) { btnPC.disabled = false; btnPC.innerText = `结算 (${selectedItems.length})`; }
+        btn.disabled = false; 
+        btn.innerText = originalText;
     }
 }
