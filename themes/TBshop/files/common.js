@@ -263,7 +263,7 @@ function loadGlobalConfig() {
 let sidebar = null;
 const sidebarOptions = {
     topSpacing: 80,
-    bottomSpacing: 20,
+    bottomSpacing: 180,
     containerSelector: '#main-content-row', 
     innerWrapperSelector: '.sidebar-inner'
 };
