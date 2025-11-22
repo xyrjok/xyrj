@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终版 - 含联系方式/查单密码输入)
+// === (最终分离版：立即购买直连支付 / 购物车纯本地存储)
 // =============================================
 
 // 全局变量
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =============================================
-// === 核心渲染逻辑 (HTML 结构调整)
+// === 核心渲染逻辑
 // =============================================
 
 function renderProductDetail(p) {
@@ -144,7 +144,7 @@ function renderProductDetail(p) {
                                 <button class="btn btn-outline-secondary btn-sm" type="button" onclick="changeQty(1)">+</button>
                             </div>
                         </div>
-
+                        
                         <div class="mb-3 d-flex align-items-center">
                             <span class="text-secondary small me-3">信息：</span>
                             <div class="d-flex flex-grow-1 gap-2">
@@ -202,17 +202,11 @@ function renderProductDetail(p) {
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay(); 
     
-    // 回显缓存的联系信息
+    // 回显缓存信息
     const cachedContact = localStorage.getItem('userContact');
     const cachedPass = localStorage.getItem('userPassword');
-    if(cachedContact) {
-        const el = document.getElementById('p-contact');
-        if(el) el.value = cachedContact;
-    }
-    if(cachedPass) {
-        const el = document.getElementById('p-password');
-        if(el) el.value = cachedPass;
-    }
+    if(cachedContact) document.getElementById('p-contact').value = cachedContact;
+    if(cachedPass) document.getElementById('p-password').value = cachedPass;
     
     // 侧边栏推荐
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
@@ -226,10 +220,9 @@ function renderProductDetail(p) {
 }
 
 // =============================================
-// === 交互逻辑 (含弹窗和号码选择)
+// === 交互逻辑
 // =============================================
 
-// 辅助：解析批发配置
 function parseWholesaleInfo(config) {
     if (!config) return null;
     let rules = [];
@@ -281,17 +274,15 @@ function updateBuyMethodButtons() {
     container.innerHTML = html;
 }
 
-// 购买方式点击事件
 function selectBuyMethod(type, btn) {
     if (buyMethod === type) {
-        buyMethod = null; // 取消选中
+        buyMethod = null; 
         closeNumberSelector();
     } else {
         buyMethod = type;
         if (type === 'select') {
-            openNumberSelector(); // 打开弹窗
+            openNumberSelector(); 
         } else {
-            // 随机模式：清空已选自选信息，关闭弹窗
             selectedSpecificCardId = null;
             selectedSpecificCardInfo = '';
             closeNumberSelector();
@@ -303,7 +294,6 @@ function selectBuyMethod(type, btn) {
     updateRealTimePrice();
 }
 
-// 打开号码选择器 (向上滑出 + 自动高度 + 计算底部按钮高度)
 async function openNumberSelector() {
     const modal = document.getElementById('number-selector-modal');
     const listContainer = document.getElementById('ns-list-container');
@@ -312,7 +302,7 @@ async function openNumberSelector() {
     
     if (!modal || !currentVariant) return;
 
-    // 1. 强制样式配置
+    // 样式配置
     modal.style.display = 'flex';
     modal.style.flexDirection = 'column';
     modal.style.position = 'absolute';
@@ -327,34 +317,29 @@ async function openNumberSelector() {
     modal.style.overflow = 'hidden';
     modal.style.transition = 'height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s';
 
-    // 设置内部容器滚动
     const nsBody = modal.querySelector('.ns-body');
     if(nsBody) {
         nsBody.style.overflowY = 'auto';
         nsBody.style.flex = '1';
     }
 
-    // 2. 计算定位 (锚定在购买方式上方)
+    // 定位
     const parent = modal.offsetParent || modal.parentElement;
     const parentHeight = parent.clientHeight;
     const buyTop = buyMethodEl.offsetTop; 
     const titleBottom = titleEl.offsetTop + titleEl.offsetHeight; 
 
-    // 底部定位
     const bottomPos = parentHeight - buyTop;
     modal.style.bottom = bottomPos + 'px';
     modal.style.top = 'auto';
 
-    // 最大高度
     const maxHeight = buyTop - titleBottom - 15; 
     modal.style.maxHeight = maxHeight + 'px';
 
-    // 3. 初始状态
     modal.classList.add('active');
     modal.style.height = '0px';
     modal.style.opacity = '0';
     
-    // 4. 显示加载中
     listContainer.innerHTML = '<div class="text-center w-100 mt-3"><i class="fa fa-spinner fa-spin"></i> 加载中...</div>';
     
     requestAnimationFrame(() => {
@@ -377,13 +362,9 @@ async function openNumberSelector() {
             listContainer.innerHTML = '<div class="text-center w-100 mt-3 text-muted">暂无可自选号码</div>';
         }
 
-        // 5. 数据加载完毕，计算实际高度 (含 Header + Content + Footer)
         const headerHeight = modal.querySelector('.ns-header').offsetHeight || 40;
         const footerHeight = modal.querySelector('.ns-footer') ? modal.querySelector('.ns-footer').offsetHeight : 0;
-        
-        // 计算总内容高度
         const contentHeight = listContainer.scrollHeight + headerHeight + footerHeight + 20; 
-        
         const finalHeight = Math.min(contentHeight, maxHeight);
         modal.style.height = finalHeight + 'px';
 
@@ -404,7 +385,6 @@ function closeNumberSelector() {
     }
 }
 
-// 选中某个号码
 function selectNumberItem(id, note) {
     selectedSpecificCardId = id;
     selectedSpecificCardInfo = note;
@@ -419,7 +399,6 @@ function selectNumberItem(id, note) {
     setTimeout(closeNumberSelector, 200);
 }
 
-// 动态更新价格下方的文字
 function updateDynamicInfoDisplay() {
     const displayDiv = document.getElementById('dynamic-info-display');
     if (!displayDiv) return;
@@ -567,6 +546,9 @@ function changeQty(delta) {
     updateRealTimePrice();
 }
 
+// =============================================
+// === 1. [修改] 加入购物车：纯本地逻辑，不跳转
+// =============================================
 function addToCart() {
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
@@ -580,7 +562,7 @@ function addToCart() {
         }
     }
 
-    // 自动保存填写的信息（如果存在）
+    // 若用户填了信息，顺便保存到本地，供后续结算使用（不强制校验）
     const contactEl = document.getElementById('p-contact');
     const passEl = document.getElementById('p-password');
     if (contactEl && passEl) {
@@ -617,6 +599,7 @@ function addToCart() {
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
     if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
     
+    // UI 反馈 (不跳转)
     const btn = event.target;
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fa fa-check"></i> 已加入';
@@ -627,41 +610,90 @@ function addToCart() {
     }, 1500);
 }
 
-function buyNow() {
+// =============================================
+// === 2. [修改] 立即购买：直连后端，直接去付款
+// =============================================
+async function buyNow() {
+    // 1. 基础参数校验
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (buyMethod === null) { alert('请选择购买方式'); return; }
     
+    if (buyMethod === 'select') {
+        if (!selectedSpecificCardId) {
+            alert('请选择一个号码/卡密');
+            openNumberSelector(); 
+            return;
+        }
+    }
+
+    // 2. 校验联系方式与密码
     const contactEl = document.getElementById('p-contact');
     const passEl = document.getElementById('p-password');
     
-    if (contactEl && passEl) {
-        const contact = contactEl.value.trim();
-        const password = passEl.value.trim();
-
-        if (!contact) {
-            alert('请输入联系方式');
-            contactEl.focus();
-            return;
-        }
-        if (!password || password.length <= 1) {
-            alert('查单密码长度必须大于1位');
-            passEl.focus();
-            return;
-        }
-
-        localStorage.setItem('userContact', contact);
-        localStorage.setItem('userPassword', password);
+    if (!contactEl || !passEl) {
+        alert('页面加载异常：缺少联系方式输入框'); 
+        return;
     }
 
-    addToCart();
-    setTimeout(() => {
-        window.location.href = '/cart.html';
-    }, 200);
-}
+    const contact = contactEl.value.trim();
+    const password = passEl.value.trim();
 
-function animateValue(id, end) {
-    const el = document.getElementById(id);
-    if(el) el.innerText = end; 
+    if (!contact) {
+        alert('请输入联系方式');
+        contactEl.focus();
+        return;
+    }
+    if (!password || password.length <= 1) {
+        alert('查单密码长度必须大于1位');
+        passEl.focus();
+        return;
+    }
+
+    // 保存到本地，方便下次自动填充
+    localStorage.setItem('userContact', contact);
+    localStorage.setItem('userPassword', password);
+
+    // 3. UI Loading
+    const btn = event.currentTarget || event.target;
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 正在下单...';
+
+    // 4. 构造请求数据
+    const payload = {
+        variant_id: currentVariant.id,
+        quantity: quantity,
+        contact: contact,
+        query_password: password,
+        payment_method: paymentMethod,
+        card_id: (buyMethod === 'select') ? selectedSpecificCardId : null
+    };
+
+    // 5. 调用后端创建订单
+    try {
+        const res = await fetch('/api/shop/order/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if (data.error) {
+            alert(data.error);
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        } else {
+            // 成功 -> 跳转支付页
+            window.location.href = `/pay.html?order_id=${data.order_id}`;
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert('网络请求失败，请检查网络');
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+    }
 }
 
 function showError(msg) {
