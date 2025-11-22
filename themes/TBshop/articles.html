@@ -19,12 +19,21 @@
         .article-item:hover {
             background-color: #fcfcfc;
         }
-        /* 移除最后一个元素的底边框 */
         .article-item:last-child {
             border-bottom: none !important;
         }
 
-        /* 文章左侧缩略图容器 */
+        /* [修复] 针对 p-0 容器内标题红竖位置过偏的问题 */
+        /* 让红竖距离左侧有 1rem (约16px) 的间距，与首页保持视觉一致 */
+        .module-box.p-0 .module-title::before {
+            left: 1rem !important; 
+        }
+        /* 让标题文字相应右移，防止压住红竖 (1rem间距 + 4px宽 + 10px间隙 ≈ 30px) */
+        .module-box.p-0 .module-title {
+            padding-left: 30px !important; 
+        }
+
+        /* 文章左侧缩略图 */
         .art-item-img {
             width: 160px;
             height: 100px;
@@ -32,7 +41,7 @@
             border-radius: 4px;
             overflow: hidden;
             border: 1px solid #eee;
-            position: relative;
+            position: relative; /* 确保图片定位正常 */
         }
         .art-item-img img {
             width: 100%;
@@ -47,18 +56,18 @@
         /* 移动端适配 */
         @media (max-width: 768px) {
             .art-item-img {
-                width: 100px; /* 移动端缩小图片 */
+                width: 100px;
                 height: 70px;
                 margin-right: 10px !important;
             }
             .art-item-desc {
-                display: none; /* 移动端隐藏摘要，只显示标题和元数据 */
+                display: none;
             }
             .art-item-title {
                 font-size: 14px;
                 line-height: 1.4;
                 margin-bottom: 5px !important;
-                height: 40px; /* 限制两行 */
+                height: 40px;
                 overflow: hidden;
                 display: -webkit-box;
                 -webkit-line-clamp: 2;
@@ -121,10 +130,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // 渲染布局
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof renderCommonLayout === 'function') {
-                renderCommonLayout('articles'); // 高亮菜单
+                renderCommonLayout('articles'); 
             }
         });
     </script>
