@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (修复版：修正支付方式代码 alipay -> alipay_f2f)
+// === (最终完整版：购物车免填信息 / 立即购买强校验)
 // =============================================
 
 // 全局变量
@@ -8,7 +8,7 @@ let currentProduct = null;   // 当前商品数据
 let currentVariant = null;   // 当前选中的 SKU
 let quantity = 1;            // 购买数量
 let buyMethod = null;        // 购买方式: null | 'random' | 'select'
-let paymentMethod = 'alipay_f2f'; // [修改] 默认支付方式改为 alipay_f2f
+let paymentMethod = 'alipay_f2f'; // 默认支付方式
 
 // 自选号码相关全局变量
 let selectedSpecificCardId = null;   // 选中的具体卡密ID
@@ -94,6 +94,7 @@ function renderProductDetail(p) {
                             <span>销量: ${p.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
                         </div>
 
+                        <!-- 自选号码弹窗 -->
                         <div id="number-selector-modal" class="number-selector-overlay">
                             <div class="ns-header">
                                 <span>请选择号码</span>
@@ -145,14 +146,16 @@ function renderProductDetail(p) {
                             </div>
                         </div>
                         
+                        <!-- 信息输入区域 (仅立即购买强制要求) -->
                         <div class="mb-3 d-flex align-items-center">
                             <span class="text-secondary small me-3">信息：</span>
                             <div class="d-flex flex-grow-1 gap-2">
-                                <input type="text" class="form-control form-control-sm" id="p-contact" placeholder="联系方式">
-                                <input type="text" class="form-control form-control-sm" id="p-password" placeholder="查单密码">
+                                <input type="text" class="form-control form-control-sm" id="p-contact" placeholder="联系方式 (仅立即购买需填)">
+                                <input type="text" class="form-control form-control-sm" id="p-password" placeholder="查单密码 (仅立即购买需填)">
                             </div>
                         </div>
 
+                        <!-- 支付方式 (仅立即购买使用) -->
                         <div class="mb-4 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">支付方式：</span>
                             <div class="d-flex align-items-center flex-wrap" id="payment-method-list">
@@ -168,6 +171,7 @@ function renderProductDetail(p) {
                                     <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
                                     <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
+                                <small class="text-muted ms-2" style="font-size:12px;">(仅立即购买有效)</small>
                             </div>
                         </div>
 
@@ -202,11 +206,17 @@ function renderProductDetail(p) {
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay(); 
     
-    // 回显缓存信息
+    // 回显缓存信息 (如果有的话就回显，提升体验)
     const cachedContact = localStorage.getItem('userContact');
     const cachedPass = localStorage.getItem('userPassword');
-    if(cachedContact) document.getElementById('p-contact').value = cachedContact;
-    if(cachedPass) document.getElementById('p-password').value = cachedPass;
+    if(cachedContact) {
+        const el = document.getElementById('p-contact');
+        if(el) el.value = cachedContact;
+    }
+    if(cachedPass) {
+        const el = document.getElementById('p-password');
+        if(el) el.value = cachedPass;
+    }
     
     // 侧边栏推荐
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
@@ -220,7 +230,7 @@ function renderProductDetail(p) {
 }
 
 // =============================================
-// === 交互逻辑
+// === 交互逻辑 (规格、价格、弹窗等)
 // =============================================
 
 function parseWholesaleInfo(config) {
@@ -546,11 +556,17 @@ function changeQty(delta) {
     updateRealTimePrice();
 }
 
+// =============================================
+// === 1. [重点] 加入购物车
+// === 逻辑：不强制校验联系人/密码/支付方式
+// === 但如果有填，尝试保存到缓存
+// =============================================
 function addToCart() {
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
     if (buyMethod === null) { alert('请选择购买方式'); return; }
 
+    // 仅自选模式需要校验号码
     if (buyMethod === 'select') {
         if (!selectedSpecificCardId) {
             alert('请选择一个号码/卡密');
@@ -559,14 +575,15 @@ function addToCart() {
         }
     }
 
-    // 若用户填了信息，顺便保存到本地，供后续结算使用（不强制校验）
+    // 尝试保存信息（如果用户填了），但不校验
     const contactEl = document.getElementById('p-contact');
     const passEl = document.getElementById('p-password');
     if (contactEl && passEl) {
-        const contact = contactEl.value.trim();
-        const password = passEl.value.trim();
-        if (contact) localStorage.setItem('userContact', contact);
-        if (password) localStorage.setItem('userPassword', password);
+        const c = contactEl.value.trim();
+        const p = passEl.value.trim();
+        // 只要不为空，就保存；为空也没关系，不报错
+        if(c) localStorage.setItem('userContact', c);
+        if(p) localStorage.setItem('userPassword', p);
     }
 
     let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
@@ -596,7 +613,7 @@ function addToCart() {
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
     if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
     
-    // UI 反馈 (不跳转)
+    // UI 反馈
     const btn = event.target;
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fa fa-check"></i> 已加入';
@@ -607,8 +624,11 @@ function addToCart() {
     }, 1500);
 }
 
+// =============================================
+// === 2. [重点] 立即购买
+// === 逻辑：强制校验所有信息，直连后端下单
+// =============================================
 async function buyNow() {
-    // 1. 基础参数校验
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (buyMethod === null) { alert('请选择购买方式'); return; }
     
@@ -620,12 +640,12 @@ async function buyNow() {
         }
     }
 
-    // 2. 校验联系方式与密码
+    // 强制获取并校验联系人与密码
     const contactEl = document.getElementById('p-contact');
     const passEl = document.getElementById('p-password');
     
     if (!contactEl || !passEl) {
-        alert('页面加载异常：缺少联系方式输入框'); 
+        alert('页面加载异常，请刷新重试');
         return;
     }
 
@@ -643,27 +663,25 @@ async function buyNow() {
         return;
     }
 
-    // 保存到本地，方便下次自动填充
+    // 保存到本地
     localStorage.setItem('userContact', contact);
     localStorage.setItem('userPassword', password);
 
-    // 3. UI Loading
+    // UI Loading
     const btn = event.currentTarget || event.target;
     const originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 正在下单...';
 
-    // 4. 构造请求数据
     const payload = {
         variant_id: currentVariant.id,
         quantity: quantity,
         contact: contact,
         query_password: password,
-        payment_method: paymentMethod,
+        payment_method: paymentMethod, // 传递当前页面选中的支付方式
         card_id: (buyMethod === 'select') ? selectedSpecificCardId : null
     };
 
-    // 5. 调用后端创建订单
     try {
         const res = await fetch('/api/shop/order/create', {
             method: 'POST',
@@ -678,8 +696,8 @@ async function buyNow() {
             btn.disabled = false;
             btn.innerHTML = originalContent;
         } else {
-            // 成功 -> 跳转支付页
-            window.location.href = `/pay.html?order_id=${data.order_id}`;
+            // 跳转支付页，带上 method 参数
+            window.location.href = `/pay.html?order_id=${data.order_id}&method=${paymentMethod}`;
         }
 
     } catch (e) {
