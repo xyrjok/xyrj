@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终分离版：立即购买直连支付 / 购物车纯本地存储)
+// === (修复版：修正支付方式代码 alipay -> alipay_f2f)
 // =============================================
 
 // 全局变量
@@ -8,7 +8,7 @@ let currentProduct = null;   // 当前商品数据
 let currentVariant = null;   // 当前选中的 SKU
 let quantity = 1;            // 购买数量
 let buyMethod = null;        // 购买方式: null | 'random' | 'select'
-let paymentMethod = 'alipay'; // 默认支付方式
+let paymentMethod = 'alipay_f2f'; // [修改] 默认支付方式改为 alipay_f2f
 
 // 自选号码相关全局变量
 let selectedSpecificCardId = null;   // 选中的具体卡密ID
@@ -156,7 +156,7 @@ function renderProductDetail(p) {
                         <div class="mb-4 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">支付方式：</span>
                             <div class="d-flex align-items-center flex-wrap" id="payment-method-list">
-                                <div class="payment-option active" onclick="selectPayment('alipay', this)">
+                                <div class="payment-option active" onclick="selectPayment('alipay_f2f', this)">
                                     <i class="fab fa-alipay" style="color:#1678ff;"></i>
                                     <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                 </div>
@@ -546,9 +546,6 @@ function changeQty(delta) {
     updateRealTimePrice();
 }
 
-// =============================================
-// === 1. [修改] 加入购物车：纯本地逻辑，不跳转
-// =============================================
 function addToCart() {
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return; }
@@ -610,9 +607,6 @@ function addToCart() {
     }, 1500);
 }
 
-// =============================================
-// === 2. [修改] 立即购买：直连后端，直接去付款
-// =============================================
 async function buyNow() {
     // 1. 基础参数校验
     if (!currentVariant) { alert('请先选择规格'); return; }
