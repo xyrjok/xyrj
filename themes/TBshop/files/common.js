@@ -181,13 +181,15 @@ function renderCommonLayout(activePage) {
     // 2. 右侧栏特殊处理 (显示隐藏的模块)
     if (document.getElementById('global-sidebar-right')) {
         const extras = ['top-sales-box-container', 'tag-cloud-box-container', 'article-cat-box-container'];
-        // 只有首页、商品页、文章页需要显示这些
-        const showExtras = ['home', 'product', 'article', 'articles'].includes(activePage);
+        // [修改] 增加 'orders', 'pay' 到显示列表
+        const showExtras = ['home', 'product', 'article', 'articles', 'orders', 'pay'].includes(activePage);
         if(showExtras) {
              extras.forEach(id => {
                  const el = document.getElementById(id);
                  if(el) el.classList.remove('d-none');
              });
+             // [新增] 自动加载侧边栏数据 (解决空白问题)
+             loadGlobalSidebarData();
         }
     }
 
@@ -209,6 +211,37 @@ function renderCommonLayout(activePage) {
     // 4. 加载配置 & 更新角标
     loadGlobalConfig();
     loadCartBadge();
+}
+
+/**
+ * [新增] 全局加载侧边栏数据
+ * 用于在商品页、文章页、订单页等自动填充 销量排行/热门标签/教程分类
+ */
+async function loadGlobalSidebarData() {
+    // 1. 如果有销量排行或标签云容器，加载商品数据
+    const needProducts = document.getElementById('top-sales-list') || document.getElementById('tag-cloud-list');
+    if (needProducts) {
+        try {
+            const res = await fetch('/api/shop/products');
+            const products = await res.json();
+            if (!products.error) {
+                renderSidebarTopSales(products);
+                renderSidebarTagCloud(products);
+            }
+        } catch(e) { console.error('Sidebar products load error:', e); }
+    }
+
+    // 2. 如果有文章分类容器，加载文章数据
+    const needArticles = document.getElementById('article-cat-list');
+    if (needArticles) {
+        try {
+            const res = await fetch('/api/shop/articles');
+            const articles = await res.json();
+            if (!articles.error) {
+                renderSidebarArticleCats(articles);
+            }
+        } catch(e) { console.error('Sidebar articles load error:', e); }
+    }
 }
 
 /**
@@ -395,7 +428,7 @@ function renderSidebarArticleCats(articles) {
     const el = document.getElementById('article-cat-list');
     if(el && articles?.length) {
         const cats = [...new Set(articles.map(a=>a.category_name).filter(Boolean))];
-        el.innerHTML = cats.length ? cats.map(c=>`<a href="#">${c}</a>`).join('') : '<div class="text-muted small">暂无分类</div>';
+        el.innerHTML = cats.length ? cats.map(c=>`<a href="/articles.html?cat=${encodeURIComponent(c)}">${c}</a>`).join('') : '<div class="text-muted small">暂无分类</div>';
     }
 }
 
