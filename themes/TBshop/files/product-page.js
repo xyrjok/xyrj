@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终版 - 适配外部CSS + 向上滑出 + 收起按钮)
+// === (最终版 - 含联系方式/查单密码输入)
 // =============================================
 
 // 全局变量
@@ -70,8 +70,6 @@ function renderProductDetail(p) {
     }
 
     // 2. 构建 HTML 结构
-    // [注意] 移除了之前的 <style> 标签，样式由 custom-theme.css 控制
-    // [注意] .ns-footer 移除了内联样式
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -147,6 +145,14 @@ function renderProductDetail(p) {
                             </div>
                         </div>
 
+                        <div class="mb-3 d-flex align-items-center">
+                            <span class="text-secondary small me-3">信息：</span>
+                            <div class="d-flex flex-grow-1 gap-2">
+                                <input type="text" class="form-control form-control-sm" id="p-contact" placeholder="联系方式">
+                                <input type="text" class="form-control form-control-sm" id="p-password" placeholder="查单密码">
+                            </div>
+                        </div>
+
                         <div class="mb-4 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">支付方式：</span>
                             <div class="d-flex align-items-center flex-wrap" id="payment-method-list">
@@ -195,6 +201,18 @@ function renderProductDetail(p) {
     // 3. 初始化后续逻辑
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay(); 
+    
+    // 回显缓存的联系信息
+    const cachedContact = localStorage.getItem('userContact');
+    const cachedPass = localStorage.getItem('userPassword');
+    if(cachedContact) {
+        const el = document.getElementById('p-contact');
+        if(el) el.value = cachedContact;
+    }
+    if(cachedPass) {
+        const el = document.getElementById('p-password');
+        if(el) el.value = cachedPass;
+    }
     
     // 侧边栏推荐
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
@@ -361,7 +379,6 @@ async function openNumberSelector() {
 
         // 5. 数据加载完毕，计算实际高度 (含 Header + Content + Footer)
         const headerHeight = modal.querySelector('.ns-header').offsetHeight || 40;
-        // 获取 footer 高度 (因为CSS现在已经有了，offsetHeight 能正确获取)
         const footerHeight = modal.querySelector('.ns-footer') ? modal.querySelector('.ns-footer').offsetHeight : 0;
         
         // 计算总内容高度
@@ -563,6 +580,16 @@ function addToCart() {
         }
     }
 
+    // 自动保存填写的信息（如果存在）
+    const contactEl = document.getElementById('p-contact');
+    const passEl = document.getElementById('p-password');
+    if (contactEl && passEl) {
+        const contact = contactEl.value.trim();
+        const password = passEl.value.trim();
+        if (contact) localStorage.setItem('userContact', contact);
+        if (password) localStorage.setItem('userPassword', password);
+    }
+
     let cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
     
     let existingItem = null;
@@ -604,6 +631,28 @@ function buyNow() {
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (buyMethod === null) { alert('请选择购买方式'); return; }
     
+    const contactEl = document.getElementById('p-contact');
+    const passEl = document.getElementById('p-password');
+    
+    if (contactEl && passEl) {
+        const contact = contactEl.value.trim();
+        const password = passEl.value.trim();
+
+        if (!contact) {
+            alert('请输入联系方式');
+            contactEl.focus();
+            return;
+        }
+        if (!password || password.length <= 1) {
+            alert('查单密码长度必须大于1位');
+            passEl.focus();
+            return;
+        }
+
+        localStorage.setItem('userContact', contact);
+        localStorage.setItem('userPassword', password);
+    }
+
     addToCart();
     setTimeout(() => {
         window.location.href = '/cart.html';
