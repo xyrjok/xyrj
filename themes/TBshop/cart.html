@@ -21,6 +21,7 @@
             transition: top 0.3s;
         }
 
+        /* 支付方式选择框样式 */
         .payment-select-box {
             border: 1px solid #eee;
             border-radius: 8px;
@@ -30,7 +31,8 @@
             display: flex;
             align-items: center;
             background: #fff;
-            margin-bottom: 8px;
+            margin-bottom: 8px; /* PC端默认间距 */
+            height: 100%; /* 移动端Grid布局撑满高度 */
         }
         .payment-select-box:hover { border-color: #ddd; }
         .payment-select-box.active {
@@ -46,6 +48,7 @@
             color: #ff5000;
         }
         
+        /* 结算板块通用样式 */
         .checkout-section {
             background: #fff;
             border-radius: 8px;
@@ -183,17 +186,17 @@
                         <div class="mb-3">
                             <label class="form-label small text-muted mb-2">支付方式</label>
                             <div id="cart-payment-list-pc">
-                                <div class="payment-select-box active" onclick="selectCartPayment('alipay_f2f', this)">
+                                <div class="payment-select-box active" data-method="alipay_f2f" onclick="selectCartPayment('alipay_f2f', this)">
                                     <i class="fab fa-alipay text-primary me-2"></i>
                                     <span class="small">支付宝</span>
                                     <i class="fa fa-check-circle check-icon"></i>
                                 </div>
-                                <div class="payment-select-box" onclick="selectCartPayment('wxpay', this)">
+                                <div class="payment-select-box" data-method="wxpay" onclick="selectCartPayment('wxpay', this)">
                                     <i class="fab fa-weixin text-success me-2"></i>
                                     <span class="small">微信支付</span>
                                     <i class="fa fa-check-circle check-icon"></i>
                                 </div>
-                                <div class="payment-select-box" onclick="selectCartPayment('usdt', this)">
+                                <div class="payment-select-box" data-method="usdt" onclick="selectCartPayment('usdt', this)">
                                     <span class="fw-bold text-success me-2" style="font-size:10px;">USDT</span>
                                     <span class="small">USDT</span>
                                     <i class="fa fa-check-circle check-icon"></i>
@@ -230,21 +233,21 @@
                         <label class="form-label small text-muted mb-2">支付方式</label>
                         <div class="row g-2" id="cart-payment-list-mobile">
                              <div class="col-6">
-                                <div class="payment-select-box active" onclick="selectCartPayment('alipay_f2f', this)">
+                                <div class="payment-select-box active" data-method="alipay_f2f" onclick="selectCartPayment('alipay_f2f', this)">
                                     <i class="fab fa-alipay text-primary me-2"></i>
                                     <span class="small">支付宝</span>
                                     <i class="fa fa-check-circle check-icon"></i>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="payment-select-box" onclick="selectCartPayment('wxpay', this)">
+                                <div class="payment-select-box" data-method="wxpay" onclick="selectCartPayment('wxpay', this)">
                                     <i class="fab fa-weixin text-success me-2"></i>
                                     <span class="small">微信</span>
                                     <i class="fa fa-check-circle check-icon"></i>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="payment-select-box" onclick="selectCartPayment('usdt', this)">
+                                <div class="payment-select-box" data-method="usdt" onclick="selectCartPayment('usdt', this)">
                                     <span class="fw-bold text-success me-2" style="font-size:10px;">USDT</span>
                                     <span class="small">USDT</span>
                                     <i class="fa fa-check-circle check-icon"></i>
