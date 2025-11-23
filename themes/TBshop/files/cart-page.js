@@ -303,6 +303,10 @@ window.changeQty = function(idx, delta, absVal=null) {
     if(isNaN(q) || q < 1) q = 1;
     
     cart[idx].quantity = q;
+    
+    // 【修复关键点】 先保存到 localStorage，再重新加载渲染
+    localStorage.setItem('tbShopCart', JSON.stringify(cart));
+    
     loadCart(); 
 }
 
