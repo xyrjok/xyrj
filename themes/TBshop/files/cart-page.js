@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (关键修复版：解决结算API报错 + 支持合并支付)
+// === (修复版：解决数量点击无效 + 移动端样式错位)
 // =============================================
 
 let cart = [];
@@ -53,40 +53,29 @@ function syncInputs(id1, id2) {
 }
 
 /**
- * [关键修复] 标准化商品数据对象
- * 既要满足前端显示(name, sku, img)，又要满足后端接口需求(variantId, selectedCardId)
+ * 标准化商品数据对象
  */
 function normalizeItem(item) {
     return {
-        // --- 后端接口必需字段 (API Required) ---
-        // 兼容 product-page.js 存入时的 variant_id (下划线) 或可能存在的驼峰
         variantId: item.variant_id || item.variantId, 
         productName: item.productName || item.name || item.title || '未命名商品',
         variantName: item.variant_name || item.variantName || item.skuName || item.variant || '默认规格',
-        selectedCardId: item.selectedCardId || null, // 自选号码ID
+        selectedCardId: item.selectedCardId || null, 
 
-        // --- 前端显示字段 (Display) ---
-        // 为了兼容渲染函数，映射到通用字段名
         name: item.productName || item.name || item.title || '未命名商品',
         sku: item.variant_name || item.variantName || item.skuName || item.variant || '默认规格',
         img: item.img || item.image || item.thumb || item.pic || '/assets/img/no-image.png',
         
-        // --- 通用字段 ---
         price: parseFloat(item.price || 0),
         quantity: parseInt(item.quantity || 1),
         buyMode: item.buyMode || 'auto',
         
-        // 预设信息显示 (前端用)
         inputData: item.selectedCardInfo || item.selectedCardNote || item.input_data || item.customInfo || '',
         
-        // 选中状态
         checked: item.checked !== false
     };
 }
 
-/**
- * 支付方式选择逻辑
- */
 function selectCartPayment(method, el) {
     cartPaymentMethod = method;
     const containers = ['cart-payment-list', 'cart-payment-list-pc', 'cart-payment-list-mobile'];
@@ -100,15 +89,11 @@ function selectCartPayment(method, el) {
     });
 }
 
-/**
- * 加载购物车并渲染
- */
 function loadCart() {
     try {
         cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
     } catch (e) {
         cart = [];
-        console.error("Cart parse error", e);
     }
     
     const listMobile = document.getElementById('cart-list-mobile');
@@ -130,7 +115,7 @@ function loadCart() {
     if (mobileCount) mobileCount.innerText = cart.length;
 
     updateTotal();
-    bindEvents();
+    // [修改] 移除了 bindEvents，改用 HTML 内联 onclick 方式，更稳定
 }
 
 /**
@@ -150,10 +135,11 @@ function renderPCItem(rawItem, index) {
         extraInfo = `<span class="text-danger ms-1">[随机发货]</span>`;
     }
     
+    // [修改] 增加了 onclick 事件直接绑定
     return `
     <tr>
         <td class="ps-3">
-            <input class="form-check-input cart-item-check-input" type="checkbox" data-index="${index}" ${item.checked ? 'checked' : ''}>
+            <input class="form-check-input cart-item-check-input" type="checkbox" onchange="toggleItemCheck(${index}, this)" ${item.checked ? 'checked' : ''}>
         </td>
         <td>
             <div class="d-flex align-items-center">
@@ -172,16 +158,16 @@ function renderPCItem(rawItem, index) {
         <td>
             <div class="stepper" style="width:90px; height:26px; border:1px solid #ddd; display:flex; border-radius:3px;">
                 <div class="stepper-btn minus d-flex align-items-center justify-content-center bg-light" 
-                     data-index="${index}" style="width:26px; cursor:pointer; border-right:1px solid #ddd;">-</div>
-                <input type="number" class="stepper-input text-center border-0" value="${item.quantity}" data-index="${index}" 
-                       style="width:36px; font-size:13px; outline:none;">
+                     onclick="changeQty(${index}, -1)" style="width:26px; cursor:pointer; border-right:1px solid #ddd;">-</div>
+                <input type="number" class="stepper-input text-center border-0" value="${item.quantity}" 
+                       onchange="changeQty(${index}, 0, this.value)" style="width:36px; font-size:13px; outline:none;">
                 <div class="stepper-btn plus d-flex align-items-center justify-content-center bg-light" 
-                     data-index="${index}" style="width:26px; cursor:pointer; border-left:1px solid #ddd;">+</div>
+                     onclick="changeQty(${index}, 1)" style="width:26px; cursor:pointer; border-left:1px solid #ddd;">+</div>
             </div>
         </td>
         <td><strong class="text-danger small">¥${subtotal}</strong></td>
         <td>
-            <a href="javascript:void(0)" class="delete-btn text-muted small text-decoration-none" data-index="${index}">
+            <a href="javascript:void(0)" class="text-muted small text-decoration-none" onclick="deleteItem(${index})">
                 <i class="fa fa-trash-alt"></i>
             </a>
         </td>
@@ -200,11 +186,13 @@ function renderMobileItem(rawItem, index) {
         infoText = '随机发货';
     }
     
+    // [修改1] .stepper 增加了 width: auto !important，解决了加号后面有空白的问题
+    // [修改2] 按钮增加了 onclick="changeQty(...)"，解决了点击没反应的问题
     return `
     <div class="cart-item bg-white p-3 mb-2 rounded shadow-sm position-relative">
         <div class="d-flex">
             <div class="me-2 d-flex align-items-center">
-                <input class="form-check-input cart-item-check-input" type="checkbox" data-index="${index}" ${item.checked ? 'checked' : ''}>
+                <input class="form-check-input cart-item-check-input" type="checkbox" onchange="toggleItemCheck(${index}, this)" ${item.checked ? 'checked' : ''}>
             </div>
             <img src="${item.img}" class="rounded" alt="img" 
                  onerror="this.src='/assets/img/no-image.png'"
@@ -216,56 +204,30 @@ function renderMobileItem(rawItem, index) {
                 </div>
                 <div class="d-flex justify-content-between align-items-end">
                     <div class="text-danger fw-bold">¥${item.price.toFixed(2)}</div>
-                    <div class="stepper d-flex border rounded" style="height:24px;">
-                        <div class="stepper-btn minus px-2 d-flex align-items-center bg-light cursor-pointer" data-index="${index}">-</div>
-                        <input type="number" class="stepper-input text-center border-0 border-start border-end" value="${item.quantity}" data-index="${index}" style="width:30px; font-size:12px; outline:none;">
-                        <div class="stepper-btn plus px-2 d-flex align-items-center bg-light cursor-pointer" data-index="${index}">+</div>
+                    
+                    <div class="stepper d-flex border rounded" style="height:24px; width: auto !important;">
+                        <div class="stepper-btn minus px-2 d-flex align-items-center bg-light cursor-pointer" onclick="changeQty(${index}, -1)">-</div>
+                        <input type="number" class="stepper-input text-center border-0 border-start border-end" value="${item.quantity}" 
+                               onchange="changeQty(${index}, 0, this.value)" style="width:30px; font-size:12px; outline:none;">
+                        <div class="stepper-btn plus px-2 d-flex align-items-center bg-light cursor-pointer" onclick="changeQty(${index}, 1)">+</div>
                     </div>
+
                 </div>
             </div>
         </div>
-        <button class="delete-btn btn btn-sm text-muted position-absolute top-0 end-0 mt-2 me-2" 
-                data-index="${index}" style="display:${isEditing?'block':'none'}">
+        <button class="btn btn-sm text-muted position-absolute top-0 end-0 mt-2 me-2" 
+                onclick="deleteItem(${index})" style="display:${isEditing?'block':'none'}">
             <i class="fa fa-times"></i>
         </button>
     </div>`;
 }
 
-function bindEvents() {
-    document.querySelectorAll('.cart-item-check-input').forEach(chk => {
-        chk.addEventListener('change', (e) => {
-            const idx = e.target.dataset.index;
-            if(cart[idx]) {
-                cart[idx].checked = e.target.checked;
-                updateTotal();
-            }
-        });
-    });
-    
-    document.querySelectorAll('.stepper-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const idx = e.target.dataset.index;
-            const isPlus = e.target.classList.contains('plus');
-            changeQty(idx, isPlus ? 1 : -1);
-        });
-    });
-    
-    document.querySelectorAll('.stepper-input').forEach(input => {
-        input.addEventListener('focus', e => e.target.select());
-        input.addEventListener('change', e => {
-            let val = parseInt(e.target.value);
-            if(isNaN(val) || val < 1) val = 1;
-            changeQty(e.target.dataset.index, 0, val);
-        });
-    });
-    
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            const target = e.target.closest('.delete-btn');
-            if(target) deleteItem(target.dataset.index);
-        });
-    });
+// [修改] 新增：切换单个商品选中
+function toggleItemCheck(idx, el) {
+    if(cart[idx]) {
+        cart[idx].checked = el.checked;
+        updateTotal();
+    }
 }
 
 function toggleEdit() {
@@ -278,11 +240,7 @@ function toggleEdit() {
 function toggleCheckAll(source) {
     const checked = source.checked;
     cart.forEach(item => item.checked = checked);
-    document.querySelectorAll('.cart-item-check-input').forEach(c => c.checked = checked);
-    document.getElementById('check-all-pc').checked = checked;
-    const mobileAll = document.getElementById('check-all-mobile-footer');
-    if(mobileAll) mobileAll.checked = checked;
-    updateTotal();
+    loadCart(); // 重绘以更新所有 checkbox 状态
 }
 
 function updateTotal() {
@@ -312,18 +270,23 @@ function updateTotal() {
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
 }
 
-function changeQty(idx, delta, absVal=null) {
+// [修改] 暴露给全局，确保 onclick 能调用
+window.changeQty = function(idx, delta, absVal=null) {
     if(!cart[idx]) return;
     let q = parseInt(cart[idx].quantity) || 1;
-    if(absVal !== null) q = absVal;
-    else q += delta;
-    if(q < 1) q = 1;
+    if(absVal !== null) {
+        q = parseInt(absVal);
+    } else {
+        q += delta;
+    }
+    if(isNaN(q) || q < 1) q = 1;
     
     cart[idx].quantity = q;
-    loadCart();
+    loadCart(); // 重绘更新界面
 }
 
-function deleteItem(idx) {
+// [修改] 暴露给全局
+window.deleteItem = function(idx) {
     if(confirm('确定删除该商品吗？')) {
         cart.splice(idx, 1);
         localStorage.setItem('tbShopCart', JSON.stringify(cart));
@@ -331,7 +294,8 @@ function deleteItem(idx) {
     }
 }
 
-async function handleCheckout() {
+// [修改] 暴露给全局
+window.handleCheckout = async function() {
     const selected = cart.filter(i => i.checked !== false);
     if(selected.length === 0) return alert('请选择要结算的商品');
     
@@ -348,7 +312,6 @@ async function handleCheckout() {
     btns.forEach(b => { b.disabled = true; b.innerText = '提交中...'; });
     
     try {
-        // [修复] 这里的 normalizeItem 现在会包含 variantId 等关键字段
         const payload = {
             items: selected.map(normalizeItem), 
             contact: contact,
@@ -367,7 +330,6 @@ async function handleCheckout() {
         const remaining = cart.filter(i => i.checked === false);
         localStorage.setItem('tbShopCart', JSON.stringify(remaining));
         
-        // 跳转到收银台，此处 data.order_id 即为合并后的订单号
         window.location.href = `pay.html?order_id=${data.order_id}&method=${cartPaymentMethod}`;
     } catch(e) {
         alert('结算失败: ' + e.message);
