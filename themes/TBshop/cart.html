@@ -215,6 +215,22 @@
         </div>
         
         <div class="d-lg-none">
+            <div class="bg-white rounded shadow-sm p-3 mb-3 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="form-check me-3">
+                        <input class="form-check-input" type="checkbox" id="check-all-mobile-footer" onchange="toggleCheckAll(this)">
+                        <label class="form-check-label small" for="check-all-mobile-footer">全选</label>
+                    </div>
+                    <div>
+                        <span class="small text-muted">合计:</span>
+                        <span class="text-danger fw-bold fs-5">¥<span id="total-price-mobile">0.00</span></span>
+                    </div>
+                </div>
+                <button class="btn btn-danger rounded-pill px-4 fw-bold" onclick="handleCheckout()" id="checkout-btn-mobile">
+                    结算 (<span id="checkout-count-mobile">0</span>)
+                </button>
+            </div>
+
             <div class="checkout-section">
                 <h5 class="fw-bold border-bottom pb-2 mb-3">填写结算信息</h5>
                 <div class="row g-3">
@@ -258,25 +274,9 @@
 
     </div>
 
-    <div class="cart-footer-bar fixed-bottom bg-white border-top py-2 px-3 shadow-lg d-flex align-items-center justify-content-between d-lg-none">
-        <div class="d-flex align-items-center">
-            <div class="form-check me-3">
-                <input class="form-check-input" type="checkbox" id="check-all-mobile-footer" onchange="toggleCheckAll(this)">
-                <label class="form-check-label small" for="check-all-mobile-footer">全选</label>
-            </div>
-            <div>
-                <span class="small text-muted">合计:</span>
-                <span class="text-danger fw-bold fs-5">¥<span id="total-price-mobile">0.00</span></span>
-            </div>
-        </div>
-        <button class="btn btn-danger rounded-pill px-4 fw-bold" onclick="handleCheckout()" id="checkout-btn-mobile">
-            结算 (<span id="checkout-count-mobile">0</span>)
-        </button>
-    </div>
-
     <footer class="site-footer" id="global-footer"></footer>
 
-    <div class="d-lg-none" style="height: 100px;"></div>
+    <div class="d-lg-none" style="height: 50px;"></div>
 
     <script src="/themes/TBshop/files/bootstrap.bundle.min.js"></script>
 </body>
