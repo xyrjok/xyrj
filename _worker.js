@@ -7,6 +7,7 @@
  * [新增] 支持联系方式+查单密码查询历史订单接口
  * [修复] 添加 /api/shop/product 单个商品详情接口
  * [新增] 文章分类接口 & 文章列表摘要/首图提取逻辑
+ * [性能优化] 首页商品列表改为批量查询，解决加载慢的问题
  */
 
 // === 工具函数 ===
@@ -543,16 +544,39 @@ async function handleApi(request, env, url) {
             return jsonRes(results);
         }
 
+        // [修改] 首页商品接口性能优化 (批量查询)
         if (path === '/api/shop/products') {
+            // 1. 获取所有上架商品
             const res = (await db.prepare("SELECT * FROM products WHERE active=1 ORDER BY sort DESC").all()).results;
-            for(let p of res) {
-                p.variants = (await db.prepare("SELECT * FROM variants WHERE product_id=?").bind(p.id).all()).results;
-                p.variants.forEach(v => {
+            
+            if (res.length > 0) {
+                // 2. [性能优化] 批量获取所有相关规格，避免 N+1 循环查询导致的速度慢
+                // 提取所有商品的 ID
+                const ids = res.map(p => p.id).join(',');
+                
+                // 一次性查出所有涉及的规格
+                const allVariants = (await db.prepare(`SELECT * FROM variants WHERE product_id IN (${ids})`).all()).results;
+                
+                // 在内存中将规格按 product_id 分组
+                const variantsMap = {};
+                allVariants.forEach(v => {
+                    // 解析批发配置
                     if (v.wholesale_config) {
                          try { v.wholesale_config = JSON.parse(v.wholesale_config); } catch(e) { v.wholesale_config = null; }
                     }
+                    
+                    if (!variantsMap[v.product_id]) {
+                        variantsMap[v.product_id] = [];
+                    }
+                    variantsMap[v.product_id].push(v);
                 });
+
+                // 3. 将规格挂载到对应商品对象上
+                for(let p of res) {
+                    p.variants = variantsMap[p.id] || [];
+                }
             }
+            
             return jsonRes(res);
         }
         
