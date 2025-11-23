@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (修复版：解决数量点击无效 + 移动端样式错位)
+// === (修复版：数量按钮修复 + 商品跳转链接 + 找回页尾)
 // =============================================
 
 let cart = [];
@@ -57,6 +57,9 @@ function syncInputs(id1, id2) {
  */
 function normalizeItem(item) {
     return {
+        // [新增] 确保获取商品ID，用于跳转链接
+        productId: item.product_id || item.productId || item.product_id, 
+        
         variantId: item.variant_id || item.variantId, 
         productName: item.productName || item.name || item.title || '未命名商品',
         variantName: item.variant_name || item.variantName || item.skuName || item.variant || '默认规格',
@@ -115,7 +118,6 @@ function loadCart() {
     if (mobileCount) mobileCount.innerText = cart.length;
 
     updateTotal();
-    // [修改] 移除了 bindEvents，改用 HTML 内联 onclick 方式，更稳定
 }
 
 /**
@@ -126,6 +128,9 @@ function renderPCItem(rawItem, index) {
     const subtotal = (item.price * item.quantity).toFixed(2);
     const specDisplay = `<span class="text-muted">${item.sku}</span>`;
     
+    // [新增] 商品链接
+    const productLink = item.productId ? `/product.html?id=${item.productId}` : 'javascript:void(0)';
+    
     let extraInfo = '';
     if (item.buyMode === 'select') {
         extraInfo = item.inputData ? 
@@ -135,7 +140,7 @@ function renderPCItem(rawItem, index) {
         extraInfo = `<span class="text-danger ms-1">[随机发货]</span>`;
     }
     
-    // [修改] 增加了 onclick 事件直接绑定
+    // [修改] 数量按钮改为 <button> 标签，图片和标题增加 <a> 链接
     return `
     <tr>
         <td class="ps-3">
@@ -143,11 +148,15 @@ function renderPCItem(rawItem, index) {
         </td>
         <td>
             <div class="d-flex align-items-center">
-                <img src="${item.img}" class="pc-item-img me-2" alt="img" 
-                     onerror="this.src='/assets/img/no-image.png'" 
-                     style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #eee;">
+                <a href="${productLink}" target="_blank" class="d-block me-2">
+                    <img src="${item.img}" class="pc-item-img" alt="img" 
+                         onerror="this.src='/assets/img/no-image.png'" 
+                         style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #eee;">
+                </a>
                 <div>
-                    <div class="pc-cart-title text-dark" style="font-size:13px; font-weight:500;">${item.name}</div>
+                    <a href="${productLink}" target="_blank" class="pc-cart-title text-dark text-decoration-none d-block" style="font-size:13px; font-weight:500;">
+                        ${item.name}
+                    </a>
                     <div class="pc-cart-sku small" style="font-size:12px; color:#888;">
                         ${specDisplay}${extraInfo}
                     </div>
@@ -157,12 +166,12 @@ function renderPCItem(rawItem, index) {
         <td class="text-muted" style="font-size:13px;">¥${item.price.toFixed(2)}</td>
         <td>
             <div class="stepper" style="width:90px; height:26px; border:1px solid #ddd; display:flex; border-radius:3px;">
-                <div class="stepper-btn minus d-flex align-items-center justify-content-center bg-light" 
-                     onclick="changeQty(${index}, -1)" style="width:26px; cursor:pointer; border-right:1px solid #ddd;">-</div>
+                <button type="button" class="stepper-btn minus d-flex align-items-center justify-content-center bg-light border-0" 
+                     onclick="changeQty(${index}, -1)" style="width:26px; cursor:pointer; border-right:1px solid #ddd !important;">-</button>
                 <input type="number" class="stepper-input text-center border-0" value="${item.quantity}" 
                        onchange="changeQty(${index}, 0, this.value)" style="width:36px; font-size:13px; outline:none;">
-                <div class="stepper-btn plus d-flex align-items-center justify-content-center bg-light" 
-                     onclick="changeQty(${index}, 1)" style="width:26px; cursor:pointer; border-left:1px solid #ddd;">+</div>
+                <button type="button" class="stepper-btn plus d-flex align-items-center justify-content-center bg-light border-0" 
+                     onclick="changeQty(${index}, 1)" style="width:26px; cursor:pointer; border-left:1px solid #ddd !important;">+</button>
             </div>
         </td>
         <td><strong class="text-danger small">¥${subtotal}</strong></td>
@@ -179,6 +188,10 @@ function renderPCItem(rawItem, index) {
  */
 function renderMobileItem(rawItem, index) {
     const item = normalizeItem(rawItem);
+    
+    // [新增] 商品链接
+    const productLink = item.productId ? `/product.html?id=${item.productId}` : 'javascript:void(0)';
+
     let infoText = '';
     if (item.buyMode === 'select') {
         infoText = item.inputData ? `已选: ${item.inputData}` : '未选号码';
@@ -186,19 +199,25 @@ function renderMobileItem(rawItem, index) {
         infoText = '随机发货';
     }
     
-    // [修改1] .stepper 增加了 width: auto !important，解决了加号后面有空白的问题
-    // [修改2] 按钮增加了 onclick="changeQty(...)"，解决了点击没反应的问题
+    // [修改1] 数量按钮改为 <button> 标签，确保点击灵敏度
+    // [修改2] 图片和标题包裹了 <a> 标签用于跳转
     return `
     <div class="cart-item bg-white p-3 mb-2 rounded shadow-sm position-relative">
         <div class="d-flex">
             <div class="me-2 d-flex align-items-center">
                 <input class="form-check-input cart-item-check-input" type="checkbox" onchange="toggleItemCheck(${index}, this)" ${item.checked ? 'checked' : ''}>
             </div>
-            <img src="${item.img}" class="rounded" alt="img" 
-                 onerror="this.src='/assets/img/no-image.png'"
-                 style="width:70px; height:70px; object-fit:cover; border:1px solid #f0f0f0;">
-            <div class="flex-grow-1 ms-2">
-                <div class="text-truncate mb-1" style="font-size:14px; font-weight:bold; max-width:200px;">${item.name}</div>
+            
+            <a href="${productLink}" class="d-block me-2">
+                <img src="${item.img}" class="rounded" alt="img" 
+                     onerror="this.src='/assets/img/no-image.png'"
+                     style="width:70px; height:70px; object-fit:cover; border:1px solid #f0f0f0;">
+            </a>
+
+            <div class="flex-grow-1">
+                <a href="${productLink}" class="text-truncate mb-1 text-dark text-decoration-none d-block" style="font-size:14px; font-weight:bold; max-width:200px;">
+                    ${item.name}
+                </a>
                 <div class="small text-muted bg-light px-2 py-1 rounded d-inline-block mb-2" style="font-size:12px;">
                     ${item.sku} <span class="text-danger">(${infoText})</span>
                 </div>
@@ -206,10 +225,12 @@ function renderMobileItem(rawItem, index) {
                     <div class="text-danger fw-bold">¥${item.price.toFixed(2)}</div>
                     
                     <div class="stepper d-flex border rounded" style="height:24px; width: auto !important;">
-                        <div class="stepper-btn minus px-2 d-flex align-items-center bg-light cursor-pointer" onclick="changeQty(${index}, -1)">-</div>
+                        <button type="button" class="stepper-btn minus px-2 d-flex align-items-center bg-light cursor-pointer border-0" 
+                                onclick="changeQty(${index}, -1)" style="min-width: 28px;">-</button>
                         <input type="number" class="stepper-input text-center border-0 border-start border-end" value="${item.quantity}" 
                                onchange="changeQty(${index}, 0, this.value)" style="width:30px; font-size:12px; outline:none;">
-                        <div class="stepper-btn plus px-2 d-flex align-items-center bg-light cursor-pointer" onclick="changeQty(${index}, 1)">+</div>
+                        <button type="button" class="stepper-btn plus px-2 d-flex align-items-center bg-light cursor-pointer border-0" 
+                                onclick="changeQty(${index}, 1)" style="min-width: 28px;">+</button>
                     </div>
 
                 </div>
@@ -222,7 +243,7 @@ function renderMobileItem(rawItem, index) {
     </div>`;
 }
 
-// [修改] 新增：切换单个商品选中
+// 切换单个商品选中
 function toggleItemCheck(idx, el) {
     if(cart[idx]) {
         cart[idx].checked = el.checked;
@@ -240,7 +261,7 @@ function toggleEdit() {
 function toggleCheckAll(source) {
     const checked = source.checked;
     cart.forEach(item => item.checked = checked);
-    loadCart(); // 重绘以更新所有 checkbox 状态
+    loadCart(); 
 }
 
 function updateTotal() {
@@ -270,7 +291,7 @@ function updateTotal() {
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
 }
 
-// [修改] 暴露给全局，确保 onclick 能调用
+// 暴露给全局，确保 onclick 能调用
 window.changeQty = function(idx, delta, absVal=null) {
     if(!cart[idx]) return;
     let q = parseInt(cart[idx].quantity) || 1;
@@ -282,10 +303,9 @@ window.changeQty = function(idx, delta, absVal=null) {
     if(isNaN(q) || q < 1) q = 1;
     
     cart[idx].quantity = q;
-    loadCart(); // 重绘更新界面
+    loadCart(); 
 }
 
-// [修改] 暴露给全局
 window.deleteItem = function(idx) {
     if(confirm('确定删除该商品吗？')) {
         cart.splice(idx, 1);
@@ -294,7 +314,6 @@ window.deleteItem = function(idx) {
     }
 }
 
-// [修改] 暴露给全局
 window.handleCheckout = async function() {
     const selected = cart.filter(i => i.checked !== false);
     if(selected.length === 0) return alert('请选择要结算的商品');
