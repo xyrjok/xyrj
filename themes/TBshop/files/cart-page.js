@@ -1,17 +1,17 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (Updated: 'Select' Item Qty Limit + Layout Fixes)
+// === (修复版：全选功能修复 + 状态自动同步)
 // =============================================
 
 let cart = [];
 let isEditing = false;
-let cartPaymentMethod = 'alipay_f2f'; // Default Payment
+let cartPaymentMethod = 'alipay_f2f'; // 默认选中支付宝
 
 /**
- * Page Load
+ * 页面加载
  */
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Load Config
+    // 1. 加载配置
     try {
         const configRes = await fetch('/api/shop/config');
         const siteConfig = await configRes.json();
@@ -22,10 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } catch (e) { console.error('Config load error', e); }
 
-    // 2. Load Cart
+    // 2. 加载购物车
     loadCart();
 
-    // 3. Restore Contact Info
+    // 3. 恢复联系人信息
     const cachedContact = localStorage.getItem('userContact');
     const cachedPass = localStorage.getItem('userPassword');
     
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         inputs.forEach(el => { if(el) el.value = cachedPass; });
     }
 
-    // Sync Inputs
+    // 监听输入同步
     syncInputs('contact-info', 'contact-info-mobile');
     syncInputs('query-password', 'query-password-mobile');
 });
@@ -53,7 +53,7 @@ function syncInputs(id1, id2) {
 }
 
 /**
- * Normalize Item Data
+ * 标准化商品数据对象
  */
 function normalizeItem(item) {
     return {
@@ -228,6 +228,7 @@ function renderMobileItem(rawItem, index) {
     </div>`;
 }
 
+// 切换单个商品选中
 function toggleItemCheck(idx, el) {
     if(cart[idx]) {
         cart[idx].checked = el.checked;
@@ -242,24 +243,45 @@ function toggleEdit() {
     loadCart(); 
 }
 
-function toggleCheckAll(source) {
+// 【修复1】全选功能
+window.toggleCheckAll = function(source) {
     const checked = source.checked;
     cart.forEach(item => item.checked = checked);
+    
+    // 关键：在重新加载前必须保存，否则 loadCart 会读取旧数据覆盖你的修改
+    localStorage.setItem('tbShopCart', JSON.stringify(cart));
+    
     loadCart(); 
 }
 
 function updateTotal() {
     let total = 0;
     let count = 0;
+    
+    // 检查是否所有商品都被选中了（用于同步全选按钮状态）
+    const hasItems = cart.length > 0;
+    let allChecked = hasItems; 
+
     cart.forEach(item => {
         if(item.checked !== false) { 
             const p = parseFloat(item.price) || 0;
             const q = parseInt(item.quantity) || 1;
             total += p * q;
             count++;
+        } else {
+            // 只要有一个没选中，全选按钮就不选中
+            allChecked = false;
         }
     });
     
+    // 【新增】同步两个全选框的状态（PC和移动端）
+    const checkAllIds = ['check-all-pc', 'check-all-mobile-footer'];
+    checkAllIds.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.checked = allChecked;
+    });
+
+    // 更新金额显示
     const ids = [
         { t: 'total-price-pc', c: 'checkout-count-pc' },
         { t: 'total-price-mobile', c: 'checkout-count-mobile' }
@@ -275,19 +297,15 @@ function updateTotal() {
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
 }
 
-// Global exposure
+// 暴露给全局
 window.changeQty = function(idx, delta, absVal=null) {
     if(!cart[idx]) return;
     
-    // [Request 1] Restrict 'select' items to quantity 1
+    // 自选号码限制数量为1
     if (cart[idx].buyMode === 'select') {
         const currentQ = parseInt(cart[idx].quantity) || 1;
-        
-        // If attempting to increase (delta > 0) or set absolute value > 1
         if ((delta > 0) || (absVal !== null && parseInt(absVal) > 1)) {
             alert('提示：该商品为加价自选，每组预设信息只能购买一份。\n如需购买多份，请返回商品页选择其他号码/预设信息。');
-            
-            // Force reset to 1 if input was changed manually
             if (absVal !== null) {
                 cart[idx].quantity = 1;
                 localStorage.setItem('tbShopCart', JSON.stringify(cart));
@@ -306,10 +324,7 @@ window.changeQty = function(idx, delta, absVal=null) {
     if(isNaN(q) || q < 1) q = 1;
     
     cart[idx].quantity = q;
-    
-    // Save before reload
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
-    
     loadCart(); 
 }
 
