@@ -1,17 +1,17 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (修复版：数量按钮修复 + 商品跳转链接 + 找回页尾)
+// === (Updated: 'Select' Item Qty Limit + Layout Fixes)
 // =============================================
 
 let cart = [];
 let isEditing = false;
-let cartPaymentMethod = 'alipay_f2f'; // 默认选中支付宝
+let cartPaymentMethod = 'alipay_f2f'; // Default Payment
 
 /**
- * 页面加载
+ * Page Load
  */
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. 加载配置
+    // 1. Load Config
     try {
         const configRes = await fetch('/api/shop/config');
         const siteConfig = await configRes.json();
@@ -22,10 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } catch (e) { console.error('Config load error', e); }
 
-    // 2. 加载购物车
+    // 2. Load Cart
     loadCart();
 
-    // 3. 恢复联系人信息
+    // 3. Restore Contact Info
     const cachedContact = localStorage.getItem('userContact');
     const cachedPass = localStorage.getItem('userPassword');
     
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         inputs.forEach(el => { if(el) el.value = cachedPass; });
     }
 
-    // 监听输入同步
+    // Sync Inputs
     syncInputs('contact-info', 'contact-info-mobile');
     syncInputs('query-password', 'query-password-mobile');
 });
@@ -53,13 +53,11 @@ function syncInputs(id1, id2) {
 }
 
 /**
- * 标准化商品数据对象
+ * Normalize Item Data
  */
 function normalizeItem(item) {
     return {
-        // [新增] 确保获取商品ID，用于跳转链接
         productId: item.product_id || item.productId || item.product_id, 
-        
         variantId: item.variant_id || item.variantId, 
         productName: item.productName || item.name || item.title || '未命名商品',
         variantName: item.variant_name || item.variantName || item.skuName || item.variant || '默认规格',
@@ -120,15 +118,10 @@ function loadCart() {
     updateTotal();
 }
 
-/**
- * 渲染 PC 端列表项
- */
 function renderPCItem(rawItem, index) {
     const item = normalizeItem(rawItem);
     const subtotal = (item.price * item.quantity).toFixed(2);
     const specDisplay = `<span class="text-muted">${item.sku}</span>`;
-    
-    // [新增] 商品链接
     const productLink = item.productId ? `/product.html?id=${item.productId}` : 'javascript:void(0)';
     
     let extraInfo = '';
@@ -140,7 +133,6 @@ function renderPCItem(rawItem, index) {
         extraInfo = `<span class="text-danger ms-1">[随机发货]</span>`;
     }
     
-    // [修改] 数量按钮改为 <button> 标签，图片和标题增加 <a> 链接
     return `
     <tr>
         <td class="ps-3">
@@ -183,13 +175,8 @@ function renderPCItem(rawItem, index) {
     </tr>`;
 }
 
-/**
- * 渲染移动端列表项
- */
 function renderMobileItem(rawItem, index) {
     const item = normalizeItem(rawItem);
-    
-    // [新增] 商品链接
     const productLink = item.productId ? `/product.html?id=${item.productId}` : 'javascript:void(0)';
 
     let infoText = '';
@@ -199,8 +186,6 @@ function renderMobileItem(rawItem, index) {
         infoText = '随机发货';
     }
     
-    // [修改1] 数量按钮改为 <button> 标签，确保点击灵敏度
-    // [修改2] 图片和标题包裹了 <a> 标签用于跳转
     return `
     <div class="cart-item bg-white p-3 mb-2 rounded shadow-sm position-relative">
         <div class="d-flex">
@@ -243,7 +228,6 @@ function renderMobileItem(rawItem, index) {
     </div>`;
 }
 
-// 切换单个商品选中
 function toggleItemCheck(idx, el) {
     if(cart[idx]) {
         cart[idx].checked = el.checked;
@@ -291,9 +275,28 @@ function updateTotal() {
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
 }
 
-// 暴露给全局，确保 onclick 能调用
+// Global exposure
 window.changeQty = function(idx, delta, absVal=null) {
     if(!cart[idx]) return;
+    
+    // [Request 1] Restrict 'select' items to quantity 1
+    if (cart[idx].buyMode === 'select') {
+        const currentQ = parseInt(cart[idx].quantity) || 1;
+        
+        // If attempting to increase (delta > 0) or set absolute value > 1
+        if ((delta > 0) || (absVal !== null && parseInt(absVal) > 1)) {
+            alert('提示：该商品为加价自选，每组预设信息只能购买一份。\n如需购买多份，请返回商品页选择其他号码/预设信息。');
+            
+            // Force reset to 1 if input was changed manually
+            if (absVal !== null) {
+                cart[idx].quantity = 1;
+                localStorage.setItem('tbShopCart', JSON.stringify(cart));
+                loadCart();
+            }
+            return;
+        }
+    }
+
     let q = parseInt(cart[idx].quantity) || 1;
     if(absVal !== null) {
         q = parseInt(absVal);
@@ -304,7 +307,7 @@ window.changeQty = function(idx, delta, absVal=null) {
     
     cart[idx].quantity = q;
     
-    // 【修复关键点】 先保存到 localStorage，再重新加载渲染
+    // Save before reload
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
     
     loadCart(); 
