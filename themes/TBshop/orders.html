@@ -26,12 +26,29 @@
 
         .result-card { background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-top: 20px; display: none; }
         
-        .order-item { background: #fff; border: 1px solid #eee; border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+        .order-item { background: #fff; border: 1px solid #eee; border-radius: 6px; margin-bottom: 10px; overflow: hidden; transition: all 0.3s ease; }
         .order-header { background: #fdfdfd; padding: 10px 15px; border-bottom: 1px solid #eee; font-size: 13px; color: #666; display: flex; justify-content: space-between; align-items: center; }
         .order-body { padding: 15px; }
         
         .card-text-box { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all; margin-top: 5px; font-size: 13px; color: #333; position: relative; }
         .copy-btn { font-size: 12px; padding: 2px 8px; margin-left: 5px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 3px; cursor: pointer; float: right; }
+
+        /* [新增] 缓存查单提示条样式 */
+        .cache-hint-box {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+        .cache-hint-box:hover { background-color: #bbdefb; }
     </style>
 
     <script src="/themes/TBshop/files/common.js" defer></script>
@@ -67,6 +84,17 @@
                     <div class="tab-content" id="queryTabContent" style="max-width: 600px; margin: 0 auto;">
                         
                         <div class="tab-pane fade show active" id="by-contact">
+                            
+                            <div id="local-cache-box" class="cache-hint-box d-none" onclick="queryByContact(true)">
+                                <div>
+                                    <i class="fa fa-history me-2"></i>
+                                    检测到本地记录：<strong id="cache-contact-text"></strong>
+                                </div>
+                                <div>
+                                    <small>一键查询</small> <i class="fa fa-chevron-right small"></i>
+                                </div>
+                            </div>
+
                             <div class="mb-3 mt-3">
                                 <label class="form-label text-muted">联系方式</label>
                                 <div class="input-group input-group-lg">
@@ -81,7 +109,7 @@
                                     <input type="text" class="form-control" id="input-password" placeholder="下单时设置的密码">
                                 </div>
                             </div>
-                            <button class="tb-btn-primary" onclick="queryByContact()">查询并管理订单</button>
+                            <button class="tb-btn-primary" onclick="queryByContact(false)">查询并管理订单</button>
                             <div class="text-center mt-3 text-muted small">
                                 <i class="fa fa-info-circle"></i> 可查询所有历史订单，支持补单和删除
                             </div>
@@ -141,17 +169,32 @@
                 renderCommonLayout('orders');
             }
             
-            // 自动回显缓存
-            const c = localStorage.getItem('userContact');
-            const p = localStorage.getItem('userPassword');
-            if(c) document.getElementById('input-contact').value = c;
-            if(p) document.getElementById('input-password').value = p;
+            // [新增] 初始化缓存检查
+            checkLocalCache();
 
             // 如果是被“限制下单”拦截跳转过来的，自动执行查询
+            const c = localStorage.getItem('userContact');
+            const p = localStorage.getItem('userPassword');
             if(c && p && document.referrer.includes('product.html')) {
-                 queryByContact();
+                 queryByContact(true);
             }
         });
+
+        // [新增] 检查并显示本地缓存
+        function checkLocalCache() {
+            const c = localStorage.getItem('userContact');
+            const p = localStorage.getItem('userPassword');
+            
+            if (c && p) {
+                // 1. 自动填充输入框
+                document.getElementById('input-contact').value = c;
+                document.getElementById('input-password').value = p;
+                
+                // 2. 显示顶部提示条
+                document.getElementById('cache-contact-text').innerText = c;
+                document.getElementById('local-cache-box').classList.remove('d-none');
+            }
+        }
 
         // 辅助显示函数
         function showResult(html) {
@@ -167,20 +210,34 @@
         // ============================================
         // 1. 联系方式查询 (核心升级功能)
         // ============================================
-        async function queryByContact() {
-            const contact = document.getElementById('input-contact').value.trim();
-            const pass = document.getElementById('input-password').value.trim();
+        async function queryByContact(useCache = false) {
+            let contact, pass;
+
+            if (useCache) {
+                contact = localStorage.getItem('userContact');
+                pass = localStorage.getItem('userPassword');
+                // 同步到输入框，防止用户混淆
+                if(contact) document.getElementById('input-contact').value = contact;
+                if(pass) document.getElementById('input-password').value = pass;
+            } else {
+                contact = document.getElementById('input-contact').value.trim();
+                pass = document.getElementById('input-password').value.trim();
+            }
             
             if (!contact || !pass) { alert('请输入联系方式和查单密码'); return; }
 
-            // 存缓存
+            // 更新缓存
             localStorage.setItem('userContact', contact);
             localStorage.setItem('userPassword', pass);
+            checkLocalCache(); // 刷新提示条状态
 
-            const btn = event.target;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 查询中...';
-            btn.disabled = true;
+            const btn = document.querySelector('button[onclick="queryByContact(false)"]');
+            const originalText = btn ? btn.innerHTML : '查询';
+            if(btn) { btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 查询中...'; btn.disabled = true; }
+
+            // 清空旧结果
+            document.getElementById('result-content').innerHTML = '<div class="text-center py-4"><i class="fa fa-spinner fa-spin"></i> 加载数据中...</div>';
+            document.getElementById('result-area').style.display = 'block';
 
             try {
                 const res = await fetch('/api/shop/orders/query', {
@@ -200,8 +257,7 @@
             } catch(e) {
                 showError(e.message || '查询失败');
             } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                if(btn) { btn.innerHTML = originalText; btn.disabled = false; }
             }
         }
 
@@ -215,9 +271,10 @@
                     // === 未支付 ===
                     statusBadge = '<span class="badge bg-danger">未支付</span>';
                     contentBody = '<div class="alert alert-light border border-dashed text-muted mb-0 small py-2">订单未支付，支付后自动显示卡密</div>';
+                    // [修改] 删除按钮绑定了 DOM ID，以便后续移除
                     actionBtns = `
                         <div class="mt-2 text-end border-top pt-2">
-                            <button class="btn btn-sm btn-outline-secondary me-2" onclick="deleteOrder('${order.id}')">删除订单</button>
+                            <button id="btn-del-${order.id}" class="btn btn-sm btn-outline-secondary me-2" onclick="deleteOrder('${order.id}')">删除订单</button>
                             <a href="/pay.html?order_id=${order.id}&method=${order.payment_method || 'alipay_f2f'}" class="btn btn-sm btn-danger fw-bold">
                                 去支付 <i class="fa fa-angle-right"></i>
                             </a>
@@ -236,8 +293,9 @@
                     }
                 }
 
+                // 给每个 item 加 ID，方便删除
                 html += `
-                    <div class="order-item">
+                    <div class="order-item" id="order-card-${order.id}">
                         <div class="order-header">
                             <span>${order.created_at_str || '时间未知'}</span>
                             ${statusBadge}
@@ -260,12 +318,16 @@
             showResult(html);
         }
 
-        // 删除未支付订单
+        // [修改] 删除未支付订单 - 成功后直接移除DOM，无需刷新
         async function deleteOrder(orderId) {
             if(!confirm('确定要删除这个未支付的订单吗？')) return;
             
-            const contact = document.getElementById('input-contact').value;
-            const password = document.getElementById('input-password').value;
+            // 优先从 localStorage 获取凭证，防止用户清空了输入框导致删除失败
+            const contact = localStorage.getItem('userContact') || document.getElementById('input-contact').value;
+            const password = localStorage.getItem('userPassword') || document.getElementById('input-password').value;
+
+            const btn = document.getElementById(`btn-del-${orderId}`);
+            if(btn) { btn.disabled = true; btn.innerText = '删除中...'; }
 
             try {
                 const res = await fetch('/api/shop/order/delete', {
@@ -274,14 +336,28 @@
                     body: JSON.stringify({ id: orderId, contact, query_password: password })
                 });
                 const data = await res.json();
+                
                 if(data.success) {
-                    alert('删除成功');
-                    queryByContact(); // 刷新列表
+                    // [核心修改] 直接移除 DOM 元素，实现无刷新删除
+                    const card = document.getElementById(`order-card-${orderId}`);
+                    if (card) {
+                        card.style.opacity = '0';
+                        setTimeout(() => {
+                            card.remove();
+                            // 检查是否空了
+                            const content = document.getElementById('result-content');
+                            if (content && content.children.length === 0) {
+                                content.innerHTML = '<div class="alert alert-info text-center">订单已清空</div>';
+                            }
+                        }, 300);
+                    }
                 } else {
                     alert(data.error || '删除失败');
+                    if(btn) { btn.disabled = false; btn.innerText = '删除订单'; }
                 }
             } catch(e) {
-                alert('网络错误');
+                alert('网络错误，请稍后重试');
+                if(btn) { btn.disabled = false; btn.innerText = '删除订单'; }
             }
         }
 
@@ -297,6 +373,10 @@
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 查询中...';
             btn.disabled = true;
+
+            // 清空旧结果
+            document.getElementById('result-content').innerHTML = '';
+            document.getElementById('result-area').style.display = 'none';
 
             fetch(`/api/shop/order/status?order_id=${orderId}`)
                 .then(res => res.json())
