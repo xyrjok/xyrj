@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="renderer" content="webkit">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>订单查询 - TB Shop</title>
     
     <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
@@ -13,7 +11,7 @@
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
 
     <style>
-        /* 查单页面专用微调 */
+        /* 查单页面专用样式 */
         .query-tabs .nav-link { color: #666; border: none; border-bottom: 2px solid transparent; padding: 12px 20px; font-weight: 500; }
         .query-tabs .nav-link:hover { color: var(--tb-orange); }
         .query-tabs .nav-link.active { color: var(--tb-orange); background: transparent; border-bottom: 2px solid var(--tb-orange); font-weight: bold; }
@@ -29,7 +27,7 @@
         .result-card { background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-top: 20px; display: none; }
         
         .order-item { background: #fff; border: 1px solid #eee; border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
-        .order-header { background: #fdfdfd; padding: 10px 15px; border-bottom: 1px solid #eee; font-size: 13px; color: #666; display: flex; justify-content: space-between; }
+        .order-header { background: #fdfdfd; padding: 10px 15px; border-bottom: 1px solid #eee; font-size: 13px; color: #666; display: flex; justify-content: space-between; align-items: center; }
         .order-body { padding: 15px; }
         
         .card-text-box { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all; margin-top: 5px; font-size: 13px; color: #333; position: relative; }
@@ -43,9 +41,7 @@
     <header class="mobile-header d-lg-none" id="global-mobile-header"></header>
     <div class="mobile-sidebar d-lg-none" id="mobile-sidebar"></div>
     <div class="mobile-overlay d-lg-none" id="mobile-overlay" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></div>
-    
     <header class="tb-header d-none d-lg-block" id="global-pc-header"></header>
-
 
     <div class="container mt-4">
         <div class="row gx-3" id="main-content-row">
@@ -57,33 +53,22 @@
                     
                     <ul class="nav nav-tabs query-tabs mb-4" id="queryTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="order-tab" data-bs-toggle="tab" data-bs-target="#by-order" type="button">
-                                <i class="fa fa-barcode"></i> 订单号查询
+                            <button class="nav-link active" id="contact-tab" data-bs-toggle="tab" data-bs-target="#by-contact" type="button">
+                                <i class="fa fa-user-lock"></i> 联系方式查询
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#by-contact" type="button">
-                                <i class="fa fa-user-lock"></i> 联系方式查询
+                            <button class="nav-link" id="order-tab" data-bs-toggle="tab" data-bs-target="#by-order" type="button">
+                                <i class="fa fa-barcode"></i> 订单号查询
                             </button>
                         </li>
                     </ul>
 
                     <div class="tab-content" id="queryTabContent" style="max-width: 600px; margin: 0 auto;">
                         
-                        <div class="tab-pane fade show active" id="by-order">
-                            <div class="mb-4 mt-3">
-                                <label class="form-label text-muted">商户订单号 / 交易单号</label>
-                                <div class="input-group input-group-lg">
-                                    <span class="input-group-text bg-white"><i class="fa fa-search text-secondary"></i></span>
-                                    <input type="text" class="form-control" id="input-order-id" placeholder="请输入订单号 (如: 2023xxxxx)">
-                                </div>
-                            </div>
-                            <button class="tb-btn-primary" onclick="queryByOrderId()">立即查询</button>
-                        </div>
-
-                        <div class="tab-pane fade" id="by-contact">
+                        <div class="tab-pane fade show active" id="by-contact">
                             <div class="mb-3 mt-3">
-                                <label class="form-label text-muted">联系方式 (邮箱/QQ)</label>
+                                <label class="form-label text-muted">联系方式</label>
                                 <div class="input-group input-group-lg">
                                     <span class="input-group-text bg-white"><i class="fa fa-envelope text-secondary"></i></span>
                                     <input type="text" class="form-control" id="input-contact" placeholder="下单时填写的联系方式">
@@ -93,12 +78,26 @@
                                 <label class="form-label text-muted">查单密码</label>
                                 <div class="input-group input-group-lg">
                                     <span class="input-group-text bg-white"><i class="fa fa-key text-secondary"></i></span>
-                                    <input type="password" class="form-control" id="input-password" placeholder="下单时设置的密码">
+                                    <input type="text" class="form-control" id="input-password" placeholder="下单时设置的密码">
                                 </div>
                             </div>
-                            <button class="tb-btn-primary" onclick="queryByContact()">查询历史订单</button>
+                            <button class="tb-btn-primary" onclick="queryByContact()">查询并管理订单</button>
                             <div class="text-center mt-3 text-muted small">
-                                <i class="fa fa-info-circle"></i> 仅显示最近 30 天内的订单
+                                <i class="fa fa-info-circle"></i> 可查询所有历史订单，支持补单和删除
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="by-order">
+                            <div class="mb-4 mt-3">
+                                <label class="form-label text-muted">商户订单号</label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-white"><i class="fa fa-search text-secondary"></i></span>
+                                    <input type="text" class="form-control" id="input-order-id" placeholder="请输入订单号 (如: 2023xxxxx)">
+                                </div>
+                            </div>
+                            <button class="tb-btn-primary" onclick="queryByOrderId()">立即查询</button>
+                            <div class="text-center mt-3 text-muted small">
+                                <i class="fa fa-exclamation-triangle"></i> 仅支持查询已发货订单卡密
                             </div>
                         </div>
 
@@ -121,50 +120,175 @@
         </div>
     </div>
 
-
     <footer class="site-footer" id="global-footer"></footer>
-
     <nav class="mobile-bottom-nav d-lg-none" id="global-mobile-nav"></nav>
 
     <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
     <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
         <div class="mcs-header">
             <span class="mcs-title">联系客服</span>
-            <i class="fa fa-times mcs-close" id="mobile-contact-close-btn" onclick="togglePanel('mobile-contact-sheet', 'mobile-contact-overlay')"></i>
+            <i class="fa fa-times mcs-close" onclick="togglePanel('mobile-contact-sheet', 'mobile-contact-overlay')"></i>
         </div>
-        <div class="mcs-content" id="mobile-contact-content">
-            <p>加载中...</p>
-        </div>
+        <div class="mcs-content" id="mobile-contact-content"></div>
     </div>
     
-
     <script src="/assets/sticky-sidebar.min.js"></script>
     <script src="/themes/TBshop/files/bootstrap.bundle.min.js"></script>
 
     <script>
-        // === 初始化 ===
         document.addEventListener('DOMContentLoaded', function() {
-            // 1. 渲染公共布局 (高亮 'orders' 菜单)
             if (typeof renderCommonLayout === 'function') {
                 renderCommonLayout('orders');
             }
+            
+            // 自动回显缓存
+            const c = localStorage.getItem('userContact');
+            const p = localStorage.getItem('userPassword');
+            if(c) document.getElementById('input-contact').value = c;
+            if(p) document.getElementById('input-password').value = p;
+
+            // 如果是被“限制下单”拦截跳转过来的，自动执行查询
+            if(c && p && document.referrer.includes('product.html')) {
+                 queryByContact();
+            }
         });
 
-        // === 查询功能逻辑 ===
-
+        // 辅助显示函数
         function showResult(html) {
             const area = document.getElementById('result-area');
-            const content = document.getElementById('result-content');
-            content.innerHTML = html;
+            document.getElementById('result-content').innerHTML = html;
             area.style.display = 'block';
             area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
-
         function showError(msg) {
             showResult(`<div class="alert alert-danger text-center"><i class="fa fa-exclamation-circle"></i> ${msg}</div>`);
         }
 
-        // 1. 订单号查询
+        // ============================================
+        // 1. 联系方式查询 (核心升级功能)
+        // ============================================
+        async function queryByContact() {
+            const contact = document.getElementById('input-contact').value.trim();
+            const pass = document.getElementById('input-password').value.trim();
+            
+            if (!contact || !pass) { alert('请输入联系方式和查单密码'); return; }
+
+            // 存缓存
+            localStorage.setItem('userContact', contact);
+            localStorage.setItem('userPassword', pass);
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 查询中...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/shop/orders/query', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contact, query_password: pass })
+                });
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+                if (data.length === 0) {
+                    showError('未找到相关订单');
+                } else {
+                    renderFullOrderList(data);
+                }
+
+            } catch(e) {
+                showError(e.message || '查询失败');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // 渲染完整功能的订单列表 (含支付/删除)
+        function renderFullOrderList(orders) {
+            let html = '';
+            orders.forEach(order => {
+                let statusBadge, contentBody, actionBtns = '';
+
+                if (order.status === 0) {
+                    // === 未支付 ===
+                    statusBadge = '<span class="badge bg-danger">未支付</span>';
+                    contentBody = '<div class="alert alert-light border border-dashed text-muted mb-0 small py-2">订单未支付，支付后自动显示卡密</div>';
+                    actionBtns = `
+                        <div class="mt-2 text-end border-top pt-2">
+                            <button class="btn btn-sm btn-outline-secondary me-2" onclick="deleteOrder('${order.id}')">删除订单</button>
+                            <a href="/pay.html?order_id=${order.id}&method=${order.payment_method || 'alipay_f2f'}" class="btn btn-sm btn-danger fw-bold">
+                                去支付 <i class="fa fa-angle-right"></i>
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    // === 已支付/已发货 ===
+                    statusBadge = '<span class="badge bg-success">交易成功</span>';
+                    let cards = [];
+                    try { cards = JSON.parse(order.cards_sent || '[]'); } catch(e) {}
+                    
+                    if (cards.length > 0) {
+                        contentBody = renderCardsHtml(cards);
+                    } else {
+                        contentBody = '<div class="alert alert-warning small mb-0 py-2">配货中或数据异常，请联系客服</div>';
+                    }
+                }
+
+                html += `
+                    <div class="order-item">
+                        <div class="order-header">
+                            <span>${order.created_at_str || '时间未知'}</span>
+                            ${statusBadge}
+                        </div>
+                        <div class="order-body pb-2">
+                            <h6 class="mb-2 text-dark fw-bold">
+                                ${escapeHtml(order.product_name)} 
+                                <span class="badge bg-light text-dark border ms-1 fw-normal" style="font-size:0.7em;">${order.variant_name}</span>
+                            </h6>
+                            <p class="mb-2 text-muted small">
+                                订单号: ${order.id} <span class="mx-2">|</span> 
+                                金额: <span class="text-danger fw-bold">¥${order.total_amount}</span>
+                            </p>
+                            ${contentBody}
+                            ${actionBtns}
+                        </div>
+                    </div>
+                `;
+            });
+            showResult(html);
+        }
+
+        // 删除未支付订单
+        async function deleteOrder(orderId) {
+            if(!confirm('确定要删除这个未支付的订单吗？')) return;
+            
+            const contact = document.getElementById('input-contact').value;
+            const password = document.getElementById('input-password').value;
+
+            try {
+                const res = await fetch('/api/shop/order/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: orderId, contact, query_password: password })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('删除成功');
+                    queryByContact(); // 刷新列表
+                } else {
+                    alert(data.error || '删除失败');
+                }
+            } catch(e) {
+                alert('网络错误');
+            }
+        }
+
+
+        // ============================================
+        // 2. 订单号查询 (旧版功能保留)
+        // ============================================
         function queryByOrderId() {
             const orderId = document.getElementById('input-order-id').value.trim();
             if (!orderId) { alert('请输入订单号'); return; }
@@ -178,71 +302,22 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.status >= 1) {
-                        // 已支付
                         renderSuccessSingle(orderId, data.cards);
                     } else {
-                        showError('订单未支付、不存在，或尚未发货。<br>如您刚支付，请稍等 1-2 分钟后再试。');
+                        showError('订单未支付、不存在或未发货。<br>如需管理未支付订单，请使用“联系方式查询”。');
                     }
                 })
-                .catch(err => {
-                    showError('查询出错，请检查网络连接');
-                })
+                .catch(err => showError('查询出错'))
                 .finally(() => {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 });
         }
 
-        // 2. 联系方式查询
-        function queryByContact() {
-            const contact = document.getElementById('input-contact').value.trim();
-            const pass = document.getElementById('input-password').value.trim();
-            
-            if (!contact || !pass) {
-                alert('请填写完整信息 (联系方式 + 查单密码)');
-                return;
-            }
-
-            const btn = event.target;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 查询中...';
-            btn.disabled = true;
-
-            fetch('/api/shop/orders/query', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ contact: contact, query_password: pass })
-            })
-            .then(res => {
-                if(!res.ok) throw new Error('API Error');
-                return res.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    showError(data.error);
-                } else if (Array.isArray(data) && data.length > 0) {
-                    renderOrderList(data);
-                } else {
-                    showError('未找到相关订单，请检查您的输入。');
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                showError('查询失败或系统暂不支持此功能。');
-            })
-            .finally(() => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            });
-        }
-
-        // === 渲染辅助函数 ===
-
         function renderSuccessSingle(orderId, cards) {
             let html = `
-                <div class="alert alert-success text-center">
-                    <i class="fa fa-check-circle fa-2x mb-2"></i><br>
-                    <strong>查询成功！您的订单已发货。</strong>
+                <div class="alert alert-success text-center py-2 mb-3">
+                    <i class="fa fa-check-circle"></i> 您的订单已发货
                 </div>
                 <div class="order-item">
                     <div class="order-header">
@@ -257,69 +332,41 @@
             showResult(html);
         }
 
-        function renderOrderList(orders) {
-            let html = '';
-            orders.forEach(order => {
-                const isPaid = order.status >= 1;
-                const statusBadge = isPaid 
-                    ? '<span class="badge bg-success">交易成功</span>' 
-                    : '<span class="badge bg-warning text-dark">待支付/已失效</span>';
-                
-                const cardsHtml = isPaid 
-                    ? renderCardsHtml(JSON.parse(order.cards_sent||'[]')) 
-                    : '<p class="text-muted small mb-0">订单未完成，无法查看卡密。</p>';
-
-                html += `
-                    <div class="order-item">
-                        <div class="order-header">
-                            <span>${order.created_at_str || '时间未知'}</span>
-                            ${statusBadge}
-                        </div>
-                        <div class="order-body">
-                            <h6 class="mb-2" style="font-weight:bold; color:#333;">
-                                ${escapeHtml(order.product_name)} <small class="text-muted">(${escapeHtml(order.variant_name)})</small>
-                            </h6>
-                            <p class="mb-2 text-muted small">订单号: ${order.id}</p>
-                            <hr style="margin: 10px 0; opacity: 0.1;">
-                            ${cardsHtml}
-                        </div>
-                    </div>
-                `;
-            });
-            showResult(html);
-        }
-
+        // ============================================
+        // 通用工具
+        // ============================================
         function renderCardsHtml(cards) {
             if (!cards || cards.length === 0) return '<div class="text-muted small">无发货内容</div>';
-            let html = '<h6 style="font-size:13px; font-weight:bold; color:#555;">发货内容：</h6>';
-            cards.forEach(card => {
-                html += `
-                    <div class="card-text-box">
-                        <span class="card-content">${escapeHtml(card)}</span>
-                        <button class="copy-btn" onclick="copyText(this)">复制</button>
-                    </div>
-                `;
-            });
-            return html;
+            
+            // 简单判断是否为合并订单对象数组
+            let contentStr = '';
+            if (cards.length > 0 && typeof cards[0] === 'object') {
+                 // 合并订单
+                 contentStr = cards.map(item => `[${item.variantName} x${item.quantity}]`).join('\n') + '\n(请查看具体发货详情)';
+            } else {
+                 // 普通字符串数组
+                 contentStr = cards.join('\n');
+            }
+
+            return `
+                <div class="card-text-box">
+                    <span class="card-content" style="white-space: pre-wrap;">${escapeHtml(contentStr)}</span>
+                    <button class="copy-btn" onclick="copyText(this)">复制</button>
+                </div>
+            `;
         }
 
         function copyText(btn) {
             const content = btn.previousElementSibling.textContent;
             navigator.clipboard.writeText(content).then(() => {
-                const original = btn.textContent;
-                btn.textContent = '已复制';
-                setTimeout(() => btn.textContent = original, 2000);
+                const o = btn.textContent; btn.textContent = '已复制';
+                setTimeout(() => btn.textContent = o, 2000);
             });
         }
 
         function escapeHtml(text) {
             if (!text) return '';
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         }
     </script>
 </body>
