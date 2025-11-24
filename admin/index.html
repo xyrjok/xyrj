@@ -3,34 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理员登录</title>
+    <title>管理员登录 - XYRJ后台</title>
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light d-flex align-items-center justify-content-center vh-100">
-    <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
-        <h3 class="mb-4 text-center">管理后台</h3>
-        <div class="mb-3"><input type="text" id="user" class="form-control" placeholder="用户名"></div>
-        <div class="mb-3"><input type="password" id="pass" class="form-control" placeholder="密码"></div>
-        <button onclick="login()" class="btn btn-primary w-100">登录</button>
-    </div>
-    <script>
-        // 如果已有 token，直接跳转仪表盘
-        if(localStorage.getItem('ADMIN_TOKEN')) window.location.href = '/admin/dashboard.html';
-
-        async function login() {
-            const user = document.getElementById('user').value;
-            const pass = document.getElementById('pass').value;
-            try {
-                const res = await fetch('/api/admin/login', { method:'POST', body: JSON.stringify({user, pass})});
-                const data = await res.json();
-                if(data.token) {
-                    localStorage.setItem('ADMIN_TOKEN', data.token);
-                    window.location.href = '/admin/dashboard.html';
-                } else {
-                    alert(data.error || '登录失败');
-                }
-            } catch(e) { alert('网络错误'); }
+    <style>
+        /* --- 移植自 MyBlog 的 style.css (登录部分) --- */
+        body { background-color: #f5f5f5; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        #login-wrapper {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #f5f5f5;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
         }
-    </script>
+        .login-container {
+            width: 100%; max-width: 380px; box-sizing: border-box; padding: 40px;
+            background-color: #fff; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 8px; text-align: center;
+        }
+        .login-header { margin-bottom: 30px; }
+        .login-header h1 { margin: 0; font-size: 24px; color: #333; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-control {
+            display: block; width: 100%; padding: 10px 12px; font-size: 14px;
+            line-height: 1.42857143; color: #555; background-color: #fff;
+            background-image: none; border: 1px solid #ccc; border-radius: 4px;
+            box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
+            transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+        }
+        .form-control:focus { border-color: #66afe9; outline: 0; box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(102,175,233,.6); }
+        .xyrj-primary { color: #fff; background-color: #409EFF; border: none; }
+        .xyrj-primary:hover { background-color: #3390ff; color: #fff; }
+        .xyrj-login {
+            width: 100%; padding: 10px 12px; font-size: 16px; border-radius: 4px; cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .footer-link { margin-top: 20px; font-size: 13px; color: #777; }
+        .footer-link a { color: #409EFF; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div id="login-wrapper">
+    <div class="login-container">
+        <div class="login-header">
+            <h1>XYRJ 后台登录</h1>
+        </div>
+        <div class="form-group">
+            <input type="text" id="user" class="form-control" placeholder="请输入用户名" required>
+        </div>
+        <div class="form-group">
+            <input type="password" id="pass" class="form-control" placeholder="请输入密码" required>
+        </div>
+        <button onclick="login()" class="xyrj-primary xyrj-login">登录</button>
+        <div class="footer-link">
+            Powered by XYRJ-Faka
+        </div>
+    </div>
+</div>
+
+<script>
+    // 检查 Token
+    if(localStorage.getItem('ADMIN_TOKEN')) window.location.href = '/admin/dashboard.html';
+
+    async function login() {
+        const user = document.getElementById('user').value;
+        const pass = document.getElementById('pass').value;
+        const btn = document.querySelector('.xyrj-login');
+        
+        if(!user || !pass) { alert("请输入用户名和密码"); return; }
+
+        btn.disabled = true;
+        btn.innerText = "登录中...";
+
+        try {
+            const res = await fetch('/api/admin/login', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user, pass})
+            });
+            const data = await res.json();
+            
+            if(data.token) {
+                localStorage.setItem('ADMIN_TOKEN', data.token);
+                window.location.href = '/admin/dashboard.html';
+            } else {
+                alert(data.error || '登录失败');
+                btn.disabled = false;
+                btn.innerText = "登录";
+            }
+        } catch(e) { 
+            alert('网络错误，请稍后重试'); 
+            btn.disabled = false;
+            btn.innerText = "登录";
+        }
+    }
+    
+    // 回车登录
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Enter') login();
+    });
+</script>
 </body>
 </html>
