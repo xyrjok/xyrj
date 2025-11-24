@@ -12,31 +12,44 @@
     <script src="/themes/TBshop/files/cart-page.js" defer></script>
 
     <style>
-        /* 支付方式选择框样式 */
-        .payment-select-box {
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
+        /* 支付方式选择框样式 (移植自 product.html 风格) */
+        .payment-option {
+            position: relative;
+            display: inline-flex;
             align-items: center;
-            background: #fff;
+            justify-content: center;
+            padding: 1px 6px;
+            height: 38px;
+            min-width: 38px;
+            font-size: 25px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 12px;
             margin-bottom: 8px;
-            height: 100%;
+            cursor: pointer;
+            background: #fff;
+            transition: all 0.2s;
         }
-        .payment-select-box:hover { border-color: #ddd; }
-        .payment-select-box.active {
-            border-color: #ff5000;
-            background-color: #fff5f0;
+        .payment-option:hover { border-color: #bbb; }
+        .payment-option.active { border-color: #dc3545; }
+        .payment-option img { height: 20px; width: auto; object-fit: contain; }
+
+        /* 右上角圆底白对勾 */
+        .payment-check-mark {
+            position: absolute;
+            top: -7px; right: -7px;
+            width: 16px; height: 16px;
+            background-color: #dc3545;
+            color: #fff;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transform: scale(0);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1;
         }
-        .payment-select-box .check-icon {
-            color: #ddd;
-            margin-left: auto;
-            font-size: 14px;
-        }
-        .payment-select-box.active .check-icon {
-            color: #ff5000;
+        .payment-option.active .payment-check-mark {
+            opacity: 1; transform: scale(1);
         }
         
         /* 表单控件微调 */
@@ -145,24 +158,18 @@
                             </div>
                             <div class="col-12 mt-3">
                                 <label class="form-label small text-muted mb-2">支付方式</label>
-                                <div class="row g-2" id="cart-payment-list-mobile">
-                                     <div class="col-4">
-                                        <div class="payment-select-box active py-2 px-2 justify-content-center" data-method="alipay_f2f" onclick="selectCartPayment('alipay_f2f', this)">
-                                            <i class="fab fa-alipay text-primary me-1"></i>
-                                            <span class="small" style="font-size:12px;">支付宝</span>
-                                        </div>
+                                <div class="d-flex align-items-center flex-wrap" id="cart-payment-list-mobile">
+                                    <div class="payment-option active" data-method="alipay_f2f" onclick="selectCartPayment('alipay_f2f', this)">
+                                        <i class="fab fa-alipay" style="color:#1678ff;"></i>
+                                        <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                     </div>
-                                    <div class="col-4">
-                                        <div class="payment-select-box py-2 px-2 justify-content-center" data-method="wxpay" onclick="selectCartPayment('wxpay', this)">
-                                            <i class="fab fa-weixin text-success me-1"></i>
-                                            <span class="small" style="font-size:12px;">微信</span>
-                                        </div>
+                                    <div class="payment-option" data-method="wxpay" onclick="selectCartPayment('wxpay', this)">
+                                        <i class="fab fa-weixin" style="color:#09bb07;"></i>
+                                        <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                     </div>
-                                    <div class="col-4">
-                                        <div class="payment-select-box py-2 px-2 justify-content-center" data-method="usdt" onclick="selectCartPayment('usdt', this)">
-                                            <span class="fw-bold text-success me-1" style="font-size:10px;">USDT</span>
-                                            <span class="small" style="font-size:12px;">USDT</span>
-                                        </div>
+                                    <div class="payment-option" data-method="usdt" onclick="selectCartPayment('usdt', this)">
+                                        <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
+                                        <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                     </div>
                                 </div>
                             </div>
@@ -190,21 +197,18 @@
 
                             <div class="mb-3">
                                 <label class="form-label small text-muted mb-2">支付方式</label>
-                                <div id="cart-payment-list-pc">
-                                    <div class="payment-select-box active" data-method="alipay_f2f" onclick="selectCartPayment('alipay_f2f', this)">
-                                        <i class="fab fa-alipay text-primary me-2"></i>
-                                        <span class="small">支付宝</span>
-                                        <i class="fa fa-check-circle check-icon"></i>
+                                <div class="d-flex align-items-center flex-wrap" id="cart-payment-list-pc">
+                                    <div class="payment-option active" data-method="alipay_f2f" onclick="selectCartPayment('alipay_f2f', this)">
+                                        <i class="fab fa-alipay" style="color:#1678ff;"></i>
+                                        <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                     </div>
-                                    <div class="payment-select-box" data-method="wxpay" onclick="selectCartPayment('wxpay', this)">
-                                        <i class="fab fa-weixin text-success me-2"></i>
-                                        <span class="small">微信支付</span>
-                                        <i class="fa fa-check-circle check-icon"></i>
+                                    <div class="payment-option" data-method="wxpay" onclick="selectCartPayment('wxpay', this)">
+                                        <i class="fab fa-weixin" style="color:#09bb07;"></i>
+                                        <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                     </div>
-                                    <div class="payment-select-box" data-method="usdt" onclick="selectCartPayment('usdt', this)">
-                                        <span class="fw-bold text-success me-2" style="font-size:10px;">USDT</span>
-                                        <span class="small">USDT</span>
-                                        <i class="fa fa-check-circle check-icon"></i>
+                                    <div class="payment-option" data-method="usdt" onclick="selectCartPayment('usdt', this)">
+                                        <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
+                                        <div class="payment-check-mark"><i class="fa fa-check"></i></div>
                                     </div>
                                 </div>
                             </div>
@@ -257,7 +261,6 @@
     <script src="/assets/sticky-sidebar.min.js"></script>
     <script src="/themes/TBshop/files/bootstrap.bundle.min.js"></script>
     <script>
-        // 激活公共布局
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof renderCommonLayout === 'function') {
                 renderCommonLayout('cart');
