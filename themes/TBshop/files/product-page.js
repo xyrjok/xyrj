@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (最终完整版：兼容性优化 - 修复按钮等宽问题)
+// === (修复版：拦截未支付订单跳转)
 // =============================================
 
 // 全局变量
@@ -207,7 +207,7 @@ function renderProductDetail(p) {
     // 3. 初始化后续逻辑
     updateBuyMethodButtons(); 
     updateDynamicInfoDisplay(); 
-    updatePcDetailCartBadge(); // [新增] 初始化PC端详情页购物车角标
+    updatePcDetailCartBadge(); 
     
     // 回显缓存信息
     const cachedContact = localStorage.getItem('userContact');
@@ -606,7 +606,7 @@ function addToCart() {
 
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
     if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
-    updatePcDetailCartBadge(); // [新增] 更新本页面的购物车图标数量
+    updatePcDetailCartBadge(); 
     
     // UI 反馈
     const btn = event.target;
@@ -620,7 +620,7 @@ function addToCart() {
 }
 
 // =============================================
-// === 2. [重点] 立即购买
+// === 2. [重点修改] 立即购买 (含未支付订单拦截)
 // =============================================
 async function buyNow() {
     if (!currentVariant) { alert('请先选择规格'); return; }
@@ -650,7 +650,7 @@ async function buyNow() {
         contactEl.focus();
         return;
     }
-    if (!password || password.length <= 1) {
+    if (!password || password.length < 1) {
         alert('查单密码长度必须大于1位');
         passEl.focus();
         return;
@@ -683,7 +683,18 @@ async function buyNow() {
         const data = await res.json();
         
         if (data.error) {
-            alert(data.error);
+            // [新增] 拦截未支付订单错误
+            if (data.error.includes('未支付订单')) {
+                // 弹出确认框
+                if(confirm('提示：' + data.error + '\n\n点击“确定”前往查单页面处理。')) {
+                    // 跳转到查单页
+                    window.location.href = '/orders.html';
+                    return; // 阻止后续逻辑
+                }
+            } else {
+                alert(data.error);
+            }
+            
             btn.disabled = false;
             btn.innerHTML = originalContent;
         } else {
@@ -856,7 +867,6 @@ function updatePcDetailCartBadge() {
     if (!badge) return;
     try {
         const cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
-        // 这里使用 cart.length 表示商品种类数量
         const count = cart.length; 
         
         if (count > 0) {
