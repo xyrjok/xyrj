@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/main-index.js
-// === (首页专属业务逻辑 - 已修复标签显示效果)
+// === (首页专属业务逻辑 - 完整修复版)
 // =============================================
 
 // 全局变量 (供搜索和筛选使用)
@@ -18,7 +18,7 @@ async function initHomePage() {
         const catRes = await fetch('/api/shop/categories');
         allCategories = await catRes.json();
         
-        // 渲染分类导航条 (PC & Mobile)
+        // 渲染分类导航条 (仅 PC 端药丸，移动端侧栏现由 common.js 接管)
         renderCategoryTabs();
     } catch(e) { 
         console.error('Categories load failed:', e); 
@@ -29,8 +29,21 @@ async function initHomePage() {
         const prodRes = await fetch('/api/shop/products');
         allProducts = await prodRes.json();
 
-        // 渲染默认视图 (全部商品)
-        renderCategorizedView('all');
+        // [新增] 检查 URL 是否带有分类参数 (从移动端侧边栏跳转过来)
+        const urlParams = new URLSearchParams(window.location.search);
+        const catId = urlParams.get('cat');
+
+        if (catId) {
+            // 如果有 cat 参数，直接筛选该分类
+            renderCategorizedView(catId);
+            // (可选) 清除 URL 参数，避免刷新或点击返回时卡死在该分类
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        } else {
+            // 默认视图 (全部商品)
+            renderCategorizedView('all');
+        }
 
     } catch (e) {
         console.error('Products load failed:', e);
@@ -44,7 +57,7 @@ async function initHomePage() {
 
         // 填充首页特有的“热门教程”模块
         renderHotArticlesHome(articles);
-
+        
     } catch (e) { console.warn('Articles load failed:', e); }
 }
 
@@ -54,33 +67,21 @@ async function initHomePage() {
 // =============================================
 
 /**
- * 渲染分类导航 (PC药丸 + 移动端侧滑菜单)
+ * 渲染分类导航 (PC药丸)
+ * [修改说明] 移除了移动端侧边栏的渲染代码，避免与 common.js 冲突
  */
 function renderCategoryTabs() {
     const pcContainer = document.getElementById('category-container');
-    const mobileContainer = document.getElementById('mobile-category-list');
     
     // 基础选项
     let pcHtml = '<div class="cat-pill active" onclick="filterCategory(\'all\', this)">全部商品</div>';
-    let mobileHtml = ''; 
 
     allCategories.forEach(c => {
         const icon = c.image_url ? `<img src="${c.image_url}">` : '';
-        
         pcHtml += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${icon}${c.name}</div>`;
-        
-        mobileHtml += `
-            <a href="#" onclick="event.preventDefault(); filterCategory(${c.id}); togglePanel('mobile-sidebar', 'mobile-overlay', false);">
-                ${icon || '<i class="fa fa-angle-right"></i>'} ${c.name}
-            </a>
-        `;
     });
 
     if (pcContainer) pcContainer.innerHTML = pcHtml;
-    // 移动端：追加到现有菜单后面
-    if (mobileContainer) {
-        mobileContainer.insertAdjacentHTML('beforeend', '<div class="border-top my-2 pt-2 text-muted small px-2">商品分类</div>' + mobileHtml);
-    }
 }
 
 /**
@@ -116,7 +117,7 @@ function getProductCardHtml(p) {
     const imgUrl = p.image_url || mainVariant.image_url || '/themes/TBshop/assets/no-image.png'; // 默认图
     const price = mainVariant.price || '0.00';
     
-    // [修改] 直接调用本地的增强版 renderTagsLocal，不再依赖 parseTags
+    // [修改] 使用本地增强版的 renderTagsLocal，确保颜色正确解析
     const tagsHtml = renderTagsLocal(p.tags); 
 
     return `
@@ -137,7 +138,7 @@ function getProductCardHtml(p) {
 }
 
 /**
- * [重点修改] 本地标签渲染 - 现在支持颜色解析 (b1, b2, #hex)
+ * [重点修改] 本地标签渲染 - 支持颜色解析 (b1, b2, #hex)
  * 逻辑与 product-page.js 保持一致
  */
 function renderTagsLocal(tags) {
@@ -163,7 +164,7 @@ function renderTagsLocal(tags) {
         const c = text.match(/#([0-9a-fA-F]{3,6})$/);
         if(c) { textColor='#'+c[1]; text=text.substring(0,c.index).trim(); }
 
-        // 生成与详情页一致的 HTML 结构和样式
+        // 生成 HTML
         return `<span class="dynamic-tag" style="display:inline-block;margin-right:6px;margin-bottom:4px;padding:1px 5px;border:1px solid ${borderColor};background:${bgColor};color:${textColor};border-radius:3px;font-size:11px;">${text}</span>`;
     }).join('');
 }
@@ -177,6 +178,7 @@ function renderCategorizedView(filterId) {
     if (!area) return;
     area.innerHTML = ''; 
 
+    // filterId 有可能是字符串 'all' 或数字ID，统一处理
     let catsToShow = (filterId === 'all') ? allCategories : allCategories.filter(c => c.id == filterId);
     let hasData = false;
 
@@ -196,7 +198,9 @@ function renderCategorizedView(filterId) {
     });
 
     if (!hasData) {
-        area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100 text-muted">该分类下暂无商品</div></div>`;
+        // 优化提示文案
+        const msg = (filterId === 'all') ? '暂无商品' : '该分类下暂无商品';
+        area.innerHTML = `<div class="module-box"><div class="text-center py-5 w-100 text-muted">${msg}</div></div>`;
     }
 }
 
@@ -236,14 +240,17 @@ function filterCategory(id, el) {
         document.querySelectorAll('.cat-pill').forEach(e => e.classList.remove('active'));
         el.classList.add('active');
     } else {
-        // 如果是通过移动端菜单触发，没有 el，则重置所有状态
-        document.querySelectorAll('.cat-pill').forEach(e => e.classList.remove('active'));
+        // 如果是通过移动端菜单触发或代码触发，没有 el，则重置所有状态
+        document.querySelectorAll('.cat-pill').forEach(e => {
+            if (id === 'all' && e.innerText.includes('全部商品')) e.classList.add('active');
+            else if (id !== 'all') e.classList.remove('active'); // 简单处理，PC端不一定能高亮对应ID的pill，除非遍历查找
+        });
     }
     
     // 2. 渲染内容
     renderCategorizedView(id);
     
-    // 3. 滚动到顶部
+    // 3. 滚动到顶部 (仅当不是初始化加载时体验更好，这里保留)
     const mainRow = document.getElementById('main-content-row');
     if(mainRow) mainRow.scrollIntoView({ behavior: 'smooth' });
 }
