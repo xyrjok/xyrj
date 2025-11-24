@@ -48,29 +48,12 @@
             color: #ff5000;
         }
         
-        /* 结算板块通用样式 */
-        .checkout-section {
-            background: #fff;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            border: 1px solid #f0f0f0;
-        }
+        /* 表单控件微调 (匹配 orders.html) */
+        .form-control::placeholder { color: #ccc; font-size: 12px; }
+        .form-control { font-size: 13px; border-color: #eee; }
+        .form-control:focus { box-shadow: none; border-color: #ff5000; }
 
-        .form-control::placeholder {
-            color: #ccc;
-            font-size: 12px;
-        }
-        .form-control {
-            font-size: 13px;
-            border-color: #eee;
-        }
-        .form-control:focus {
-            box-shadow: none;
-            border-color: #ff5000;
-        }
-
-        /* 数量加减器样式优化 */
+        /* 数量加减器样式 */
         .stepper {
             display: flex;
             border: 1px solid #ddd;
@@ -100,30 +83,13 @@
             -moz-appearance: textfield; 
         }
         .stepper-input::-webkit-outer-spin-button,
-        .stepper-input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
+        .stepper-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-        .pc-cart-title {
-            font-size: 13px;
-            color: #333;
-            line-height: 1.4;
-            margin-bottom: 4px;
-        }
-        .pc-cart-sku {
-            font-size: 12px;
-            color: #999;
-        }
-        .pc-item-img {
-            width: 60px; 
-            height: 60px; 
-            object-fit: cover; 
-            border-radius: 4px; 
-            border: 1px solid #eee;
-        }
+        .pc-cart-title { font-size: 13px; color: #333; line-height: 1.4; margin-bottom: 4px; }
+        .pc-cart-sku { font-size: 12px; color: #999; }
+        .pc-item-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
 
-        /* 移动端底部悬浮条样式 */
+        /* 移动端底部悬浮条 */
         .cart-footer-bar {
             z-index: 1030;
             background: #fff;
@@ -133,16 +99,19 @@
         }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
     <header class="mobile-header d-lg-none" id="global-mobile-header"></header>
+    <div class="mobile-sidebar d-lg-none" id="mobile-sidebar"></div>
+    <div class="mobile-overlay d-lg-none" id="mobile-overlay" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></div>
     <header class="tb-header d-none d-lg-block" id="global-pc-header"></header>
 
-    <div class="container mt-3 mb-4">
-        <div class="row g-3">
+    <div class="container mt-4">
+        <div class="row gx-3" id="main-content-row">
+            
             <div class="col-lg-9">
                 
-                <div class="d-none d-lg-block bg-white rounded shadow-sm p-4 mb-4" style="min-height: 400px;">
+                <div class="module-box d-none d-lg-block" style="min-height: 400px;">
                     <h5 class="mb-3 fw-bold"><i class="fa fa-shopping-cart text-danger me-2"></i>购物车</h5>
                     
                     <table class="table table-hover align-middle mb-0">
@@ -158,22 +127,21 @@
                                 <th scope="col" width="60">操作</th>
                             </tr>
                         </thead>
-                        <tbody id="cart-list-pc">
-                            </tbody>
+                        <tbody id="cart-list-pc"></tbody>
                     </table>
                 </div>
 
                 <div class="d-lg-none mb-3">
-                    <h5 class="mb-3 fw-bold px-1"><i class="fa fa-shopping-cart text-danger me-2"></i>购物车</h5>
-
-                    <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-                        <span class="text-muted small">共 <span id="cart-count-mobile">0</span> 件商品</span>
-                        <span class="text-primary small" onclick="toggleEdit('mobile')" id="edit-btn-mobile">管理</span>
+                    <div class="module-box mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0"><i class="fa fa-shopping-cart text-danger me-2"></i>购物车</h5>
+                            <span class="text-primary small" onclick="toggleEdit('mobile')" id="edit-btn-mobile">管理</span>
+                        </div>
                     </div>
                     
                     <div id="cart-list-mobile" class="cart-list-mobile mb-3"></div>
 
-                    <div class="checkout-section">
+                    <div class="module-box">
                         <h6 class="fw-bold border-bottom pb-2 mb-3">填写结算信息</h6>
                         <div class="row g-3">
                             <div class="col-12">
@@ -209,12 +177,12 @@
                             </div>
                         </div>
                     </div>
-                    </div>
+                </div>
             </div>
 
             <div class="col-lg-3 d-none d-lg-block">
                 <div class="sticky-checkout-wrapper">
-                    <div class="checkout-section">
+                    <div class="module-box">
                         <h6 class="fw-bold border-bottom pb-2 mb-3">结算信息</h6>
                         
                         <div class="mb-3">
@@ -277,10 +245,28 @@
         </button>
     </div>
 
-    <footer class="site-footer d-none d-lg-block" id="global-footer"></footer>
+    <footer class="site-footer" id="global-footer"></footer>
+    <nav class="mobile-bottom-nav d-lg-none" id="global-mobile-nav"></nav>
+
+    <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
+    <div class="mobile-contact-sheet d-lg-none" id="mobile-contact-sheet">
+        <div class="mcs-header">
+            <span class="mcs-title">联系客服</span>
+            <i class="fa fa-times mcs-close" onclick="togglePanel('mobile-contact-sheet', 'mobile-contact-overlay')"></i>
+        </div>
+        <div class="mcs-content" id="mobile-contact-content"></div>
+    </div>
 
     <div class="d-lg-none" style="height: 80px;"></div>
 
     <script src="/themes/TBshop/files/bootstrap.bundle.min.js"></script>
+    <script>
+        // 激活公共布局
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof renderCommonLayout === 'function') {
+                renderCommonLayout('cart');
+            }
+        });
+    </script>
 </body>
 </html>
