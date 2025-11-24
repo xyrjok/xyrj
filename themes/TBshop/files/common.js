@@ -1,6 +1,7 @@
 // =============================================
 // === themes/TBshop/files/common.js
-// === (全局共享JS + 公共布局渲染 - 修复侧边栏文章接口)
+// === (全局共享JS + 公共布局渲染 - 完整版)
+// === 修改内容：移动端侧边栏改为商品分类列表
 // =============================================
 
 // ============================================================
@@ -8,7 +9,7 @@
 // ============================================================
 
 const TB_LAYOUT = {
-    // 移动端头部
+    // 移动端头部 (保持不变)
     mobileHeader: `
         <div class="mh-left" id="mobile-menu-btn" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')">
             <i class="fa fa-bars"></i>
@@ -27,7 +28,7 @@ const TB_LAYOUT = {
         </div>
     `,
 
-    // PC端头部
+    // PC端头部 (保持不变)
     pcHeader: (activePage) => `
         <div class="container header-inner">
             <a href="/" class="site-brand">
@@ -54,36 +55,20 @@ const TB_LAYOUT = {
         </div>
     `,
 
-    // 移动端侧滑菜单
+    // [修改] 移动端侧滑菜单 -> 改为分类列表容器
     mobileSidebar: (activePage) => `
         <div class="mobile-sidebar-header">
-            <h5 class="mobile-sidebar-title">功能菜单</h5>
+            <h5 class="mobile-sidebar-title">商品分类</h5>
             <i class="fa fa-times mobile-sidebar-close" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')"></i>
         </div>
         <div class="mobile-sidebar-content">
-            <div id="mobile-category-list">
-                <a href="/" class="${activePage === 'home' ? 'active' : ''}" style="${activePage === 'home' ? 'background:rgba(255,255,255,0.1);' : ''}">
-                    <i class="fa fa-home"></i> 首页
-                </a>
-                <a href="/orders.html" class="${activePage === 'orders' ? 'active' : ''}" style="${activePage === 'orders' ? 'background:rgba(255,255,255,0.1);' : ''}">
-                    <i class="fa fa-file-alt"></i> 订单查询
-                </a>
-                <a href="/articles.html" class="${activePage === 'articles' ? 'active' : ''}" style="${activePage === 'articles' ? 'background:rgba(255,255,255,0.1);' : ''}">
-                    <i class="fa fa-book"></i> 教程文章
-                </a>
-                 <a href="/cart.html" class="${activePage === 'cart' ? 'active' : ''}" style="${activePage === 'cart' ? 'background:rgba(255,255,255,0.1);' : ''}">
-                    <i class="fa fa-shopping-cart"></i> 购物车
-                </a>
+            <div id="mobile-category-list" class="d-flex flex-column">
+                <div class="text-center py-3 text-muted"><i class="fa fa-spinner fa-spin"></i> 加载中...</div>
             </div>
         </div>
-        <div class="mobile-sidebar-footer">
-            <a href="/admin/" class="mobile-sidebar-login-link">
-                <i class="fa fa-user-circle"></i> 管理员登录
-            </a>
-        </div>
-    `,
+        `,
 
-    // 移动端底部导航
+    // 移动端底部导航 (保持不变)
     mobileBottomNav: (activePage) => `
         <a href="/" class="mbn-item ${activePage === 'home' ? 'active' : ''}">
             <i class="fa fa-home"></i>
@@ -91,7 +76,7 @@ const TB_LAYOUT = {
         </a>
         <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-sidebar', 'mobile-overlay');">
             <i class="fa fa-th-large"></i>
-            <span>菜单</span>
+            <span>分类</span>
         </a>
         <a href="/orders.html" class="mbn-item ${activePage === 'orders' ? 'active' : ''}">
             <i class="fa fa-file-alt"></i>
@@ -109,7 +94,7 @@ const TB_LAYOUT = {
         </a>
     `,
 
-    // 页脚
+    // 页脚 (保持不变)
     footer: `
         <div class="container">
             <div class="footer-links">
@@ -124,7 +109,7 @@ const TB_LAYOUT = {
         </div>
     `,
 
-    // PC右侧栏 (标准框架)
+    // PC右侧栏 (保持不变)
     pcSidebarStandard: `
         <div class="sidebar-inner">
             <div class="module-box" id="notice-module-box">
@@ -207,14 +192,71 @@ function renderCommonLayout(activePage) {
         }
     }
 
-    // 4. 加载配置 & 更新角标
+    // 4. [新增] 初始化移动端分类侧边栏
+    initMobileSidebar();
+
+    // 5. 加载配置 & 更新角标
     loadGlobalConfig();
     loadCartBadge();
 }
 
 /**
- * [新增] 全局加载侧边栏数据
- * 用于在商品页、文章页、订单页等自动填充 销量排行/热门标签/教程分类
+ * [新增] 初始化移动端侧边栏数据
+ */
+async function initMobileSidebar() {
+    const container = document.getElementById('mobile-category-list');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/shop/categories');
+        const categories = await res.json();
+        
+        if (!categories || categories.length === 0) {
+            container.innerHTML = '<div class="text-center py-3 text-muted">暂无分类</div>';
+            return;
+        }
+
+        container.innerHTML = categories.map(c => {
+            const iconHtml = c.image_url 
+                ? `<img src="${c.image_url}" style="width:20px;height:20px;margin-right:10px;border-radius:4px;object-fit:cover;background:#fff;">` 
+                : `<i class="fa fa-angle-right" style="margin-right:10px;width:20px;text-align:center;"></i>`;
+
+            return `
+                <a href="javascript:void(0)" onclick="handleMobileCategoryClick(${c.id})" style="padding:10px 5px; border-bottom:1px solid rgba(255,255,255,0.1); color:#fff; display:flex; align-items:center;">
+                    ${iconHtml} ${c.name}
+                </a>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error('Sidebar categories load error:', e);
+        container.innerHTML = '<div class="text-center py-3 text-muted">加载失败</div>';
+    }
+}
+
+/**
+ * [新增] 处理移动端分类点击
+ */
+function handleMobileCategoryClick(catId) {
+    togglePanel('mobile-sidebar', 'mobile-overlay'); // 关闭侧栏
+
+    const path = window.location.pathname;
+    // 如果在首页，直接筛选
+    if (path === '/' || path === '/index.html') {
+        if (typeof filterCategory === 'function') {
+            filterCategory(catId);
+        } else {
+            window.location.href = `/?cat=${catId}`;
+        }
+    } else {
+        // 其他页面跳转
+        window.location.href = `/index.html?cat=${catId}`;
+    }
+}
+
+
+/**
+ * 全局加载侧边栏数据 (保持不变)
  */
 async function loadGlobalSidebarData() {
     // 1. 如果有销量排行或标签云容器，加载商品数据
@@ -234,7 +276,6 @@ async function loadGlobalSidebarData() {
     const needArticles = document.getElementById('article-cat-list');
     if (needArticles) {
         try {
-            // [修正] 这里的接口必须是 /api/shop/articles/list，而不是 /api/shop/articles (后者可能需要管理员权限)
             const res = await fetch('/api/shop/articles/list');
             const articles = await res.json();
             if (!articles.error) {
@@ -245,7 +286,7 @@ async function loadGlobalSidebarData() {
 }
 
 /**
- * 加载配置
+ * 加载配置 (保持不变)
  */
 function loadGlobalConfig() {
     fetch('/api/shop/config')
