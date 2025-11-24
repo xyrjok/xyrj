@@ -12,15 +12,6 @@
     <script src="/themes/TBshop/files/cart-page.js" defer></script>
 
     <style>
-        /* 结算栏右侧悬浮效果 (PC Only) */
-        .sticky-checkout-wrapper {
-            position: -webkit-sticky;
-            position: sticky;
-            top: 90px;
-            z-index: 10;
-            transition: top 0.3s;
-        }
-
         /* 支付方式选择框样式 */
         .payment-select-box {
             border: 1px solid #eee;
@@ -48,7 +39,7 @@
             color: #ff5000;
         }
         
-        /* 表单控件微调 (匹配 orders.html) */
+        /* 表单控件微调 */
         .form-control::placeholder { color: #ccc; font-size: 12px; }
         .form-control { font-size: 13px; border-color: #eee; }
         .form-control:focus { box-shadow: none; border-color: #ff5000; }
@@ -111,7 +102,7 @@
             
             <div class="col-lg-9">
                 
-                <div class="module-box d-none d-lg-block" style="min-height: 400px;">
+                <div class="module-box d-none d-lg-block p-4" style="min-height: 400px;">
                     <h5 class="mb-3 fw-bold"><i class="fa fa-shopping-cart text-danger me-2"></i>购物车</h5>
                     
                     <table class="table table-hover align-middle mb-0">
@@ -181,48 +172,52 @@
             </div>
 
             <div class="col-lg-3 d-none d-lg-block">
-                <div class="sticky-checkout-wrapper">
-                    <div class="module-box">
-                        <h6 class="fw-bold border-bottom pb-2 mb-3">结算信息</h6>
+                <div id="sidebar-wrapper">
+                    <div class="sidebar-inner">
                         
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">联系方式 <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="contact-info" placeholder="请输入QQ/手机/邮箱">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">查单密码 <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="query-password" placeholder="请设置查单密码">
-                        </div>
+                        <div class="module-box p-4">
+                            <h5 class="fw-bold border-bottom pb-3 mb-3">结算信息</h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">联系方式 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="contact-info" placeholder="请输入QQ/手机/邮箱">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">查单密码 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="query-password" placeholder="请设置查单密码">
+                            </div>
 
-                        <div class="mb-3">
-                            <label class="form-label small text-muted mb-2">支付方式</label>
-                            <div id="cart-payment-list-pc">
-                                <div class="payment-select-box active" data-method="alipay_f2f" onclick="selectCartPayment('alipay_f2f', this)">
-                                    <i class="fab fa-alipay text-primary me-2"></i>
-                                    <span class="small">支付宝</span>
-                                    <i class="fa fa-check-circle check-icon"></i>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted mb-2">支付方式</label>
+                                <div id="cart-payment-list-pc">
+                                    <div class="payment-select-box active" data-method="alipay_f2f" onclick="selectCartPayment('alipay_f2f', this)">
+                                        <i class="fab fa-alipay text-primary me-2"></i>
+                                        <span class="small">支付宝</span>
+                                        <i class="fa fa-check-circle check-icon"></i>
+                                    </div>
+                                    <div class="payment-select-box" data-method="wxpay" onclick="selectCartPayment('wxpay', this)">
+                                        <i class="fab fa-weixin text-success me-2"></i>
+                                        <span class="small">微信支付</span>
+                                        <i class="fa fa-check-circle check-icon"></i>
+                                    </div>
+                                    <div class="payment-select-box" data-method="usdt" onclick="selectCartPayment('usdt', this)">
+                                        <span class="fw-bold text-success me-2" style="font-size:10px;">USDT</span>
+                                        <span class="small">USDT</span>
+                                        <i class="fa fa-check-circle check-icon"></i>
+                                    </div>
                                 </div>
-                                <div class="payment-select-box" data-method="wxpay" onclick="selectCartPayment('wxpay', this)">
-                                    <i class="fab fa-weixin text-success me-2"></i>
-                                    <span class="small">微信支付</span>
-                                    <i class="fa fa-check-circle check-icon"></i>
+                            </div>
+
+                            <div class="border-top pt-3 mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="small text-muted">已选 <span id="checkout-count-pc" class="text-dark fw-bold">0</span> 件</span>
+                                    <span class="text-danger fw-bold fs-5">¥<span id="total-price-pc">0.00</span></span>
                                 </div>
-                                <div class="payment-select-box" data-method="usdt" onclick="selectCartPayment('usdt', this)">
-                                    <span class="fw-bold text-success me-2" style="font-size:10px;">USDT</span>
-                                    <span class="small">USDT</span>
-                                    <i class="fa fa-check-circle check-icon"></i>
-                                </div>
+                                <button class="btn btn-danger w-100 rounded-pill fw-bold shadow-sm" onclick="handleCheckout()">立即结算</button>
                             </div>
                         </div>
 
-                        <div class="border-top pt-3 mt-3">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="small text-muted">已选 <span id="checkout-count-pc" class="text-dark fw-bold">0</span> 件</span>
-                                <span class="text-danger fw-bold fs-5">¥<span id="total-price-pc">0.00</span></span>
-                            </div>
-                            <button class="btn btn-danger w-100 rounded-pill fw-bold shadow-sm" onclick="handleCheckout()">立即结算</button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -245,7 +240,7 @@
         </button>
     </div>
 
-    <footer class="site-footer" id="global-footer"></footer>
+    <footer class="site-footer d-none d-lg-block" id="global-footer"></footer>
     <nav class="mobile-bottom-nav d-lg-none" id="global-mobile-nav"></nav>
 
     <div class="mobile-contact-overlay d-lg-none" id="mobile-contact-overlay"></div>
@@ -259,6 +254,7 @@
 
     <div class="d-lg-none" style="height: 80px;"></div>
 
+    <script src="/assets/sticky-sidebar.min.js"></script>
     <script src="/themes/TBshop/files/bootstrap.bundle.min.js"></script>
     <script>
         // 激活公共布局
