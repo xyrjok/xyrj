@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/main-index.js
-// === (首页专属业务逻辑 - 已优化：去除侧边栏冗余逻辑)
+// === (首页专属业务逻辑 - 已修复标签显示效果)
 // =============================================
 
 // 全局变量 (供搜索和筛选使用)
@@ -32,9 +32,6 @@ async function initHomePage() {
         // 渲染默认视图 (全部商品)
         renderCategorizedView('all');
 
-        // [修改] 侧边栏填充逻辑已移至 common.js 全局处理，此处不再重复调用
-        // 避免双重渲染导致页面抖动或资源浪费
-
     } catch (e) {
         console.error('Products load failed:', e);
         if (prodListArea) prodListArea.innerHTML = '<div class="text-center py-5 text-danger">商品加载失败，请刷新重试</div>';
@@ -45,10 +42,8 @@ async function initHomePage() {
         const artRes = await fetch('/api/shop/articles/list');
         const articles = await artRes.json();
 
-        // 填充首页特有的“热门教程”模块 (这个是首页独有的，必须保留)
+        // 填充首页特有的“热门教程”模块
         renderHotArticlesHome(articles);
-        
-        // [修改] 侧边栏分类填充已移至 common.js 全局处理，此处不再重复调用
 
     } catch (e) { console.warn('Articles load failed:', e); }
 }
@@ -67,11 +62,9 @@ function renderCategoryTabs() {
     
     // 基础选项
     let pcHtml = '<div class="cat-pill active" onclick="filterCategory(\'all\', this)">全部商品</div>';
-    // 移动端保留顶部的固定链接，只追加分类
     let mobileHtml = ''; 
 
     allCategories.forEach(c => {
-        // 这里假设分类对象有 name 和 id，可能有 image_url
         const icon = c.image_url ? `<img src="${c.image_url}">` : '';
         
         pcHtml += `<div class="cat-pill" onclick="filterCategory(${c.id}, this)">${icon}${c.name}</div>`;
@@ -84,9 +77,8 @@ function renderCategoryTabs() {
     });
 
     if (pcContainer) pcContainer.innerHTML = pcHtml;
-    // 移动端：追加到现有菜单后面 (现有菜单在 common.js 里已生成基础结构)
+    // 移动端：追加到现有菜单后面
     if (mobileContainer) {
-        // 在“教程文章”之前或之后插入分类，或者直接追加
         mobileContainer.insertAdjacentHTML('beforeend', '<div class="border-top my-2 pt-2 text-muted small px-2">商品分类</div>' + mobileHtml);
     }
 }
@@ -124,10 +116,8 @@ function getProductCardHtml(p) {
     const imgUrl = p.image_url || mainVariant.image_url || '/themes/TBshop/assets/no-image.png'; // 默认图
     const price = mainVariant.price || '0.00';
     
-    // 标签处理 (调用 common.js 的 parseTags，如果存在)
-    // 注意：如果 common.js 没有 parseTags，这里会报错，建议做容错，或者确保 common.js 里有
-    // 这里简单处理，直接返回空或手动解析
-    const tagsHtml = (typeof parseTags === 'function') ? parseTags(p.tags) : renderTagsLocal(p.tags); 
+    // [修改] 直接调用本地的增强版 renderTagsLocal，不再依赖 parseTags
+    const tagsHtml = renderTagsLocal(p.tags); 
 
     return `
         <a href="/product.html?id=${p.id}" class="tb-card">
@@ -146,14 +136,35 @@ function getProductCardHtml(p) {
     `;
 }
 
-// 本地简易标签渲染 (防止 common.js 没加载到 parseTags)
+/**
+ * [重点修改] 本地标签渲染 - 现在支持颜色解析 (b1, b2, #hex)
+ * 逻辑与 product-page.js 保持一致
+ */
 function renderTagsLocal(tags) {
     if (!tags) return '';
     const arr = typeof tags === 'string' ? tags.split(',') : tags;
-    return arr.map(t => {
-        const clean = t.split('#')[0].trim();
-        if(!clean || clean.startsWith('b1') || clean.startsWith('b2')) return '';
-        return `<span class="dynamic-tag" style="border:1px solid #ff5000;color:#ff5000;">${clean}</span>`;
+    if (!Array.isArray(arr) || arr.length === 0) return '';
+
+    return arr.map(tagStr => {
+        // 默认样式：红色边框，红色背景，白色文字 (如果没有指定)
+        let borderColor = '#dc3545', bgColor = '#dc3545', textColor = '#ffffff';
+        let text = tagStr.trim();
+        if(!text) return '';
+        
+        // 1. 解析边框颜色 b1#xxxxxx
+        const b1 = text.match(/b1#([0-9a-fA-F]{3,6})/);
+        if(b1) { borderColor='#'+b1[1]; text=text.replace(b1[0],'').trim(); }
+        
+        // 2. 解析背景颜色 b2#xxxxxx
+        const b2 = text.match(/b2#([0-9a-fA-F]{3,6})/);
+        if(b2) { bgColor='#'+b2[1]; text=text.replace(b2[0],'').trim(); }
+        
+        // 3. 解析文字颜色 #xxxxxx (放在最后)
+        const c = text.match(/#([0-9a-fA-F]{3,6})$/);
+        if(c) { textColor='#'+c[1]; text=text.substring(0,c.index).trim(); }
+
+        // 生成与详情页一致的 HTML 结构和样式
+        return `<span class="dynamic-tag" style="display:inline-block;margin-right:6px;margin-bottom:4px;padding:1px 5px;border:1px solid ${borderColor};background:${bgColor};color:${textColor};border-radius:3px;font-size:11px;">${text}</span>`;
     }).join('');
 }
 
