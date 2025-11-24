@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (修复版：拦截未支付订单跳转 + 全选修复)
+// === (修复版：拦截未支付订单跳转 + 全选修复 + 支付方式样式适配)
 // =============================================
 
 let cart = [];
@@ -77,15 +77,21 @@ function normalizeItem(item) {
     };
 }
 
+// [重点修改] 适配新的支付方式选择器 (.payment-option)
 function selectCartPayment(method, el) {
     cartPaymentMethod = method;
-    const containers = ['cart-payment-list', 'cart-payment-list-pc', 'cart-payment-list-mobile'];
+    const containers = ['cart-payment-list-pc', 'cart-payment-list-mobile'];
+    
     containers.forEach(id => {
         const container = document.getElementById(id);
         if (!container) return;
-        const boxes = container.querySelectorAll('.payment-select-box');
-        boxes.forEach(box => box.classList.remove('active'));
-        const target = container.querySelector(`.payment-select-box[data-method="${method}"]`);
+        
+        // 移除所有 active
+        const options = container.querySelectorAll('.payment-option');
+        options.forEach(opt => opt.classList.remove('active'));
+        
+        // 激活对应 method 的选项
+        const target = container.querySelector(`.payment-option[data-method="${method}"]`);
         if (target) target.classList.add('active');
     });
 }
