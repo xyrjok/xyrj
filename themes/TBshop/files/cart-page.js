@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/cart-page.js
-// === (修复版：全选功能修复 + 状态自动同步)
+// === (修复版：拦截未支付订单跳转 + 全选修复)
 // =============================================
 
 let cart = [];
@@ -65,7 +65,7 @@ function normalizeItem(item) {
 
         name: item.productName || item.name || item.title || '未命名商品',
         sku: item.variant_name || item.variantName || item.skuName || item.variant || '默认规格',
-        img: item.img || item.image || item.thumb || item.pic || '/assets/img/no-image.png',
+        img: item.img || item.image || item.thumb || item.pic || '/themes/TBshop/assets/no-image.png',
         
         price: parseFloat(item.price || 0),
         quantity: parseInt(item.quantity || 1),
@@ -142,7 +142,7 @@ function renderPCItem(rawItem, index) {
             <div class="d-flex align-items-center">
                 <a href="${productLink}" target="_blank" class="d-block me-2">
                     <img src="${item.img}" class="pc-item-img" alt="img" 
-                         onerror="this.src='/assets/img/no-image.png'" 
+                         onerror="this.src='/themes/TBshop/assets/no-image.png'" 
                          style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #eee;">
                 </a>
                 <div>
@@ -195,7 +195,7 @@ function renderMobileItem(rawItem, index) {
             
             <a href="${productLink}" class="d-block me-2">
                 <img src="${item.img}" class="rounded" alt="img" 
-                     onerror="this.src='/assets/img/no-image.png'"
+                     onerror="this.src='/themes/TBshop/assets/no-image.png'"
                      style="width:70px; height:70px; object-fit:cover; border:1px solid #f0f0f0;">
             </a>
 
@@ -243,14 +243,11 @@ function toggleEdit() {
     loadCart(); 
 }
 
-// 【修复1】全选功能
+// 全选功能
 window.toggleCheckAll = function(source) {
     const checked = source.checked;
     cart.forEach(item => item.checked = checked);
-    
-    // 关键：在重新加载前必须保存，否则 loadCart 会读取旧数据覆盖你的修改
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
-    
     loadCart(); 
 }
 
@@ -258,7 +255,6 @@ function updateTotal() {
     let total = 0;
     let count = 0;
     
-    // 检查是否所有商品都被选中了（用于同步全选按钮状态）
     const hasItems = cart.length > 0;
     let allChecked = hasItems; 
 
@@ -269,19 +265,16 @@ function updateTotal() {
             total += p * q;
             count++;
         } else {
-            // 只要有一个没选中，全选按钮就不选中
             allChecked = false;
         }
     });
     
-    // 【新增】同步两个全选框的状态（PC和移动端）
     const checkAllIds = ['check-all-pc', 'check-all-mobile-footer'];
     checkAllIds.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.checked = allChecked;
     });
 
-    // 更新金额显示
     const ids = [
         { t: 'total-price-pc', c: 'checkout-count-pc' },
         { t: 'total-price-mobile', c: 'checkout-count-mobile' }
@@ -336,6 +329,9 @@ window.deleteItem = function(idx) {
     }
 }
 
+// =============================================
+// === [重点修改] 结算函数 (增加拦截跳转逻辑)
+// =============================================
 window.handleCheckout = async function() {
     const selected = cart.filter(i => i.checked !== false);
     if(selected.length === 0) return alert('请选择要结算的商品');
@@ -344,7 +340,7 @@ window.handleCheckout = async function() {
     const pass = document.getElementById('query-password').value.trim() || document.getElementById('query-password-mobile').value.trim();
     
     if(!contact) return alert('请输入联系方式');
-    if(!pass || pass.length < 2) return alert('请输入查单密码 (至少2位)');
+    if(!pass || pass.length < 1) return alert('请输入查单密码 (至少1位)');
     
     localStorage.setItem('userContact', contact);
     localStorage.setItem('userPassword', pass);
@@ -366,7 +362,17 @@ window.handleCheckout = async function() {
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if(data.error) throw new Error(data.error);
+        
+        if(data.error) {
+            // [新增] 拦截未支付订单错误
+            if (data.error.includes('未支付订单')) {
+                if(confirm('提示：' + data.error + '\n\n点击“确定”前往查单页面处理。')) {
+                    window.location.href = '/orders.html';
+                    return;
+                }
+            }
+            throw new Error(data.error);
+        }
         
         const remaining = cart.filter(i => i.checked === false);
         localStorage.setItem('tbShopCart', JSON.stringify(remaining));
