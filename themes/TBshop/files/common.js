@@ -1,7 +1,7 @@
 // =============================================
 // === themes/TBshop/files/common.js
-// === (全局共享JS + 公共布局渲染 - 完整版)
-// === 修改内容：移动端侧边栏改为商品分类列表
+// === (全局共享JS + 公共布局渲染 - 完整修复版)
+// === 包含：页头样式修复 + 移动端分类侧边栏 + 所有PC端功能
 // =============================================
 
 // ============================================================
@@ -9,7 +9,7 @@
 // ============================================================
 
 const TB_LAYOUT = {
-    // 移动端头部 (保持不变)
+    // 移动端头部
     mobileHeader: `
         <div class="mh-left" id="mobile-menu-btn" onclick="togglePanel('mobile-sidebar', 'mobile-overlay')">
             <i class="fa fa-bars"></i>
@@ -28,7 +28,7 @@ const TB_LAYOUT = {
         </div>
     `,
 
-    // PC端头部 (保持不变)
+    // PC端头部 (已修复：移除 font-weight:bold)
     pcHeader: (activePage) => `
         <div class="container header-inner">
             <a href="/" class="site-brand">
@@ -42,7 +42,7 @@ const TB_LAYOUT = {
             <nav class="main-nav d-none d-md-flex">
                 <a href="/" class="nav-link-item ${activePage === 'home' ? 'active' : ''}" style="${activePage==='home'?'color:var(--tb-orange);':''}">首页</a>
                 <a href="/articles.html" class="nav-link-item ${activePage === 'articles' ? 'active' : ''}" style="${activePage==='articles'?'color:var(--tb-orange);':''}">教程文章</a>
-                <a href="/orders.html" class="nav-link-item ${activePage === 'orders' ? 'active' : ''}" style="${activePage==='orders'?'color:var(--tb-orange);font-weight:bold;':''}">查询订单</a>
+                <a href="/orders.html" class="nav-link-item ${activePage === 'orders' ? 'active' : ''}" style="${activePage==='orders'?'color:var(--tb-orange);':''}">查询订单</a>
             </nav>
 
             <div class="header-right">
@@ -55,7 +55,7 @@ const TB_LAYOUT = {
         </div>
     `,
 
-    // [修改] 移动端侧滑菜单 -> 改为分类列表容器
+    // 移动端侧滑菜单 (改为分类列表容器)
     mobileSidebar: (activePage) => `
         <div class="mobile-sidebar-header">
             <h5 class="mobile-sidebar-title">商品分类</h5>
@@ -66,9 +66,9 @@ const TB_LAYOUT = {
                 <div class="text-center py-3 text-muted"><i class="fa fa-spinner fa-spin"></i> 加载中...</div>
             </div>
         </div>
-        `,
+    `,
 
-    // 移动端底部导航 (保持不变)
+    // 移动端底部导航
     mobileBottomNav: (activePage) => `
         <a href="/" class="mbn-item ${activePage === 'home' ? 'active' : ''}">
             <i class="fa fa-home"></i>
@@ -94,7 +94,7 @@ const TB_LAYOUT = {
         </a>
     `,
 
-    // 页脚 (保持不变)
+    // 页脚
     footer: `
         <div class="container">
             <div class="footer-links">
@@ -109,7 +109,7 @@ const TB_LAYOUT = {
         </div>
     `,
 
-    // PC右侧栏 (保持不变)
+    // PC右侧栏 (标准框架)
     pcSidebarStandard: `
         <div class="sidebar-inner">
             <div class="module-box" id="notice-module-box">
@@ -192,7 +192,7 @@ function renderCommonLayout(activePage) {
         }
     }
 
-    // 4. [新增] 初始化移动端分类侧边栏
+    // 4. [修复] 初始化移动端分类侧边栏 (之前丢失的部分)
     initMobileSidebar();
 
     // 5. 加载配置 & 更新角标
@@ -201,7 +201,7 @@ function renderCommonLayout(activePage) {
 }
 
 /**
- * [新增] 初始化移动端侧边栏数据
+ * [修复] 初始化移动端侧边栏数据 (加载分类)
  */
 async function initMobileSidebar() {
     const container = document.getElementById('mobile-category-list');
@@ -212,7 +212,7 @@ async function initMobileSidebar() {
         const categories = await res.json();
         
         if (!categories || categories.length === 0) {
-            container.innerHTML = '<div class="text-center py-3 text-muted">暂无分类</div>';
+            container.innerHTML = '<div class="text-center py-3 text-white-50">暂无分类</div>';
             return;
         }
 
@@ -230,12 +230,12 @@ async function initMobileSidebar() {
 
     } catch (e) {
         console.error('Sidebar categories load error:', e);
-        container.innerHTML = '<div class="text-center py-3 text-muted">加载失败</div>';
+        container.innerHTML = '<div class="text-center py-3 text-white-50">加载失败</div>';
     }
 }
 
 /**
- * [新增] 处理移动端分类点击
+ * [修复] 处理移动端分类点击
  */
 function handleMobileCategoryClick(catId) {
     togglePanel('mobile-sidebar', 'mobile-overlay'); // 关闭侧栏
@@ -254,9 +254,8 @@ function handleMobileCategoryClick(catId) {
     }
 }
 
-
 /**
- * 全局加载侧边栏数据 (保持不变)
+ * 全局加载侧边栏数据 (销量、文章分类等)
  */
 async function loadGlobalSidebarData() {
     // 1. 如果有销量排行或标签云容器，加载商品数据
@@ -286,7 +285,7 @@ async function loadGlobalSidebarData() {
 }
 
 /**
- * 加载配置 (保持不变)
+ * 加载配置
  */
 function loadGlobalConfig() {
     fetch('/api/shop/config')
@@ -316,14 +315,12 @@ function checkSidebarStatus() {
     
     if (!sidebarInner || !productArea) return;
 
-    // 1. 设置最小高度，防止加载中塌陷
     productArea.style.minHeight = '400px';
 
     const sbHeight = sidebarInner.offsetHeight;
     const contentHeight = productArea.offsetHeight;
     const isWideScreen = window.innerWidth >= 992;
 
-    // 2. 判断是否激活
     if (contentHeight < sbHeight || !isWideScreen) {
         if (sidebar) {
             sidebar.destroy();
@@ -340,7 +337,6 @@ function checkSidebarStatus() {
     }
 }
 
-// 自动监听
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(checkSidebarStatus, 100);
     const contentEl = document.querySelector('.col-lg-9');
@@ -358,12 +354,10 @@ window.addEventListener('resize', checkSidebarStatus);
 // === 3. 共享逻辑 (搜索、侧栏、角标等)
 // =============================================
 
-// UI: Search
 function doSearch(source = 'pc') {
     const inputId = source === 'mobile' ? 'mobile-search-input' : 'search-input';
     const val = document.getElementById(inputId)?.value.trim();
     if (typeof renderSingleGrid === 'function' && typeof allProducts !== 'undefined') {
-        // 首页模式：本地筛选
         if (!val) renderCategorizedView('all');
         else {
             const filtered = allProducts.filter(p => p.name.toLowerCase().includes(val.toLowerCase()));
@@ -371,7 +365,6 @@ function doSearch(source = 'pc') {
         }
         if (source === 'mobile') toggleMobileSearch(false);
     } else {
-        // 其他页面：跳转搜索
         if (val) window.location.href = `/?q=${encodeURIComponent(val)}`;
     }
 }
@@ -381,7 +374,6 @@ document.addEventListener('keypress', (e) => {
     }
 });
 
-// UI: Panels
 function togglePanel(panelId, overlayId, forceShow = null) {
     const panel = document.getElementById(panelId);
     const overlay = document.getElementById(overlayId);
@@ -402,7 +394,6 @@ window.addEventListener('scroll', () => {
     if(document.querySelector('.mobile-search-dropdown.show')) toggleMobileSearch(false);
 }, { passive: true });
 
-// Data: Config Render
 function renderGlobalHeaders(config) {
     if (!document.title.includes("商品详情")) document.title = config.site_name || '商店首页';
     
@@ -442,7 +433,6 @@ function renderSidebarNoticeContact(config) {
     }
 }
 
-// Data: Helpers
 function renderSidebarTopSales(allProducts) { 
     const el = document.getElementById('top-sales-list');
     if(!el || !allProducts) return;
@@ -473,7 +463,6 @@ function renderSidebarArticleCats(articles) {
     }
 }
 
-// Cart & Top
 function loadCartBadge() {
     try { updateCartBadge(JSON.parse(localStorage.getItem('tbShopCart') || '[]').length); } catch(e){}
 }
@@ -483,7 +472,7 @@ function updateCartBadge(n) {
         if(el) { el.innerText = n > 99 ? '99+' : n; el.style.display = n > 0 ? 'block' : 'none'; }
     });
 }
-// Back to Top
+
 document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('back-to-top-btn')) return;
     const btn = document.createElement('div');
