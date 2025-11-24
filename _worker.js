@@ -1,13 +1,7 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版 - 含文章系统升级)
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 含文章系统升级 & 防乱单机制)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
- * [已合并] 增加查单密码、订单管理、规格自选标签
- * [购物车-升级版] 增加购物车合并下单接口、支付回调支持合并订单处理
- * [已修改] 将查单密码验证从6位改为1位
- * [新增] 支持联系方式+查单密码查询历史订单接口
- * [修复] 添加 /api/shop/product 单个商品详情接口
- * [新增] 文章分类接口 & 文章列表摘要/首图提取逻辑
- * [性能优化] 首页商品列表改为批量查询，解决加载慢的问题
+ * [新增] 限制未支付订单数量、删除未支付订单接口
  */
 
 // === 工具函数 ===
@@ -701,10 +695,20 @@ async function handleApi(request, env, url) {
 
         // =======================================================
         // [修改] 修复点 1： /api/shop/order/create
+        // [修改] 增加未支付订单数量检查
         // =======================================================
         if (path === '/api/shop/order/create' && method === 'POST') {
             // 1. 接收 query_password
             const { variant_id, quantity, contact, payment_method, card_id, query_password } = await request.json();
+
+            // --- 新增限制逻辑 START ---
+            // 检查该联系人下的未支付订单数量
+            const unpaidCount = (await db.prepare("SELECT COUNT(*) as c FROM orders WHERE contact=? AND status=0").bind(contact).first()).c;
+            if (unpaidCount >= 2) {
+                return errRes('您有过多未支付订单，请先支付或删除再下单', 400); 
+            }
+            // --- 新增限制逻辑 END ---
+
             const variant = await db.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
             if (!variant) return errRes('规格不存在');
 
@@ -776,6 +780,7 @@ async function handleApi(request, env, url) {
 
         // =======================================================
         // [修改] 修复点 2： /api/shop/cart/checkout
+        // [修改] 增加未支付订单数量检查
         // =======================================================
         if (path === '/api/shop/cart/checkout' && method === 'POST') {
             const { items, contact, query_password, payment_method } = await request.json();
@@ -785,6 +790,13 @@ async function handleApi(request, env, url) {
             if (!query_password || query_password.length < 1) {
                 return errRes('请设置1位以上的查单密码');
             }
+
+            // --- 新增限制逻辑 START ---
+            const unpaidCount = (await db.prepare("SELECT COUNT(*) as c FROM orders WHERE contact=? AND status=0").bind(contact).first()).c;
+            if (unpaidCount >= 2) {
+                return errRes('您有过多未支付订单，请先支付或删除再下单', 400);
+            }
+            // --- 新增限制逻辑 END ---
 
             let total_amount = 0;
             const validatedItems = []; // 存储后端验证过的商品信息
@@ -875,6 +887,26 @@ async function handleApi(request, env, url) {
             ).run();
 
             return jsonRes({ order_id, total_amount, payment_method });
+        }
+
+        // =======================================================
+        // [新增] 用户删除未支付订单接口 (配合 orders.html)
+        // =======================================================
+        if (path === '/api/shop/order/delete' && method === 'POST') {
+            const { id, contact, query_password } = await request.json();
+            
+            // 1. 验证订单归属 (必须匹配 ID, Contact, Password, 且 Status=0)
+            const order = await db.prepare("SELECT id FROM orders WHERE id=? AND contact=? AND query_password=? AND status=0")
+                .bind(id, contact, query_password).first();
+                
+            if (!order) {
+                return errRes('删除失败：订单不存在、密码错误或订单已支付');
+            }
+
+            // 2. 执行删除
+            await db.prepare("DELETE FROM orders WHERE id=?").bind(id).run();
+            
+            return jsonRes({ success: true });
         }
 
 
