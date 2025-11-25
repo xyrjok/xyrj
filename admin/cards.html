@@ -98,16 +98,6 @@
         .status-unsold { background-color: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
         .status-sold { background-color: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
 
-        /* [修改] 卡密内容小字体样式 */
-        .card-content-text {
-            font-size: 12px; /* 调小字体 */
-            font-family: monospace; /* 等宽字体 */
-            color: #555;
-            word-break: break-all;
-            max-width: 350px; /* 限制宽度 */
-            display: block;
-        }
-
         /* ================== 响应式适配 ================== */
         @media (max-width: 800px) {
             .admin-mobile-header { display: flex; }
@@ -163,8 +153,6 @@
                 
                 <div class="vr mx-2"></div>
 
-                <input type="text" id="card-search-input" class="form-control form-control-sm" style="width: 180px;" placeholder="搜索卡密/预设信息..." onkeyup="renderCards()">
-
                 <button class="btn btn-danger btn-sm" id="batch-delete-btn" onclick="batchDelete()" style="display: none;">
                     <i class="fas fa-trash"></i> 删除 (<span id="selected-count">0</span>)
                 </button>
@@ -219,11 +207,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">卡密内容 (一行一个)</label>
-                    <textarea class="form-control" id="import-content" rows="8" 
-                        placeholder="支持普通格式和预设信息格式：&#10;卡密123456&#10;卡密789012 #[预设信息:账号xxx]&#10;..."></textarea>
-                    <div class="form-text text-muted" style="font-size: 12px;">
-                        支持 <code>卡密内容 #[预设信息]</code> 格式，"预设信息"将展示在自选列表供买家查看。
-                    </div>
+                    <textarea class="form-control" id="import-content" rows="8" placeholder="卡密123456&#10;卡密abcdef&#10;..."></textarea>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="import-remove-dup" checked>
@@ -257,7 +241,6 @@
 
     // 页面数据
     let allProducts = [];
-    let currentCards = []; // [关键] 存储当前加载的所有卡密，用于前端搜索
     const importModal = new bootstrap.Modal(document.getElementById('importModal'));
 
     // 加载商品和规格列表
@@ -279,7 +262,7 @@
         }
     }
 
-    // 加载卡密列表 (从服务器获取)
+    // 加载卡密列表
     async function loadCards() {
         const variantId = document.getElementById('filter-variant').value;
         const tbody = document.getElementById('card-list');
@@ -291,43 +274,21 @@
 
         tbody.innerHTML = '<tr><td colspan="7" class="text-center">加载中...</td></tr>';
         
+        // 注意：后端接口需要 variant_id
         const res = await api(`cards/list?variant_id=${variantId}`);
-        // 存储到全局变量
-        currentCards = Array.isArray(res) ? res : [];
-        
-        // 渲染
-        renderCards();
-    }
+        const list = Array.isArray(res) ? res : [];
 
-    // [新增] 渲染卡密列表 (支持前端搜索)
-    function renderCards() {
-        const tbody = document.getElementById('card-list');
-        const searchTerm = document.getElementById('card-search-input').value.toLowerCase().trim();
-
-        // 过滤
-        const filteredCards = currentCards.filter(c => {
-            if (!searchTerm) return true;
-            return c.content.toLowerCase().includes(searchTerm);
-        });
-
-        if (filteredCards.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无匹配卡密</td></tr>';
-            updateBatchBtn(); // 清空选中状态
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">暂无卡密</td></tr>';
             return;
         }
 
-        tbody.innerHTML = filteredCards.map(c => {
+        tbody.innerHTML = list.map(c => {
             const isSold = c.status === 1;
             const statusHtml = isSold ? '<span class="status-sold">已售出</span>' : '<span class="status-unsold">未售出</span>';
             const createTime = c.created_at ? new Date(c.created_at * 1000).toLocaleString() : '-';
+            // 已售出的卡密不能删除 (后端限制)
             const deleteDisabled = isSold ? 'disabled title="已售出卡密不可删除"' : '';
-
-            // 高亮搜索词
-            let displayContent = c.content;
-            if (searchTerm) {
-                const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-                displayContent = displayContent.replace(regex, '<span class="bg-warning text-dark">$1</span>');
-            }
 
             return `
             <tr>
@@ -335,7 +296,7 @@
                     <input class="form-check-input c-check" type="checkbox" value="${c.id}" ${isSold ? 'disabled' : ''} onchange="updateBatchBtn()">
                 </td>
                 <td>${c.id}</td>
-                <td><span class="card-content-text">${displayContent}</span></td>
+                <td class="text-break" style="max-width: 300px; font-family: monospace;">${c.content}</td>
                 <td>${statusHtml}</td>
                 <td>${c.order_id ? `<small>${c.order_id}</small>` : '-'}</td>
                 <td><small>${createTime}</small></td>
@@ -346,8 +307,7 @@
             `;
         }).join('');
         
-        document.getElementById('select-all').checked = false; 
-        updateBatchBtn();
+        document.getElementById('select-all').checked = false; updateBatchBtn();
     }
 
     // 打开导入模态框
@@ -415,11 +375,7 @@
     async function deleteCard(id) {
         if (!confirm('确定要删除这条卡密吗？')) return;
         const res = await api('card/delete', { method: 'POST', body: JSON.stringify({ id }) });
-        if (res.success) { 
-            // 从本地数组移除，重新渲染，避免重新请求
-            currentCards = currentCards.filter(c => c.id != id);
-            renderCards();
-        } else { alert('删除失败: ' + (res.error || '未知错误')); }
+        if (res.success) { loadCards(); } else { alert('删除失败: ' + (res.error || '未知错误')); }
     }
 
     // 批量删除
@@ -442,12 +398,11 @@
         const btn = document.getElementById('batch-delete-btn');
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
 
+        // 循环调用删除接口 (后端无批量接口时)
         try {
             const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
             await Promise.all(ids.map(id => api('card/delete', { method: 'POST', body: JSON.stringify({ id }) })));
-            alert('批量删除完成'); 
-            // 重新加载（为了确保状态准确）
-            loadCards();
+            alert('批量删除完成'); loadCards();
         } catch (e) { alert('部分删除失败'); loadCards(); } finally { btn.disabled = false; }
     }
 
