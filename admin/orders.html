@@ -272,7 +272,6 @@
         if(page === 1) tbody.innerHTML = '<tr><td colspan="8" class="text-center">加载中...</td></tr>';
         
         const search = document.getElementById('search-input').value;
-        // 假设后端接口支持分页和搜索: /api/admin/orders/list?page=1&search=xxx
         const res = await api(`orders/list?page=${page}&search=${encodeURIComponent(search)}`);
         
         const list = Array.isArray(res) ? res : (res.data || []);
@@ -293,15 +292,14 @@
             return `
             <tr>
                 <td style="text-align: center;"><input class="form-check-input o-check" type="checkbox" value="${o.id}" onchange="updateBatchBtn()"></td>
-                <td><small>${o.out_trade_no}</small></td>
-                <td><div class="text-truncate" style="max-width: 150px;" title="${o.product_name}">${o.product_name}</div></td>
+                <td><small>${o.id}</small></td> <td><div class="text-truncate" style="max-width: 150px;" title="${o.product_name}">${o.product_name}</div></td>
                 <td>￥${o.price}</td>
                 <td>${o.contact || '-'}</td>
                 <td>${statusBadge}</td>
                 <td><small>${o.create_time ? new Date(o.create_time).toLocaleString() : '-'}</small></td>
                 <td style="text-align: center;">
-                    <button class="btn btn-sm btn-outline-info" onclick="viewOrder(${o.id})" title="详情"><i class="fas fa-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-primary" onclick="openEditModal(${o.id})" title="编辑"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-info" onclick="viewOrder('${o.id}')" title="详情"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="openEditModal('${o.id}')" title="编辑"><i class="fas fa-edit"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -312,12 +310,12 @@
         document.getElementById('select-all').checked = false; updateBatchBtn();
     }
 
-    // 查看详情
+    // 查看详情 (修复了 id 读取)
     function viewOrder(id) {
         const o = allOrders.find(x => x.id === id);
         if(!o) return;
         
-        document.getElementById('v-out-trade-no').innerText = o.out_trade_no;
+        document.getElementById('v-out-trade-no').innerText = o.id; // [修复] 使用 o.id
         document.getElementById('v-trade-no').innerText = o.trade_no || '-';
         document.getElementById('v-product-name').innerText = o.product_name;
         document.getElementById('v-quantity').innerText = o.quantity || 1;
@@ -329,8 +327,18 @@
         
         // 卡密展示
         const cardsDiv = document.getElementById('v-cards');
-        if (o.status == 1 && o.cards && o.cards.length > 0) {
-            cardsDiv.innerText = o.cards.join('\n');
+        if (o.status == 1 && o.cards_sent) {
+            try {
+                const cards = JSON.parse(o.cards_sent);
+                if(Array.isArray(cards)) {
+                    cardsDiv.innerText = cards.join('\n');
+                } else {
+                    // 兼容旧数据或特殊格式
+                    cardsDiv.innerText = JSON.stringify(cards, null, 2);
+                }
+            } catch(e) {
+                cardsDiv.innerText = o.cards_sent;
+            }
             cardsDiv.style.display = 'block';
         } else {
             cardsDiv.innerText = '无卡密信息或未支付';
@@ -381,14 +389,19 @@
         btn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
     }
     async function batchDelete() {
-        const ids = Array.from(document.querySelectorAll('.o-check:checked')).map(cb => parseInt(cb.value));
+        const ids = Array.from(document.querySelectorAll('.o-check:checked')).map(cb => cb.value); // id 是字符串
         if (ids.length === 0) return;
         if (!confirm(`确定要删除选中的 ${ids.length} 个订单吗？此操作不可恢复。`)) return;
         const btn = document.getElementById('batch-delete-btn');
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
         try {
-            await Promise.all(ids.map(id => api('order/delete', { method: 'POST', body: JSON.stringify({ id }) })));
-            alert('批量删除完成'); loadOrders(1);
+            // 注意：这里调用的是 batch_delete 接口
+            const res = await api('orders/batch_delete', { method: 'POST', body: JSON.stringify({ ids }) });
+            if(res.success) {
+                alert('批量删除完成'); loadOrders(1);
+            } else {
+                alert('删除失败: ' + (res.error || '未知错误'));
+            }
         } catch (error) { alert('部分删除失败'); loadOrders(1); } finally { btn.disabled = false; }
     }
 
