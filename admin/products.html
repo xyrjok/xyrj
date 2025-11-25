@@ -3,325 +3,520 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商品管理 - Faka Admin</title>
+    <title>商品管理 - 夏雨店铺系统</title>
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <style>
-        body { padding-top: 56px; }
-        .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; z-index: 100; padding: 48px 0 0; box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1); }
-        .main { margin-left: 240px; padding: 20px; }
-        @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
+        /* ================== 全局样式 ================== */
+        body { 
+            background-color: #f4f7f6; 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+        }
         
-        .variant-row { background-color: #f8f9fa; }
+        /* 布局主容器 */
+        .admin-container { 
+            display: flex; 
+            min-height: 100vh; 
+            width: 100%; 
+        }
+
+        /* ================== 移动端专属顶栏 (MyBlog风格) ================== */
+        .admin-mobile-header {
+            display: none; /* PC端隐藏 */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 50px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #ddd;
+            padding: 0 15px;
+            z-index: 1001;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .admin-mobile-header .mobile-logo a {
+            font-size: 18px; font-weight: bold; color: #333; text-decoration: none;
+        }
+        #mobile-menu-toggle {
+            background: none; border: none; font-size: 20px; color: #555; padding: 5px;
+        }
+
+        /* ================== 遮罩层 (MyBlog风格) ================== */
+        .admin-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .admin-overlay.is-visible {
+            display: block; opacity: 1;
+        }
+        
+        /* ================== 左侧侧边栏 ================== */
+        .admin-sidebar {
+            width: 240px; 
+            background-color: #2c3e50; 
+            color: #ecf0f1;
+            position: fixed; 
+            height: 100%; 
+            left: 0; top: 0;
+            z-index: 100; 
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .sidebar-header {
+            padding: 20px; text-align: center; font-size: 20px; font-weight: bold;
+            border-bottom: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
+        }
+        .sidebar-header a { color: #ecf0f1; text-decoration: none; }
+        
+        .sidebar-menu-container { flex: 1; overflow-y: auto; }
+        .admin-sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .admin-sidebar ul li a {
+            display: block; color: #bdc3c7; padding: 15px 20px;
+            text-decoration: none; border-left: 3px solid transparent;
+            transition: all 0.3s; font-size: 14px;
+        }
+        .admin-sidebar ul li a:hover { background-color: #34495e; color: #ffffff; }
+        .admin-sidebar ul li a.active { background-color: #e74c3c; color: #ffffff; border-left-color: #c0392b; }
+        .admin-sidebar ul li a i { margin-right: 10px; width: 20px; text-align: center; }
+
+        .sidebar-footer {
+            padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;
+            border-top: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
+        }
+
+        /* ================== 右侧内容区域 ================== */
+        .admin-content {
+            margin-left: 240px; width: calc(100% - 240px); padding: 20px;
+            transition: margin-left 0.3s; font-size: 14px;
+        }
+
+        .admin-content h3 { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+        .logout-btn { color: #e74c3c !important; }
+
+        /* ================== 商品管理专属样式 ================== */
+        .variant-row { background-color: #f8f9fa; border: 1px solid #e9ecef; }
         .form-label-sm { font-size: .75rem; font-weight: 500; color: #555; margin-bottom: 0.1rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .form-control-sm { padding: 0.2rem 0.3rem; font-size: 0.85rem; }
         .form-select-sm { padding: 0.2rem 1.5rem 0.2rem 0.3rem; font-size: 0.85rem; }
 
         .variant-fields-container {
-            display: flex; flex-wrap: nowrap; gap: 5px; align-items: flex-end; overflow-x: auto; padding-bottom: 15px;
+            display: flex; flex-wrap: nowrap; gap: 5px; align-items: flex-end; overflow-x: auto; padding-bottom: 10px;
         }
+        /* 美化滚动条 */
+        .variant-fields-container::-webkit-scrollbar { height: 6px; }
+        .variant-fields-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
         .variant-field { flex-shrink: 0; min-width: 60px; }
         .v-name { width: 120px; }
         .v-color-wrap { width: 60px; }
         .v-mode-wrap { width: 65px;}
-        .v-image_url { width: auto;}
+        .v-image_url { width: 120px;}
         .v-selection_label { width: 100px; }
-        .v-price-wrap { width: 60px;}
-        .v-stock-wrap { width: 60px; }
+        .v-price-wrap { width: 70px;}
+        .v-stock-wrap { width: 70px; }
         .v-markup-wrap { width: 60px; }
         .v-sales-wrap { width: 60px; }
-        .v-wholesale_config { width: auto;}
+        .v-wholesale_config { width: 100px;}
+
+        /* ================== 响应式适配 ================== */
+        @media (max-width: 800px) {
+            .admin-mobile-header { display: flex; }
+            .admin-sidebar { left: -240px; z-index: 1002; }
+            .admin-sidebar.is-visible { left: 0; }
+            .admin-content { margin-left: 0; width: 100%; padding-top: 70px; }
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">CF Faka Admin</a>
-        <button class="btn btn-outline-light btn-sm px-4 me-3" onclick="logout()">退出</button>
-    </nav>
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item"><a class="nav-link" href="/admin/dashboard.html">仪表盘</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/categories.html">商品分类</a></li>
-                        <li class="nav-item"><a class="nav-link active fw-bold" href="/admin/products.html">商品管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/orders.html">订单管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/cards.html">卡密管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/payments.html">支付设置</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/article_categories.html">文章分类</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/articles.html">文章管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/settings.html">系统设置</a></li>
-                    </ul>
-                </div>
-            </nav>
 
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h2>商品管理</h2>
-                    <button class="btn btn-primary" onclick="openModal()">+ 新建商品</button>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover align-middle">
-                        <thead><tr><th>ID</th><th>商品 (分类)</th><th>规格数</th><th>排序</th><th>状态</th><th>操作</th></tr></thead>
-                        <tbody id="p-list"></tbody>
-                    </table>
-                </div>
-            </main>
+<script src="../config.js"></script>
+
+<div class="admin-mobile-header">
+    <div class="mobile-logo">
+        <a href="#">夏雨店铺系统</a>
+    </div>
+    <button id="mobile-menu-toggle">
+        <i class="fas fa-bars"></i>
+    </button>
+</div>
+
+<div class="admin-overlay"></div>
+
+<div class="admin-container">
+    <div class="admin-sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="/admin/dashboard.html">XYRJ Faka</a>
+        </div>
+        
+        <div class="sidebar-menu-container">
+            <ul>
+                <li><a href="/admin/dashboard.html"><i class="fas fa-tachometer-alt"></i> 仪表盘</a></li>
+                <li><a href="/admin/categories.html"><i class="fas fa-folder"></i> 商品分类</a></li>
+                <li><a href="/admin/products.html" class="active"><i class="fas fa-box"></i> 商品管理</a></li>
+                <li><a href="/admin/orders.html"><i class="fas fa-shopping-cart"></i> 订单管理</a></li>
+                <li><a href="/admin/cards.html"><i class="fas fa-ticket-alt"></i> 卡密管理</a></li>
+                <li><a href="/admin/payments.html"><i class="fas fa-credit-card"></i> 支付设置</a></li>
+                <li><a href="/admin/article_categories.html"><i class="fas fa-tags"></i> 文章分类</a></li>
+                <li><a href="/admin/articles.html"><i class="fas fa-newspaper"></i> 文章管理</a></li>
+                <li><a href="/admin/settings.html"><i class="fas fa-cog"></i> 系统设置</a></li>
+                <li><a href="javascript:logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            夏雨店铺系统 Version <span id="app-version">...</span>
         </div>
     </div>
 
-    <div class="modal fade" id="editModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">编辑商品</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="p-form">
-                        <input type="hidden" id="p-id">
-                        <div class="row mb-3">
-                            <div class="col-md-5"><label>商品名称</label><input type="text" class="form-control" id="p-name" required></div>
-                            <div class="col-md-4"><label>商品分类</label><select id="p-category" class="form-select"></select></div>
-                            <div class="col-md-3"><label>排序权重</label><input type="number" class="form-control" id="p-sort" value="0"></div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label>商品主图 URL (默认显示)</label>
-                            <input type="text" class="form-control" id="p-image" placeholder="https://example.com/main.jpg">
-                        </div>
-
-                        <div class="mb-3">
-                            <label>商品标签 (格式: b1#边框色 b2#背景色 标签名#文字色, ...)</label>
-                            <input type="text" class="form-control" id="p-tags" placeholder="例如: b1#ff0000 b2#ffecec 热销#ff0000, b1#0000ff b2#e0e0ff 推荐#0000ff">
-                            <div class="form-text text-muted small">
-                                说明: 多个标签用<b>英文逗号</b>分隔。每个标签内用<b>空格</b>分隔属性。<br>
-                                b1=边框颜色, b2=背景颜色, 第三项=标签名#文字颜色。
-                            </div>
-                        </div>
-
-                        <div class="mb-3"><label>商品描述</label><textarea class="form-control" id="p-desc" rows="3"></textarea></div>
-                        <div class="mb-3 form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="p-active" checked>
-                            <label class="form-check-label" for="p-active">上架销售</label>
-                        </div>
-                    </form>
-                    
-                    <hr class="my-4">
-                    <h5>规格列表 (Variants) <button class="btn btn-sm btn-outline-success ms-3" onclick="addVariantRow({})"><i class="fa fa-plus"></i> 添加规格</button></h5>
-                    <div id="v-list" class="mt-3"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" onclick="saveProduct()">保存商品</button>
+    <div class="admin-content">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>商品管理</h3>
+            <button class="btn btn-primary btn-sm" onclick="openModal()">
+                <i class="fas fa-plus"></i> 新建商品
+            </button>
+        </div>
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0" style="font-size: 14px;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">ID</th>
+                                <th>商品 (分类)</th>
+                                <th style="width: 80px; text-align: center;">规格数</th>
+                                <th style="width: 80px; text-align: center;">排序</th>
+                                <th style="width: 80px; text-align: center;">状态</th>
+                                <th style="width: 80px; text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="p-list">
+                            </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        const TOKEN = localStorage.getItem('ADMIN_TOKEN');
-        if(!TOKEN) window.location.href = '/admin/index.html';
-        function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
-        async function api(path, options = {}) {
-            options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
-            const res = await fetch('/api/admin/' + path, options);
-            if(res.status === 401) logout();
-            return res.json();
-        }
+<div class="modal fade" id="editModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑商品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="p-form">
+                    <input type="hidden" id="p-id">
+                    <div class="row mb-3">
+                        <div class="col-md-5"><label class="form-label">商品名称</label><input type="text" class="form-control" id="p-name" required></div>
+                        <div class="col-md-4"><label class="form-label">商品分类</label><select id="p-category" class="form-select"></select></div>
+                        <div class="col-md-3"><label class="form-label">排序权重</label><input type="number" class="form-control" id="p-sort" value="0"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">商品主图 URL (默认显示)</label>
+                        <input type="text" class="form-control" id="p-image" placeholder="https://example.com/main.jpg">
+                    </div>
 
-        let allProducts = [];
-        let allCategories = [];
-        const modal = new bootstrap.Modal(document.getElementById('editModal'));
+                    <div class="mb-3">
+                        <label class="form-label">商品标签 (格式: b1#边框色 b2#背景色 标签名#文字色, ...)</label>
+                        <input type="text" class="form-control" id="p-tags" placeholder="例如: b1#ff0000 b2#ffecec 热销#ff0000, b1#0000ff b2#e0e0ff 推荐#0000ff">
+                        <div class="form-text text-muted small" style="font-size: 12px;">
+                            说明: 多个标签用<b>英文逗号</b>分隔。每个标签内用<b>空格</b>分隔属性。<br>
+                            b1=边框颜色, b2=背景颜色, 第三项=标签名#文字颜色。
+                        </div>
+                    </div>
 
-        async function loadData() {
-            [allProducts, allCategories] = await Promise.all([
-                api('products/list'),
-                api('categories/list')
-            ]);
-            
-            document.getElementById('p-list').innerHTML = allProducts.map(p => {
-                const category = allCategories.find(c => c.id === p.category_id) || { name: '未知' };
-                return `
-                <tr>
-                    <td>${p.id}</td><td><strong>${p.name}</strong><br><small class="text-muted">${category.name}</small></td>
-                    <td><span class="badge bg-info text-dark">${p.variants.length}</span></td>
-                    <td>${p.sort}</td>
-                    <td><span class="badge bg-${p.active ? 'success' : 'secondary'}">${p.active ? '上架' : '下架'}</span></td>
-                    <td><button class="btn btn-sm btn-outline-primary" onclick="openModal(${p.id})">编辑</button></td>
-                </tr>
-            `}).join('');
-        }
-
-        function openModal(id = null) {
-            const p = allProducts.find(x => x.id === id) || { name:'', description:'', sort:0, active:1, category_id: 1, variants:[{}], tags: '' };
-            document.getElementById('p-id').value = p.id || '';
-            document.getElementById('p-name').value = p.name;
-            document.getElementById('p-desc').value = p.description || '';
-            document.getElementById('p-sort').value = p.sort;
-            // 加载主图数据
-            document.getElementById('p-image').value = p.image_url || '';
-            // [新增] 加载 tags
-            document.getElementById('p-tags').value = p.tags || '';
-
-            document.getElementById('p-active').checked = !!p.active;
-            
-            const catSelect = document.getElementById('p-category');
-            catSelect.innerHTML = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            catSelect.value = p.category_id || 1;
-            
-            document.getElementById('v-list').innerHTML = '';
-            (p.variants.length ? p.variants : [{}]).forEach(v => addVariantRow(v));
-            modal.show();
-        }
-
-        /* * * --- [ 修改后的函数 ] ---
-         * */
-        function addVariantRow(v) {
-            const vList = document.getElementById('v-list');
-            const row = document.createElement('div');
-            row.className = 'variant-row border rounded p-3 mb-3 position-relative';
-            
-            let wholesaleString = '';
-            if (v.wholesale_config && Array.isArray(v.wholesale_config)) {
-                wholesaleString = v.wholesale_config.map(tier => `${tier.qty}=${tier.price}`).join(', ');
-            }
-            
-            const autoDelivery = (v.auto_delivery !== undefined) ? v.auto_delivery : 1;
-            const isAuto = (autoDelivery == 1);
-
-            row.innerHTML = `
-                <input type="hidden" class="v-id" value="${v.id || ''}">
+                    <div class="mb-3"><label class="form-label">商品描述</label><textarea class="form-control" id="p-desc" rows="3"></textarea></div>
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="p-active" checked>
+                        <label class="form-check-label" for="p-active">上架销售</label>
+                    </div>
+                </form>
                 
-                <button type="button" class="btn btn-sm btn-outline-success position-absolute top-0 end-0 m-2" 
-                        style="margin-right: 2.5rem !important; z-index: 10;" 
-                        aria-label="保存所有更改" 
-                        title="保存所有更改 (同底部保存)" 
-                        onclick="saveProduct()">
-                    <i class="fa fa-save"></i>
-                </button>
-                
-                <button type="button" class="btn-close position-absolute top-0 end-0 m-2" aria-label="删除此规格" onclick="this.closest('.variant-row').remove()"></button>
-                
-                <div class="variant-fields-container">
-                    <div class="variant-field v-name">
-                        <label class="form-label-sm">规格名称</label>
-                        <input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="月卡">
-                    </div>
-                    <div class="variant-field v-color-wrap">
-                        <label class="form-label-sm">颜色</label>
-                        <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFF">
-                    </div>
-                    <div class="variant-field v-mode-wrap">
-                        <label class="form-label-sm">发货模式</label>
-                        <select class="form-select form-select-sm v-auto_delivery" onchange="toggleStockInput(this)">
-                            <option value="1" ${isAuto ? 'selected' : ''}>自动</option>
-                            <option value="0" ${!isAuto ? 'selected' : ''}>手动</option>
-                        </select>
-                    </div>
-                    <div class="variant-field v-image_url">
-                        <label class="form-label-sm">图片链接</label>
-                        <input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="http://...">
-                    </div>
-                    <div class="variant-field v-price-wrap">
-                        <label class="form-label-sm">售价</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm v-price" value="${v.price || ''}" placeholder="0.00">
-                    </div>
-                    <div class="variant-field v-wholesale_config">
-                        <label class="form-label-sm">批发价 (5=3)</label>
-                        <input type="text" class="form-control form-control-sm v-wholesale_config" value="${wholesaleString}" placeholder="5=3">
-                    </div>
-                    <div class="variant-field v-stock-wrap">
-                        <label class="form-label-sm">库存</label>
-                        <input type="number" class="form-control form-control-sm v-stock" value="${v.stock || 0}" 
-                            ${isAuto ? 'disabled readonly title="自动从卡密库计算"' : ''}>
-                    </div>
-                    <div class="variant-field v-selection_label">
-                        <label class="form-label-sm">自选标签</label>
-                        <input type="text" class="form-control form-control-sm" name="v_selection_label" value="${v.selection_label || ''}" placeholder="自选卡密/号码">
-                    </div>
-                    <div class="variant-field v-markup-wrap">
-                        <label class="form-label-sm">加价</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}">
-                    </div>
-                    <div class="variant-field v-sales-wrap">
-                        <label class="form-label-sm">销量</label>
-                        <input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly>
-                    </div>
+                <hr class="my-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">规格列表 (Variants)</h5>
+                    <button class="btn btn-sm btn-outline-success" onclick="addVariantRow({})"><i class="fas fa-plus"></i> 添加规格</button>
                 </div>
-            `;
-            vList.appendChild(row);
-        }
-        /* * --- [ 修改结束 ] ---
-         * */
+                <div id="v-list" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveProduct()">保存商品</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-        function toggleStockInput(selectEl) {
-            const row = selectEl.closest('.variant-row');
-            const stockInput = row.querySelector('.v-stock');
-            if (selectEl.value == "1") {
-                stockInput.disabled = true; stockInput.readOnly = true; stockInput.title = "自动从卡密库计算";
-            } else {
-                stockInput.disabled = false; stockInput.readOnly = false; stockInput.title = "";
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // === 1. 权限与基础配置 ===
+    const TOKEN = localStorage.getItem('ADMIN_TOKEN');
+    if(!TOKEN) window.location.href = '/admin/index.html';
+
+    // 版本号显示
+    if (window.SITE_CONFIG && window.SITE_CONFIG.version) {
+        document.getElementById('app-version').innerText = window.SITE_CONFIG.version;
+    } else {
+        document.getElementById('app-version').innerText = '1.0.0';
+    }
+
+    function logout() { 
+        if(confirm('确定要退出登录吗？')) {
+            localStorage.removeItem('ADMIN_TOKEN'); 
+            window.location.href = '/admin/index.html'; 
+        }
+    }
+
+    async function api(path, options = {}) {
+        options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+        try {
+            const res = await fetch('/api/admin/' + path, options);
+            if(res.status === 401) {
+                logout();
+                return {};
             }
+            return res.json();
+        } catch(e) {
+            console.error(e);
+            return {};
+        }
+    }
+
+    // === 2. 页面逻辑 (商品管理) ===
+    let allProducts = [];
+    let allCategories = [];
+    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+
+    async function loadData() {
+        const tbody = document.getElementById('p-list');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">加载中...</td></tr>';
+
+        [allProducts, allCategories] = await Promise.all([
+            api('products/list'),
+            api('categories/list')
+        ]);
+        
+        if (!allProducts || allProducts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">暂无商品</td></tr>';
+            return;
         }
 
-        async function saveProduct() {
-            const data = {
-                id: document.getElementById('p-id').value || null,
-                name: document.getElementById('p-name').value,
-                description: document.getElementById('p-desc').value,
-                sort: parseInt(document.getElementById('p-sort').value) || 0,
-                active: document.getElementById('p-active').checked ? 1 : 0,
-                category_id: document.getElementById('p-category').value,
-                // 保存主图
-                image_url: document.getElementById('p-image').value,
-                // [新增] 保存 tags
-                tags: document.getElementById('p-tags').value,
-                variants: []
-            };
+        tbody.innerHTML = allProducts.map(p => {
+            const category = allCategories.find(c => c.id === p.category_id) || { name: '未知' };
+            return `
+            <tr>
+                <td>${p.id}</td>
+                <td>
+                    <div class="fw-bold text-truncate" style="max-width: 200px;">${p.name}</div>
+                    <small class="text-muted">${category.name}</small>
+                </td>
+                <td class="text-center"><span class="badge bg-info text-dark">${p.variants.length}</span></td>
+                <td class="text-center">${p.sort}</td>
+                <td class="text-center"><span class="badge bg-${p.active ? 'success' : 'secondary'}">${p.active ? '上架' : '下架'}</span></td>
+                <td class="text-center"><button class="btn btn-sm btn-outline-primary" onclick="openModal(${p.id})"><i class="fas fa-edit"></i></button></td>
+            </tr>
+        `}).join('');
+    }
+
+    function openModal(id = null) {
+        const p = allProducts.find(x => x.id === id) || { name:'', description:'', sort:0, active:1, category_id: 1, variants:[{}], tags: '' };
+        document.getElementById('p-id').value = p.id || '';
+        document.getElementById('p-name').value = p.name;
+        document.getElementById('p-desc').value = p.description || '';
+        document.getElementById('p-sort').value = p.sort;
+        document.getElementById('p-image').value = p.image_url || '';
+        document.getElementById('p-tags').value = p.tags || '';
+        document.getElementById('p-active').checked = !!p.active;
+        
+        const catSelect = document.getElementById('p-category');
+        catSelect.innerHTML = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        catSelect.value = p.category_id || (allCategories.length > 0 ? allCategories[0].id : '');
+        
+        document.getElementById('v-list').innerHTML = '';
+        (p.variants.length ? p.variants : [{}]).forEach(v => addVariantRow(v));
+        modal.show();
+    }
+
+    // 添加规格行
+    function addVariantRow(v) {
+        const vList = document.getElementById('v-list');
+        const row = document.createElement('div');
+        row.className = 'variant-row rounded p-3 mb-3 position-relative shadow-sm';
+        
+        let wholesaleString = '';
+        if (v.wholesale_config && Array.isArray(v.wholesale_config)) {
+            wholesaleString = v.wholesale_config.map(tier => `${tier.qty}=${tier.price}`).join(', ');
+        }
+        
+        const autoDelivery = (v.auto_delivery !== undefined) ? v.auto_delivery : 1;
+        const isAuto = (autoDelivery == 1);
+
+        row.innerHTML = `
+            <input type="hidden" class="v-id" value="${v.id || ''}">
             
-            try {
-                document.querySelectorAll('#v-list .variant-row').forEach(row => {
-                    const wholesaleInput = row.querySelector('input.v-wholesale_config');
-                    const wholesaleValue = wholesaleInput ? wholesaleInput.value.trim() : '';
-                    let wholesale_config = null;
-                    if (wholesaleValue) {
-                        try {
-                            wholesale_config = wholesaleValue.split(',').map(p => p.trim()).filter(p => p.includes('=')).map(p => {
-                                const parts = p.split('=');
-                                return { qty: parseInt(parts[0]), price: parseFloat(parts[1]) };
-                            });
-                            if (wholesale_config.length === 0) wholesale_config = null;
-                        } catch (e) {}
-                    }
-                    
-                    const price = parseFloat(row.querySelector('.v-price').value);
-                    const nameVal = row.querySelector('input.v-name').value || '默认规格';
-                    if (isNaN(price) || price < 0) throw new Error(`规格 "${nameVal}" 售价错误`);
-                    
-                    data.variants.push({
-                        id: row.querySelector('.v-id').value || null,
-                        name: nameVal,
-                        price: price,
-                        color: row.querySelector('.v-color').value || null,
-                        image_url: row.querySelector('input.v-image_url').value || null,
-                        selection_label: row.querySelector('[name="v_selection_label"]').value.trim() || null,
-                        custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0,
-                        wholesale_config: wholesale_config,
-                        auto_delivery: parseInt(row.querySelector('.v-auto_delivery').value),
-                        stock: parseInt(row.querySelector('.v-stock').value) || 0
-                    });
-                });
-                if (data.variants.length === 0) throw new Error('至少添加一个规格');
-            } catch (e) { return alert('保存失败: ' + e.message); }
+            <button type="button" class="btn btn-sm btn-outline-success position-absolute top-0 end-0 m-2" 
+                    style="margin-right: 2.5rem !important; z-index: 10;" 
+                    title="保存所有更改" 
+                    onclick="saveProduct()">
+                <i class="fas fa-save"></i>
+            </button>
+            
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-2" aria-label="删除此规格" onclick="this.closest('.variant-row').remove()"></button>
+            
+            <div class="variant-fields-container">
+                <div class="variant-field v-name">
+                    <label class="form-label-sm">规格名称</label>
+                    <input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="月卡">
+                </div>
+                <div class="variant-field v-color-wrap">
+                    <label class="form-label-sm">颜色</label>
+                    <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFF">
+                </div>
+                <div class="variant-field v-mode-wrap">
+                    <label class="form-label-sm">发货模式</label>
+                    <select class="form-select form-select-sm v-auto_delivery" onchange="toggleStockInput(this)">
+                        <option value="1" ${isAuto ? 'selected' : ''}>自动</option>
+                        <option value="0" ${!isAuto ? 'selected' : ''}>手动</option>
+                    </select>
+                </div>
+                <div class="variant-field v-image_url">
+                    <label class="form-label-sm">图片链接</label>
+                    <input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="http://...">
+                </div>
+                <div class="variant-field v-price-wrap">
+                    <label class="form-label-sm">售价</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm v-price" value="${v.price || ''}" placeholder="0.00">
+                </div>
+                <div class="variant-field v-wholesale_config">
+                    <label class="form-label-sm">批发 (5=3)</label>
+                    <input type="text" class="form-control form-control-sm v-wholesale_config" value="${wholesaleString}" placeholder="5=3">
+                </div>
+                <div class="variant-field v-stock-wrap">
+                    <label class="form-label-sm">库存</label>
+                    <input type="number" class="form-control form-control-sm v-stock" value="${v.stock || 0}" 
+                        ${isAuto ? 'disabled readonly title="自动从卡密库计算"' : ''}>
+                </div>
+                <div class="variant-field v-selection_label">
+                    <label class="form-label-sm">自选标签</label>
+                    <input type="text" class="form-control form-control-sm" name="v_selection_label" value="${v.selection_label || ''}" placeholder="自选卡密">
+                </div>
+                <div class="variant-field v-markup-wrap">
+                    <label class="form-label-sm">加价</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}">
+                </div>
+                <div class="variant-field v-sales-wrap">
+                    <label class="form-label-sm">销量</label>
+                    <input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly>
+                </div>
+            </div>
+        `;
+        vList.appendChild(row);
+    }
 
-            const res = await api('product/save', { method: 'POST', body: JSON.stringify(data) });
-            if (res.success) { modal.hide(); loadData(); } 
-            else { alert('保存失败: ' + (res.error || '未知错误')); }
+    function toggleStockInput(selectEl) {
+        const row = selectEl.closest('.variant-row');
+        const stockInput = row.querySelector('.v-stock');
+        if (selectEl.value == "1") {
+            stockInput.disabled = true; stockInput.readOnly = true; stockInput.title = "自动从卡密库计算";
+        } else {
+            stockInput.disabled = false; stockInput.readOnly = false; stockInput.title = "";
         }
-        loadData();
-    </script>
+    }
+
+    async function saveProduct() {
+        const data = {
+            id: document.getElementById('p-id').value || null,
+            name: document.getElementById('p-name').value,
+            description: document.getElementById('p-desc').value,
+            sort: parseInt(document.getElementById('p-sort').value) || 0,
+            active: document.getElementById('p-active').checked ? 1 : 0,
+            category_id: document.getElementById('p-category').value,
+            image_url: document.getElementById('p-image').value,
+            tags: document.getElementById('p-tags').value,
+            variants: []
+        };
+        
+        try {
+            document.querySelectorAll('#v-list .variant-row').forEach(row => {
+                const wholesaleInput = row.querySelector('input.v-wholesale_config');
+                const wholesaleValue = wholesaleInput ? wholesaleInput.value.trim() : '';
+                let wholesale_config = null;
+                if (wholesaleValue) {
+                    try {
+                        wholesale_config = wholesaleValue.split(',').map(p => p.trim()).filter(p => p.includes('=')).map(p => {
+                            const parts = p.split('=');
+                            return { qty: parseInt(parts[0]), price: parseFloat(parts[1]) };
+                        });
+                        if (wholesale_config.length === 0) wholesale_config = null;
+                    } catch (e) {}
+                }
+                
+                const price = parseFloat(row.querySelector('.v-price').value);
+                const nameVal = row.querySelector('input.v-name').value || '默认规格';
+                if (isNaN(price) || price < 0) throw new Error(`规格 "${nameVal}" 售价错误`);
+                
+                data.variants.push({
+                    id: row.querySelector('.v-id').value || null,
+                    name: nameVal,
+                    price: price,
+                    color: row.querySelector('.v-color').value || null,
+                    image_url: row.querySelector('input.v-image_url').value || null,
+                    selection_label: row.querySelector('[name="v_selection_label"]').value.trim() || null,
+                    custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0,
+                    wholesale_config: wholesale_config,
+                    auto_delivery: parseInt(row.querySelector('.v-auto_delivery').value),
+                    stock: parseInt(row.querySelector('.v-stock').value) || 0
+                });
+            });
+            if (data.variants.length === 0) throw new Error('至少添加一个规格');
+        } catch (e) { return alert('保存失败: ' + e.message); }
+
+        const res = await api('product/save', { method: 'POST', body: JSON.stringify(data) });
+        if (res.success) { modal.hide(); loadData(); } 
+        else { alert('保存失败: ' + (res.error || '未知错误')); }
+    }
+    
+    // 初始化加载
+    loadData();
+
+    // === 3. 移动端菜单逻辑 ===
+    const mobileBtn = document.getElementById('mobile-menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.admin-overlay');
+    const icon = mobileBtn.querySelector('i');
+
+    function toggleMenu() {
+        sidebar.classList.toggle('is-visible');
+        overlay.classList.toggle('is-visible');
+        if (icon.classList.contains('fa-bars')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+        } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    }
+
+    mobileBtn.addEventListener('click', function(e) { e.stopPropagation(); toggleMenu(); });
+    overlay.addEventListener('click', function() { toggleMenu(); });
+
+    document.querySelectorAll('.admin-sidebar a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 800 && sidebar.classList.contains('is-visible')) {
+                toggleMenu();
+            }
+        });
+    });
+</script>
 </body>
 </html>
