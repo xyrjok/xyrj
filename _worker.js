@@ -1,7 +1,8 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版 - 含文章系统升级 & 防乱单机制)
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 含文章系统升级 & 防乱单机制 & 卡密管理增强)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
  * [新增] 限制未支付订单数量、删除未支付订单接口
+ * [新增] 卡密管理支持分页、搜索、全量显示
  */
 
 // === 工具函数 ===
@@ -343,12 +344,56 @@ async function handleApi(request, env, url) {
             }
 
 
-            // --- 卡密管理 API ---
+            // --- 卡密管理 API (升级版: 支持分页、搜索、关联查询) ---
             if (path === '/api/admin/cards/list') {
                 const variant_id = url.searchParams.get('variant_id');
-                const { results } = await db.prepare("SELECT * FROM cards WHERE variant_id = ? ORDER BY id DESC").bind(variant_id).all();
-                return jsonRes(results);
+                const kw = url.searchParams.get('kw'); // 搜索关键字
+                const page = parseInt(url.searchParams.get('page') || 1); // 当前页码
+                const limit = parseInt(url.searchParams.get('limit') || 10); // 每页条数
+                const offset = (page - 1) * limit;
+
+                // 构建查询条件
+                let whereClauses = ["1=1"];
+                let params = [];
+
+                if (variant_id) {
+                    whereClauses.push("c.variant_id = ?");
+                    params.push(variant_id);
+                }
+                if (kw) {
+                    whereClauses.push("c.content LIKE ?");
+                    params.push(`%${kw}%`);
+                }
+
+                const whereSql = whereClauses.join(" AND ");
+
+                // 1. 查询总数
+                const countSql = `SELECT COUNT(*) as total FROM cards c WHERE ${whereSql}`;
+                const total = (await db.prepare(countSql).bind(...params).first()).total;
+
+                // 2. 查询数据 (关联 variants 和 products 表获取名称)
+                const dataSql = `
+                    SELECT c.*, v.name as variant_name, p.name as product_name 
+                    FROM cards c
+                    LEFT JOIN variants v ON c.variant_id = v.id
+                    LEFT JOIN products p ON v.product_id = p.id
+                    WHERE ${whereSql} 
+                    ORDER BY c.id DESC 
+                    LIMIT ? OFFSET ?
+                `;
+                // 追加分页参数
+                params.push(limit, offset);
+                
+                const { results } = await db.prepare(dataSql).bind(...params).all();
+
+                return jsonRes({
+                    data: results,
+                    total: total,
+                    page: page,
+                    limit: limit
+                });
             }
+
             if (path === '/api/admin/cards/import' && method === 'POST') {
                 const { variant_id, content } = await request.json();
                 const cards = content.split('\n').filter(c => c.trim()).map(c => c.trim());
