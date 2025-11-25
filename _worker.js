@@ -2,7 +2,7 @@
  * Cloudflare Worker Faka Backend (最终绝对完整版 - 含文章系统升级 & 防乱单机制 & 卡密管理增强)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
  * [新增] 限制未支付订单数量、删除未支付订单接口
- * [新增] 卡密管理支持分页、搜索、全量显示
+ * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
  */
 
 // === 工具函数 ===
@@ -344,7 +344,7 @@ async function handleApi(request, env, url) {
             }
 
 
-            // --- 卡密管理 API (升级版: 支持分页、搜索、关联查询) ---
+            // --- 卡密管理 API (升级版: 支持分页、多字段搜索、关联查询) ---
             if (path === '/api/admin/cards/list') {
                 const variant_id = url.searchParams.get('variant_id');
                 const kw = url.searchParams.get('kw'); // 搜索关键字
@@ -360,27 +360,35 @@ async function handleApi(request, env, url) {
                     whereClauses.push("c.variant_id = ?");
                     params.push(variant_id);
                 }
+                
+                // [修改] 关键字同时搜索：卡密内容 OR 商品名称 OR 规格名称
                 if (kw) {
-                    whereClauses.push("c.content LIKE ?");
-                    params.push(`%${kw}%`);
+                    whereClauses.push("(c.content LIKE ? OR p.name LIKE ? OR v.name LIKE ?)");
+                    params.push(`%${kw}%`, `%${kw}%`, `%${kw}%`);
                 }
 
                 const whereSql = whereClauses.join(" AND ");
+                
+                // 定义 JOIN 子句 (统计和查询都需要用到)
+                const joinSql = `
+                    LEFT JOIN variants v ON c.variant_id = v.id
+                    LEFT JOIN products p ON v.product_id = p.id
+                `;
 
-                // 1. 查询总数
-                const countSql = `SELECT COUNT(*) as total FROM cards c WHERE ${whereSql}`;
+                // 1. 查询总数 ([注意] 必须包含 JOIN，否则无法根据商品名筛选)
+                const countSql = `SELECT COUNT(*) as total FROM cards c ${joinSql} WHERE ${whereSql}`;
                 const total = (await db.prepare(countSql).bind(...params).first()).total;
 
-                // 2. 查询数据 (关联 variants 和 products 表获取名称)
+                // 2. 查询数据
                 const dataSql = `
                     SELECT c.*, v.name as variant_name, p.name as product_name 
                     FROM cards c
-                    LEFT JOIN variants v ON c.variant_id = v.id
-                    LEFT JOIN products p ON v.product_id = p.id
+                    ${joinSql}
                     WHERE ${whereSql} 
                     ORDER BY c.id DESC 
                     LIMIT ? OFFSET ?
                 `;
+                
                 // 追加分页参数
                 params.push(limit, offset);
                 
