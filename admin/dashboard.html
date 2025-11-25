@@ -17,75 +17,74 @@
         /* 布局容器 */
         .admin-container { display: flex; min-height: 100vh; width: 100%; }
         
-        /* 左侧侧边栏 (保持不变) */
+        /* --- 左侧侧边栏 (修改部分：改为 Flex 布局) --- */
         .admin-sidebar {
             width: 240px; background-color: #2c3e50; color: #ecf0f1;
-            position: fixed; height: 100%; overflow-y: auto; left: 0; top: 0;
+            position: fixed; height: 100%; left: 0; top: 0;
             z-index: 100; box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            
+            /* 新增：Flex 布局，为了把页脚推到底部 */
+            display: flex;
+            flex-direction: column;
         }
+        
         .sidebar-header {
             padding: 20px; text-align: center; font-size: 20px; font-weight: bold;
             border-bottom: 1px solid #34495e; background-color: #2c3e50;
+            flex-shrink: 0; /* 防止头部被压缩 */
         }
         .sidebar-header a { color: #ecf0f1; text-decoration: none; }
+        
+        /* 菜单列表容器 */
+        .sidebar-menu-container {
+            flex: 1; /* 占据剩余所有空间 */
+            overflow-y: auto; /* 只有菜单部分可以滚动 */
+        }
+
         .admin-sidebar ul { list-style: none; padding: 0; margin: 0; }
         .admin-sidebar ul li a {
             display: block; color: #bdc3c7; padding: 15px 20px;
             text-decoration: none; border-left: 3px solid transparent;
-            transition: all 0.3s; font-size: 14px; /* 侧边栏字体 */
+            transition: all 0.3s; font-size: 14px;
         }
         .admin-sidebar ul li a:hover { background-color: #34495e; color: #ffffff; }
         .admin-sidebar ul li a.active { background-color: #e74c3c; color: #ffffff; border-left-color: #c0392b; }
         .admin-sidebar ul li a i { margin-right: 10px; width: 20px; text-align: center; }
 
-        /* --- 右侧内容区域 (核心修改) --- */
+        /* --- 新增：侧边栏底部版本号样式 --- */
+        .sidebar-footer {
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #7f8c8d;
+            border-top: 1px solid #34495e;
+            background-color: #2c3e50;
+            flex-shrink: 0; /* 防止底部被压缩 */
+        }
+
+        /* --- 右侧内容区域 --- */
         .admin-content {
             margin-left: 240px; 
             width: calc(100% - 240px); 
-            padding: 20px; /* 稍微减小内边距 */
+            padding: 20px;
             transition: margin-left 0.3s;
-            
-            /* 1. 强制设置为 14px，对齐 MyBlog 风格 */
             font-size: 14px; 
         }
 
-        /* 2. 覆盖 Bootstrap 5 的默认标题大小，使其更秀气 */
         .admin-content h1, .admin-content .h1 { font-size: 24px; }
         .admin-content h2, .admin-content .h2 { font-size: 20px; }
         .admin-content h3, .admin-content .h3 { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
-        .admin-content h4, .admin-content .h4 { font-size: 16px; font-weight: bold; }
         
-        /* 退出按钮 */
         .logout-btn { color: #e74c3c !important; }
         .logout-btn:hover { background-color: rgba(231, 76, 60, 0.1) !important; }
 
-        /* 3. 卡片样式优化：更紧凑 */
         .card-box { 
-            border-radius: 4px; /* 圆角改小一点 */
-            border: none; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-            padding: 20px !important; /* 减小内边距 */
+            border-radius: 4px; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px !important;
         }
-        
-        /* 卡片内文字大小调整 */
-        .card-box .card-title {
-            font-size: 14px; 
-            opacity: 0.9;
-            margin: 0;
-        }
-        .card-box .card-number {
-            font-size: 28px; /* 原来是 display-4 (约60px)，现在改小 */
-            font-weight: bold;
-            margin-top: 10px;
-            margin-bottom: 0;
-            line-height: 1.2;
-        }
-        .card-box i {
-            font-size: 24px; /* 图标也改小 */
-            opacity: 0.6;
-        }
+        .card-box .card-title { font-size: 14px; opacity: 0.9; margin: 0; }
+        .card-box .card-number { font-size: 28px; font-weight: bold; margin-top: 10px; margin-bottom: 0; line-height: 1.2; }
+        .card-box i { font-size: 24px; opacity: 0.6; }
 
-        /* 响应式 */
         @media (max-width: 768px) {
             .admin-sidebar { transform: translateX(-100%); transition: transform 0.3s; }
             .admin-sidebar.active { transform: translateX(0); }
@@ -96,6 +95,8 @@
 </head>
 <body>
 
+<script src="../config.js"></script>
+
 <button class="btn btn-dark btn-sm d-md-none mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
 
 <div class="admin-container">
@@ -103,18 +104,25 @@
         <div class="sidebar-header">
             <a href="/admin/dashboard.html">XYRJ Faka</a>
         </div>
-        <ul>
-            <li><a href="/admin/dashboard.html" class="active"><i class="fas fa-tachometer-alt"></i> 仪表盘</a></li>
-            <li><a href="/admin/categories.html"><i class="fas fa-folder"></i> 商品分类</a></li>
-            <li><a href="/admin/products.html"><i class="fas fa-box"></i> 商品管理</a></li>
-            <li><a href="/admin/orders.html"><i class="fas fa-shopping-cart"></i> 订单管理</a></li>
-            <li><a href="/admin/cards.html"><i class="fas fa-ticket-alt"></i> 卡密管理</a></li>
-            <li><a href="/admin/payments.html"><i class="fas fa-credit-card"></i> 支付设置</a></li>
-            <li><a href="/admin/article_categories.html"><i class="fas fa-tags"></i> 文章分类</a></li>
-            <li><a href="/admin/articles.html"><i class="fas fa-newspaper"></i> 文章管理</a></li>
-            <li><a href="/admin/settings.html"><i class="fas fa-cog"></i> 系统设置</a></li>
-            <li><a href="javascript:logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
-        </ul>
+        
+        <div class="sidebar-menu-container">
+            <ul>
+                <li><a href="/admin/dashboard.html" class="active"><i class="fas fa-tachometer-alt"></i> 仪表盘</a></li>
+                <li><a href="/admin/categories.html"><i class="fas fa-folder"></i> 商品分类</a></li>
+                <li><a href="/admin/products.html"><i class="fas fa-box"></i> 商品管理</a></li>
+                <li><a href="/admin/orders.html"><i class="fas fa-shopping-cart"></i> 订单管理</a></li>
+                <li><a href="/admin/cards.html"><i class="fas fa-ticket-alt"></i> 卡密管理</a></li>
+                <li><a href="/admin/payments.html"><i class="fas fa-credit-card"></i> 支付设置</a></li>
+                <li><a href="/admin/article_categories.html"><i class="fas fa-tags"></i> 文章分类</a></li>
+                <li><a href="/admin/articles.html"><i class="fas fa-newspaper"></i> 文章管理</a></li>
+                <li><a href="/admin/settings.html"><i class="fas fa-cog"></i> 系统设置</a></li>
+                <li><a href="javascript:logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            Version <span id="app-version">Loading...</span>
+        </div>
     </div>
 
     <div class="admin-content">
@@ -154,28 +162,6 @@
             <div class="alert alert-info py-2" style="font-size: 13px;">
                 <i class="fas fa-info-circle"></i> 欢迎回来，当前系统运行正常。
             </div>
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-0">
-                    <table class="table table-striped table-hover mb-0" style="font-size: 14px;">
-                        <thead class="table-light">
-                            <tr>
-                                <th>系统信息</th>
-                                <th>状态</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>API 状态</td>
-                                <td><span class="badge bg-success">正常</span></td>
-                            </tr>
-                            <tr>
-                                <td>数据库连接</td>
-                                <td><span class="badge bg-success">正常</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -184,6 +170,14 @@
     const TOKEN = localStorage.getItem('ADMIN_TOKEN');
     if(!TOKEN) window.location.href = '/admin/index.html';
     
+    // --- 新增：显示版本号逻辑 ---
+    // 检查 window.SITE_CONFIG 是否存在 (由 config.js 提供)
+    if (window.SITE_CONFIG && window.SITE_CONFIG.version) {
+        document.getElementById('app-version').innerText = window.SITE_CONFIG.version;
+    } else {
+        document.getElementById('app-version').innerText = '1.0.0';
+    }
+
     function logout() { 
         if(confirm('确定要退出登录吗？')) {
             localStorage.removeItem('ADMIN_TOKEN'); 
