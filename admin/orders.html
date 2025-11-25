@@ -166,7 +166,7 @@
                                 <th>联系方式</th>
                                 <th>状态</th>
                                 <th>时间</th>
-                                <th style="width: 120px; text-align: center;" class="text-nowrap">操作</th>
+                                <th style="width: 140px; text-align: center;" class="text-nowrap">操作</th>
                             </tr>
                         </thead>
                         <tbody id="order-list"></tbody>
@@ -193,10 +193,12 @@
                     <li class="list-group-item"><strong>系统单号:</strong> <span id="v-out-trade-no"></span></li>
                     <li class="list-group-item"><strong>支付单号:</strong> <span id="v-trade-no"></span></li>
                     <li class="list-group-item"><strong>商品名称:</strong> <span id="v-product-name"></span></li>
+                    <li class="list-group-item"><strong>商品规格:</strong> <span id="v-variant-name"></span></li>
                     <li class="list-group-item"><strong>购买数量:</strong> <span id="v-quantity"></span></li>
                     <li class="list-group-item"><strong>订单总价:</strong> <span id="v-price" class="text-danger fw-bold"></span></li>
                     <li class="list-group-item"><strong>支付方式:</strong> <span id="v-payment"></span></li>
                     <li class="list-group-item"><strong>联系方式:</strong> <span id="v-contact"></span></li>
+                    <li class="list-group-item"><strong>查单密码:</strong> <span id="v-query-password"></span></li>
                     <li class="list-group-item"><strong>下单时间:</strong> <span id="v-create-time"></span></li>
                     <li class="list-group-item"><strong>支付时间:</strong> <span id="v-pay-time"></span></li>
                     <li class="list-group-item">
@@ -287,12 +289,14 @@
             let statusBadge = '<span class="status-badge status-closed">未知</span>';
             if(o.status == 1) statusBadge = '<span class="status-badge status-paid">已支付</span>';
             else if(o.status == 0) statusBadge = '<span class="status-badge status-pending">待支付</span>';
+            else if(o.status == 2) statusBadge = '<span class="status-badge status-paid">已完成</span>';
             else if(o.status == -1) statusBadge = '<span class="status-badge status-closed">已关闭</span>';
 
             return `
             <tr>
                 <td style="text-align: center;"><input class="form-check-input o-check" type="checkbox" value="${o.id}" onchange="updateBatchBtn()"></td>
-                <td><small>${o.id}</small></td> <td><div class="text-truncate" style="max-width: 150px;" title="${o.product_name}">${o.product_name}</div></td>
+                <td><small>${o.id}</small></td>
+                <td><div class="text-truncate" style="max-width: 150px;" title="${o.product_name}">${o.product_name}</div></td>
                 <td>￥${o.price}</td>
                 <td>${o.contact || '-'}</td>
                 <td>${statusBadge}</td>
@@ -300,6 +304,7 @@
                 <td style="text-align: center;">
                     <button class="btn btn-sm btn-outline-info" onclick="viewOrder('${o.id}')" title="详情"><i class="fas fa-eye"></i></button>
                     <button class="btn btn-sm btn-outline-primary" onclick="openEditModal('${o.id}')" title="编辑"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteOrder('${o.id}')" title="删除"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join('');
@@ -310,30 +315,33 @@
         document.getElementById('select-all').checked = false; updateBatchBtn();
     }
 
-    // 查看详情 (修复了 id 读取)
+    // 查看详情
     function viewOrder(id) {
         const o = allOrders.find(x => x.id === id);
         if(!o) return;
         
-        document.getElementById('v-out-trade-no').innerText = o.id; // [修复] 使用 o.id
+        document.getElementById('v-out-trade-no').innerText = o.id;
         document.getElementById('v-trade-no').innerText = o.trade_no || '-';
         document.getElementById('v-product-name').innerText = o.product_name;
+        // [新增] 显示规格
+        document.getElementById('v-variant-name').innerText = o.variant_name || '-';
         document.getElementById('v-quantity').innerText = o.quantity || 1;
-        document.getElementById('v-price').innerText = '￥' + o.price;
+        document.getElementById('v-price').innerText = '￥' + o.total_amount;
         document.getElementById('v-payment').innerText = o.payment_method || 'Unknown';
         document.getElementById('v-contact').innerText = o.contact || '-';
+        // [新增] 显示查单密码
+        document.getElementById('v-query-password').innerText = o.query_password || '-';
         document.getElementById('v-create-time').innerText = o.create_time ? new Date(o.create_time).toLocaleString() : '-';
         document.getElementById('v-pay-time').innerText = o.pay_time ? new Date(o.pay_time).toLocaleString() : '-';
         
         // 卡密展示
         const cardsDiv = document.getElementById('v-cards');
-        if (o.status == 1 && o.cards_sent) {
+        if (o.status >= 1 && o.cards_sent) {
             try {
                 const cards = JSON.parse(o.cards_sent);
                 if(Array.isArray(cards)) {
                     cardsDiv.innerText = cards.join('\n');
                 } else {
-                    // 兼容旧数据或特殊格式
                     cardsDiv.innerText = JSON.stringify(cards, null, 2);
                 }
             } catch(e) {
@@ -389,20 +397,26 @@
         btn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
     }
     async function batchDelete() {
-        const ids = Array.from(document.querySelectorAll('.o-check:checked')).map(cb => cb.value); // id 是字符串
+        const ids = Array.from(document.querySelectorAll('.o-check:checked')).map(cb => cb.value);
         if (ids.length === 0) return;
         if (!confirm(`确定要删除选中的 ${ids.length} 个订单吗？此操作不可恢复。`)) return;
         const btn = document.getElementById('batch-delete-btn');
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
         try {
-            // 注意：这里调用的是 batch_delete 接口
-            const res = await api('orders/batch_delete', { method: 'POST', body: JSON.stringify({ ids }) });
-            if(res.success) {
-                alert('批量删除完成'); loadOrders(1);
-            } else {
-                alert('删除失败: ' + (res.error || '未知错误'));
-            }
+            await Promise.all(ids.map(id => api('order/delete', { method: 'POST', body: JSON.stringify({ id }) })));
+            alert('批量删除完成'); loadOrders(1);
         } catch (error) { alert('部分删除失败'); loadOrders(1); } finally { btn.disabled = false; }
+    }
+    
+    // 单个删除 (新增)
+    async function deleteOrder(id) {
+        if (!confirm('确定要删除此订单吗？此操作不可恢复。')) return;
+        const res = await api('order/delete', { method: 'POST', body: JSON.stringify({ id }) });
+        if (res.success) {
+            loadOrders(1);
+        } else {
+            alert('删除失败: ' + (res.error || '未知错误'));
+        }
     }
 
     // 回车搜索
