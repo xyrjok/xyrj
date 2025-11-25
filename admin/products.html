@@ -15,65 +15,38 @@
         }
         
         /* 布局主容器 */
-        .admin-container { 
-            display: flex; 
-            min-height: 100vh; 
-            width: 100%; 
-        }
+        .admin-container { display: flex; min-height: 100vh; width: 100%; }
 
-        /* ================== 移动端专属顶栏 (MyBlog风格) ================== */
+        /* ================== 移动端专属顶栏 ================== */
         .admin-mobile-header {
-            display: none; /* PC端隐藏 */
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 50px;
-            background-color: #ffffff;
-            border-bottom: 1px solid #ddd;
-            padding: 0 15px;
-            z-index: 1001;
-            justify-content: space-between;
-            align-items: center;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 50px;
+            background-color: #ffffff; border-bottom: 1px solid #ddd; padding: 0 15px;
+            z-index: 1001; justify-content: space-between; align-items: center;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        .admin-mobile-header .mobile-logo a {
-            font-size: 18px; font-weight: bold; color: #333; text-decoration: none;
-        }
-        #mobile-menu-toggle {
-            background: none; border: none; font-size: 20px; color: #555; padding: 5px;
-        }
+        .admin-mobile-header .mobile-logo a { font-size: 18px; font-weight: bold; color: #333; text-decoration: none; }
+        #mobile-menu-toggle { background: none; border: none; font-size: 20px; color: #555; padding: 5px; }
 
-        /* ================== 遮罩层 (MyBlog风格) ================== */
+        /* ================== 遮罩层 ================== */
         .admin-overlay {
-            display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4);
-            z-index: 1001;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 1001; opacity: 0; transition: opacity 0.3s ease;
         }
-        .admin-overlay.is-visible {
-            display: block; opacity: 1;
-        }
+        .admin-overlay.is-visible { display: block; opacity: 1; }
         
         /* ================== 左侧侧边栏 ================== */
         .admin-sidebar {
-            width: 240px; 
-            background-color: #2c3e50; 
-            color: #ecf0f1;
-            position: fixed; 
-            height: 100%; 
-            left: 0; top: 0;
-            z-index: 100; 
+            width: 240px; background-color: #2c3e50; color: #ecf0f1;
+            position: fixed; height: 100%; left: 0; top: 0; z-index: 100; 
             box-shadow: 2px 0 5px rgba(0,0,0,0.05);
             display: flex; flex-direction: column;
             transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
         .sidebar-header {
             padding: 20px; text-align: center; font-size: 20px; font-weight: bold;
             border-bottom: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
         }
         .sidebar-header a { color: #ecf0f1; text-decoration: none; }
-        
         .sidebar-menu-container { flex: 1; overflow-y: auto; }
         .admin-sidebar ul { list-style: none; padding: 0; margin: 0; }
         .admin-sidebar ul li a {
@@ -84,7 +57,6 @@
         .admin-sidebar ul li a:hover { background-color: #34495e; color: #ffffff; }
         .admin-sidebar ul li a.active { background-color: #e74c3c; color: #ffffff; border-left-color: #c0392b; }
         .admin-sidebar ul li a i { margin-right: 10px; width: 20px; text-align: center; }
-
         .sidebar-footer {
             padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;
             border-top: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
@@ -95,9 +67,48 @@
             margin-left: 240px; width: calc(100% - 240px); padding: 20px;
             transition: margin-left 0.3s; font-size: 14px;
         }
-
         .admin-content h3 { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
         .logout-btn { color: #e74c3c !important; }
+
+        /* ================== Modal (弹窗) 风格优化 (新增) ================== */
+        .modal-content {
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            font-size: 14px; /* 强制模态框字体 14px */
+        }
+        .modal-header {
+            border-bottom: 1px solid #eee;
+            padding: 15px 20px;
+            background-color: #f8f9fa; /* 浅灰背景头 */
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            border-top: 1px solid #eee;
+            padding: 12px 20px;
+            background-color: #fff;
+        }
+        /* 表单控件优化 */
+        .form-label { font-weight: 500; margin-bottom: 6px; color: #333; }
+        .form-control, .form-select {
+            font-size: 14px;
+            padding: 8px 10px;
+            border-color: #ddd;
+            border-radius: 4px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #409EFF; /* MyBlog 主题色 */
+            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+        }
+        .btn-primary { background-color: #409EFF; border-color: #409EFF; }
+        .btn-primary:hover { background-color: #66b1ff; border-color: #66b1ff; }
+
 
         /* ================== 商品管理专属样式 ================== */
         .variant-row { background-color: #f8f9fa; border: 1px solid #e9ecef; }
@@ -138,22 +149,14 @@
 <script src="../config.js"></script>
 
 <div class="admin-mobile-header">
-    <div class="mobile-logo">
-        <a href="#">夏雨店铺系统</a>
-    </div>
-    <button id="mobile-menu-toggle">
-        <i class="fas fa-bars"></i>
-    </button>
+    <div class="mobile-logo"><a href="#">夏雨店铺系统</a></div>
+    <button id="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
 </div>
-
 <div class="admin-overlay"></div>
 
 <div class="admin-container">
     <div class="admin-sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <a href="/admin/dashboard.html">XYRJ Faka</a>
-        </div>
-        
+        <div class="sidebar-header"><a href="/admin/dashboard.html">XYRJ Faka</a></div>
         <div class="sidebar-menu-container">
             <ul>
                 <li><a href="/admin/dashboard.html"><i class="fas fa-tachometer-alt"></i> 仪表盘</a></li>
@@ -168,10 +171,7 @@
                 <li><a href="javascript:logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
             </ul>
         </div>
-
-        <div class="sidebar-footer">
-            夏雨店铺系统 Version <span id="app-version">...</span>
-        </div>
+        <div class="sidebar-footer">夏雨店铺系统 Version <span id="app-version">...</span></div>
     </div>
 
     <div class="admin-content">
@@ -196,8 +196,7 @@
                                 <th style="width: 80px; text-align: center;">操作</th>
                             </tr>
                         </thead>
-                        <tbody id="p-list">
-                            </tbody>
+                        <tbody id="p-list"></tbody>
                     </table>
                 </div>
             </div>
@@ -244,14 +243,14 @@
                 
                 <hr class="my-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">规格列表 (Variants)</h5>
+                    <h5 class="mb-0" style="font-size: 15px; font-weight: bold;">规格列表 (Variants)</h5>
                     <button class="btn btn-sm btn-outline-success" onclick="addVariantRow({})"><i class="fas fa-plus"></i> 添加规格</button>
                 </div>
                 <div id="v-list" class="mt-3"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="saveProduct()">保存商品</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveProduct()">保存商品</button>
             </div>
         </div>
     </div>
@@ -259,40 +258,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // === 1. 权限与基础配置 ===
+    // 权限与配置
     const TOKEN = localStorage.getItem('ADMIN_TOKEN');
     if(!TOKEN) window.location.href = '/admin/index.html';
-
-    // 版本号显示
     if (window.SITE_CONFIG && window.SITE_CONFIG.version) {
         document.getElementById('app-version').innerText = window.SITE_CONFIG.version;
     } else {
         document.getElementById('app-version').innerText = '1.0.0';
     }
-
-    function logout() { 
-        if(confirm('确定要退出登录吗？')) {
-            localStorage.removeItem('ADMIN_TOKEN'); 
-            window.location.href = '/admin/index.html'; 
-        }
-    }
-
+    function logout() { if(confirm('确定要退出登录吗？')) { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; } }
     async function api(path, options = {}) {
         options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
-        try {
-            const res = await fetch('/api/admin/' + path, options);
-            if(res.status === 401) {
-                logout();
-                return {};
-            }
-            return res.json();
-        } catch(e) {
-            console.error(e);
-            return {};
-        }
+        try { const res = await fetch('/api/admin/' + path, options); if(res.status === 401) { logout(); return {}; } return res.json(); } catch(e) { console.error(e); return {}; }
     }
 
-    // === 2. 页面逻辑 (商品管理) ===
+    // 页面逻辑
     let allProducts = [];
     let allCategories = [];
     const modal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -300,26 +280,17 @@
     async function loadData() {
         const tbody = document.getElementById('p-list');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">加载中...</td></tr>';
-
-        [allProducts, allCategories] = await Promise.all([
-            api('products/list'),
-            api('categories/list')
-        ]);
-        
+        [allProducts, allCategories] = await Promise.all([ api('products/list'), api('categories/list') ]);
         if (!allProducts || allProducts.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center">暂无商品</td></tr>';
             return;
         }
-
         tbody.innerHTML = allProducts.map(p => {
             const category = allCategories.find(c => c.id === p.category_id) || { name: '未知' };
             return `
             <tr>
                 <td>${p.id}</td>
-                <td>
-                    <div class="fw-bold text-truncate" style="max-width: 200px;">${p.name}</div>
-                    <small class="text-muted">${category.name}</small>
-                </td>
+                <td><div class="fw-bold text-truncate" style="max-width: 200px;">${p.name}</div><small class="text-muted">${category.name}</small></td>
                 <td class="text-center"><span class="badge bg-info text-dark">${p.variants.length}</span></td>
                 <td class="text-center">${p.sort}</td>
                 <td class="text-center"><span class="badge bg-${p.active ? 'success' : 'secondary'}">${p.active ? '上架' : '下架'}</span></td>
@@ -347,92 +318,40 @@
         modal.show();
     }
 
-    // 添加规格行
     function addVariantRow(v) {
         const vList = document.getElementById('v-list');
         const row = document.createElement('div');
         row.className = 'variant-row rounded p-3 mb-3 position-relative shadow-sm';
-        
         let wholesaleString = '';
         if (v.wholesale_config && Array.isArray(v.wholesale_config)) {
             wholesaleString = v.wholesale_config.map(tier => `${tier.qty}=${tier.price}`).join(', ');
         }
-        
         const autoDelivery = (v.auto_delivery !== undefined) ? v.auto_delivery : 1;
         const isAuto = (autoDelivery == 1);
 
         row.innerHTML = `
             <input type="hidden" class="v-id" value="${v.id || ''}">
-            
-            <button type="button" class="btn btn-sm btn-outline-success position-absolute top-0 end-0 m-2" 
-                    style="margin-right: 2.5rem !important; z-index: 10;" 
-                    title="保存所有更改" 
-                    onclick="saveProduct()">
-                <i class="fas fa-save"></i>
-            </button>
-            
+            <button type="button" class="btn btn-sm btn-outline-success position-absolute top-0 end-0 m-2" style="margin-right: 2.5rem !important; z-index: 10;" title="保存所有更改" onclick="saveProduct()"><i class="fas fa-save"></i></button>
             <button type="button" class="btn-close position-absolute top-0 end-0 m-2" aria-label="删除此规格" onclick="this.closest('.variant-row').remove()"></button>
-            
             <div class="variant-fields-container">
-                <div class="variant-field v-name">
-                    <label class="form-label-sm">规格名称</label>
-                    <input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="月卡">
-                </div>
-                <div class="variant-field v-color-wrap">
-                    <label class="form-label-sm">颜色</label>
-                    <input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFF">
-                </div>
-                <div class="variant-field v-mode-wrap">
-                    <label class="form-label-sm">发货模式</label>
-                    <select class="form-select form-select-sm v-auto_delivery" onchange="toggleStockInput(this)">
-                        <option value="1" ${isAuto ? 'selected' : ''}>自动</option>
-                        <option value="0" ${!isAuto ? 'selected' : ''}>手动</option>
-                    </select>
-                </div>
-                <div class="variant-field v-image_url">
-                    <label class="form-label-sm">图片链接</label>
-                    <input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="http://...">
-                </div>
-                <div class="variant-field v-price-wrap">
-                    <label class="form-label-sm">售价</label>
-                    <input type="number" step="0.01" class="form-control form-control-sm v-price" value="${v.price || ''}" placeholder="0.00">
-                </div>
-                <div class="variant-field v-wholesale_config">
-                    <label class="form-label-sm">批发 (5=3)</label>
-                    <input type="text" class="form-control form-control-sm v-wholesale_config" value="${wholesaleString}" placeholder="5=3">
-                </div>
-                <div class="variant-field v-stock-wrap">
-                    <label class="form-label-sm">库存</label>
-                    <input type="number" class="form-control form-control-sm v-stock" value="${v.stock || 0}" 
-                        ${isAuto ? 'disabled readonly title="自动从卡密库计算"' : ''}>
-                </div>
-                <div class="variant-field v-selection_label">
-                    <label class="form-label-sm">自选标签</label>
-                    <input type="text" class="form-control form-control-sm" name="v_selection_label" value="${v.selection_label || ''}" placeholder="自选卡密">
-                </div>
-                <div class="variant-field v-markup-wrap">
-                    <label class="form-label-sm">加价</label>
-                    <input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}">
-                </div>
-                <div class="variant-field v-sales-wrap">
-                    <label class="form-label-sm">销量</label>
-                    <input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly>
-                </div>
-            </div>
-        `;
+                <div class="variant-field v-name"><label class="form-label-sm">规格名称</label><input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="月卡"></div>
+                <div class="variant-field v-color-wrap"><label class="form-label-sm">颜色</label><input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFF"></div>
+                <div class="variant-field v-mode-wrap"><label class="form-label-sm">发货模式</label><select class="form-select form-select-sm v-auto_delivery" onchange="toggleStockInput(this)"><option value="1" ${isAuto ? 'selected' : ''}>自动</option><option value="0" ${!isAuto ? 'selected' : ''}>手动</option></select></div>
+                <div class="variant-field v-image_url"><label class="form-label-sm">图片链接</label><input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="http://..."></div>
+                <div class="variant-field v-price-wrap"><label class="form-label-sm">售价</label><input type="number" step="0.01" class="form-control form-control-sm v-price" value="${v.price || ''}" placeholder="0.00"></div>
+                <div class="variant-field v-wholesale_config"><label class="form-label-sm">批发 (5=3)</label><input type="text" class="form-control form-control-sm v-wholesale_config" value="${wholesaleString}" placeholder="5=3"></div>
+                <div class="variant-field v-stock-wrap"><label class="form-label-sm">库存</label><input type="number" class="form-control form-control-sm v-stock" value="${v.stock || 0}" ${isAuto ? 'disabled readonly title="自动从卡密库计算"' : ''}></div>
+                <div class="variant-field v-selection_label"><label class="form-label-sm">自选标签</label><input type="text" class="form-control form-control-sm" name="v_selection_label" value="${v.selection_label || ''}" placeholder="自选卡密"></div>
+                <div class="variant-field v-markup-wrap"><label class="form-label-sm">加价</label><input type="number" step="0.01" class="form-control form-control-sm v-custom_markup" value="${v.custom_markup || 0}"></div>
+                <div class="variant-field v-sales-wrap"><label class="form-label-sm">销量</label><input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly></div>
+            </div>`;
         vList.appendChild(row);
     }
-
     function toggleStockInput(selectEl) {
-        const row = selectEl.closest('.variant-row');
-        const stockInput = row.querySelector('.v-stock');
-        if (selectEl.value == "1") {
-            stockInput.disabled = true; stockInput.readOnly = true; stockInput.title = "自动从卡密库计算";
-        } else {
-            stockInput.disabled = false; stockInput.readOnly = false; stockInput.title = "";
-        }
+        const row = selectEl.closest('.variant-row'); const stockInput = row.querySelector('.v-stock');
+        if (selectEl.value == "1") { stockInput.disabled = true; stockInput.readOnly = true; stockInput.title = "自动从卡密库计算"; } 
+        else { stockInput.disabled = false; stockInput.readOnly = false; stockInput.title = ""; }
     }
-
     async function saveProduct() {
         const data = {
             id: document.getElementById('p-id').value || null,
@@ -445,78 +364,41 @@
             tags: document.getElementById('p-tags').value,
             variants: []
         };
-        
         try {
             document.querySelectorAll('#v-list .variant-row').forEach(row => {
                 const wholesaleInput = row.querySelector('input.v-wholesale_config');
                 const wholesaleValue = wholesaleInput ? wholesaleInput.value.trim() : '';
                 let wholesale_config = null;
                 if (wholesaleValue) {
-                    try {
-                        wholesale_config = wholesaleValue.split(',').map(p => p.trim()).filter(p => p.includes('=')).map(p => {
-                            const parts = p.split('=');
-                            return { qty: parseInt(parts[0]), price: parseFloat(parts[1]) };
-                        });
-                        if (wholesale_config.length === 0) wholesale_config = null;
-                    } catch (e) {}
+                    try { wholesale_config = wholesaleValue.split(',').map(p => p.trim()).filter(p => p.includes('=')).map(p => { const parts = p.split('='); return { qty: parseInt(parts[0]), price: parseFloat(parts[1]) }; }); if (wholesale_config.length === 0) wholesale_config = null; } catch (e) {}
                 }
-                
                 const price = parseFloat(row.querySelector('.v-price').value);
                 const nameVal = row.querySelector('input.v-name').value || '默认规格';
                 if (isNaN(price) || price < 0) throw new Error(`规格 "${nameVal}" 售价错误`);
-                
                 data.variants.push({
-                    id: row.querySelector('.v-id').value || null,
-                    name: nameVal,
-                    price: price,
-                    color: row.querySelector('.v-color').value || null,
-                    image_url: row.querySelector('input.v-image_url').value || null,
-                    selection_label: row.querySelector('[name="v_selection_label"]').value.trim() || null,
-                    custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0,
-                    wholesale_config: wholesale_config,
-                    auto_delivery: parseInt(row.querySelector('.v-auto_delivery').value),
-                    stock: parseInt(row.querySelector('.v-stock').value) || 0
+                    id: row.querySelector('.v-id').value || null, name: nameVal, price: price, color: row.querySelector('.v-color').value || null, image_url: row.querySelector('input.v-image_url').value || null, selection_label: row.querySelector('[name="v_selection_label"]').value.trim() || null, custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0, wholesale_config: wholesale_config, auto_delivery: parseInt(row.querySelector('.v-auto_delivery').value), stock: parseInt(row.querySelector('.v-stock').value) || 0
                 });
             });
             if (data.variants.length === 0) throw new Error('至少添加一个规格');
         } catch (e) { return alert('保存失败: ' + e.message); }
-
         const res = await api('product/save', { method: 'POST', body: JSON.stringify(data) });
-        if (res.success) { modal.hide(); loadData(); } 
-        else { alert('保存失败: ' + (res.error || '未知错误')); }
+        if (res.success) { modal.hide(); loadData(); } else { alert('保存失败: ' + (res.error || '未知错误')); }
     }
-    
-    // 初始化加载
     loadData();
 
-    // === 3. 移动端菜单逻辑 ===
+    // 移动端菜单
     const mobileBtn = document.getElementById('mobile-menu-toggle');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.querySelector('.admin-overlay');
-    const icon = mobileBtn.querySelector('i');
-
     function toggleMenu() {
         sidebar.classList.toggle('is-visible');
         overlay.classList.toggle('is-visible');
-        if (icon.classList.contains('fa-bars')) {
-            icon.classList.remove('fa-bars');
-            icon.classList.add('fa-times');
-        } else {
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-bars');
-        }
+        const icon = mobileBtn.querySelector('i');
+        icon.classList.toggle('fa-bars'); icon.classList.toggle('fa-times');
     }
-
-    mobileBtn.addEventListener('click', function(e) { e.stopPropagation(); toggleMenu(); });
-    overlay.addEventListener('click', function() { toggleMenu(); });
-
-    document.querySelectorAll('.admin-sidebar a').forEach(link => {
-        link.addEventListener('click', () => {
-            if (window.innerWidth <= 800 && sidebar.classList.contains('is-visible')) {
-                toggleMenu();
-            }
-        });
-    });
+    mobileBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+    overlay.addEventListener('click', toggleMenu);
+    document.querySelectorAll('.admin-sidebar a').forEach(link => { link.addEventListener('click', () => { if (window.innerWidth <= 800) toggleMenu(); }); });
 </script>
 </body>
 </html>
