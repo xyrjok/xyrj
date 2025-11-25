@@ -3,221 +3,413 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文章管理 - Faka Admin</title>
+    <title>文章管理 - 夏雨店铺系统</title>
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <style>
-        body { padding-top: 56px; }
-        .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; z-index: 100; padding: 48px 0 0; box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1); }
-        .main { margin-left: 240px; padding: 20px; }
-        @media (max-width: 767.98px) { .sidebar { display: none; } .main { margin-left: 0; } }
-        /* TinyMCE 弹窗层级问题修复 */
-        .tox-tinymce-aux { z-index: 1060 !important; }
+        /* ================== 全局样式 ================== */
+        body { 
+            background-color: #f4f7f6; 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+        }
+        
+        /* 布局主容器 */
+        .admin-container { display: flex; min-height: 100vh; width: 100%; }
+
+        /* ================== 移动端专属顶栏 ================== */
+        .admin-mobile-header {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 50px;
+            background-color: #ffffff; border-bottom: 1px solid #ddd; padding: 0 15px;
+            z-index: 1001; justify-content: space-between; align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .admin-mobile-header .mobile-logo a { font-size: 18px; font-weight: bold; color: #333; text-decoration: none; }
+        #mobile-menu-toggle { background: none; border: none; font-size: 20px; color: #555; padding: 5px; }
+
+        /* ================== 遮罩层 ================== */
+        .admin-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 1001; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .admin-overlay.is-visible { display: block; opacity: 1; }
+        
+        /* ================== 左侧侧边栏 ================== */
+        .admin-sidebar {
+            width: 240px; background-color: #2c3e50; color: #ecf0f1;
+            position: fixed; height: 100%; left: 0; top: 0; z-index: 100; 
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-header {
+            padding: 20px; text-align: center; font-size: 20px; font-weight: bold;
+            border-bottom: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
+        }
+        .sidebar-header a { color: #ecf0f1; text-decoration: none; }
+        .sidebar-menu-container { flex: 1; overflow-y: auto; }
+        .admin-sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .admin-sidebar ul li a {
+            display: block; color: #bdc3c7; padding: 15px 20px;
+            text-decoration: none; border-left: 3px solid transparent;
+            transition: all 0.3s; font-size: 14px;
+        }
+        .admin-sidebar ul li a:hover { background-color: #34495e; color: #ffffff; }
+        .admin-sidebar ul li a.active { background-color: #e74c3c; color: #ffffff; border-left-color: #c0392b; }
+        .admin-sidebar ul li a i { margin-right: 10px; width: 20px; text-align: center; }
+        .sidebar-footer {
+            padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;
+            border-top: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
+        }
+
+        /* ================== 右侧内容区域 ================== */
+        .admin-content {
+            margin-left: 240px; width: calc(100% - 240px); padding: 20px;
+            transition: margin-left 0.3s; font-size: 14px;
+        }
+        .admin-content h3 { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+        .logout-btn { color: #e74c3c !important; }
+
+        /* ================== Modal (弹窗) 风格优化 ================== */
+        .modal-content {
+            border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.15); font-size: 14px;
+        }
+        .modal-header {
+            border-bottom: 1px solid #eee; padding: 15px 20px; background-color: #f8f9fa;
+            border-top-left-radius: 4px; border-top-right-radius: 4px;
+        }
+        .modal-title { font-size: 16px; font-weight: bold; color: #333; }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            border-top: 1px solid #eee; padding: 12px 20px; background-color: #fff;
+        }
+        /* 表单控件优化 */
+        .form-label { font-weight: 500; margin-bottom: 6px; color: #333; }
+        .form-control, .form-select {
+            font-size: 14px; padding: 8px 10px; border-color: #ddd; border-radius: 4px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #409EFF; box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+        }
+        .btn-primary { background-color: #409EFF; border-color: #409EFF; }
+        .btn-primary:hover { background-color: #66b1ff; border-color: #66b1ff; }
+
+        /* ================== 响应式适配 ================== */
+        @media (max-width: 800px) {
+            .admin-mobile-header { display: flex; }
+            .admin-sidebar { left: -240px; z-index: 1002; }
+            .admin-sidebar.is-visible { left: 0; }
+            .admin-content { margin-left: 0; width: 100%; padding-top: 70px; }
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">CF Faka Admin</a>
-        <button class="btn btn-outline-light btn-sm px-4 me-3" onclick="logout()">退出</button>
-    </nav>
 
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item"><a class="nav-link" href="/admin/dashboard.html">仪表盘</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/categories.html">商品分类</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/products.html">商品管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/orders.html">订单管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/cards.html">卡密管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/payments.html">支付设置</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/article_categories.html">文章分类</a></li>
-                        <li class="nav-item"><a class="nav-link active fw-bold" href="/admin/articles.html">文章管理</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/admin/settings.html">系统设置</a></li>
-                    </ul>
-                </div>
-            </nav>
+<script src="../config.js"></script>
 
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h2>文章管理</h2>
-                    <button class="btn btn-primary" onclick="openModal()">+ 新建文章</button>
+<div class="admin-mobile-header">
+    <div class="mobile-logo"><a href="#">夏雨店铺系统</a></div>
+    <button id="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+</div>
+<div class="admin-overlay"></div>
+
+<div class="admin-container">
+    <div class="admin-sidebar" id="sidebar">
+        <div class="sidebar-header"><a href="/admin/dashboard.html">XYRJ Faka</a></div>
+        <div class="sidebar-menu-container">
+            <ul>
+                <li><a href="/admin/dashboard.html"><i class="fas fa-tachometer-alt"></i> 仪表盘</a></li>
+                <li><a href="/admin/categories.html"><i class="fas fa-folder"></i> 商品分类</a></li>
+                <li><a href="/admin/products.html"><i class="fas fa-box"></i> 商品管理</a></li>
+                <li><a href="/admin/orders.html"><i class="fas fa-shopping-cart"></i> 订单管理</a></li>
+                <li><a href="/admin/cards.html"><i class="fas fa-ticket-alt"></i> 卡密管理</a></li>
+                <li><a href="/admin/payments.html"><i class="fas fa-credit-card"></i> 支付设置</a></li>
+                <li><a href="/admin/article_categories.html"><i class="fas fa-tags"></i> 文章分类</a></li>
+                <li><a href="/admin/articles.html" class="active"><i class="fas fa-newspaper"></i> 文章管理</a></li>
+                <li><a href="/admin/settings.html"><i class="fas fa-cog"></i> 系统设置</a></li>
+                <li><a href="javascript:logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="sidebar-footer">夏雨店铺系统 Version <span id="app-version">...</span></div>
+    </div>
+
+    <div class="admin-content">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+            <h3>文章管理</h3>
+            <div class="d-flex align-items-center gap-2">
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <input type="text" class="form-control" id="search-input" placeholder="搜索文章标题..." onkeyup="renderArticles()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="renderArticles()"><i class="fas fa-search"></i></button>
                 </div>
+                <button class="btn btn-danger btn-sm" id="batch-delete-btn" onclick="batchDelete()" style="display: none;">
+                    <i class="fas fa-trash"></i> 批量删除 <span id="selected-count" class="badge bg-light text-dark rounded-pill ms-1">0</span>
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="openModal()">
+                    <i class="fas fa-plus"></i> 发布文章
+                </button>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover align-middle">
-                        <thead>
+                    <table class="table table-striped table-hover align-middle mb-0" style="font-size: 14px;">
+                        <thead class="table-light">
                             <tr>
-                                <th>ID</th>
+                                <th style="width: 40px; text-align: center;"><input class="form-check-input" type="checkbox" id="select-all"></th>
+                                <th style="width: 60px;">ID</th>
                                 <th>标题</th>
-                                <th>分类</th>
-                                <th>是否公告</th>
-                                <th>浏览量</th>
-                                <th>创建时间</th>
-                                <th>操作</th>
+                                <th style="width: 120px;">分类</th>
+                                <th style="width: 80px; text-align: center;">浏览量</th>
+                                <th style="width: 80px; text-align: center;">状态</th>
+                                <th style="width: 150px;">发布时间</th>
+                                <th style="width: 110px; text-align: center;" class="text-nowrap">操作</th>
                             </tr>
                         </thead>
                         <tbody id="article-list">
-                            <!-- JS 动态加载 -->
-                        </tbody>
+                            </tbody>
                     </table>
-                </div>
-            </main>
-        </div>
-    </div>
-
-    <!-- 文章编辑弹窗 -->
-    <div class="modal fade" id="article-modal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modal-title">新建文章</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="article-id">
-                    <div class="row">
-                        <div class="col-md-8 mb-3">
-                            <label class="form-label">文章标题</label>
-                            <input type="text" class="form-control" id="article-title">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">文章分类</label>
-                            <select id="article-category" class="form-select"></select>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">文章内容</label>
-                        <textarea id="article-content"></textarea>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="article-is-notice">
-                        <label class="form-check-label" for="article-is-notice">
-                            设为置顶公告 (将显示在首页)
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" onclick="saveArticle()">保存</button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- 引入 TinyMCE -->
-    <script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"></script>
-    <script>
-        const TOKEN = localStorage.getItem('ADMIN_TOKEN');
-        if (!TOKEN) window.location.href = '/admin/index.html';
-        function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
+<div class="modal fade" id="article-modal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title">发布文章</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="a-id">
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label">文章标题</label>
+                        <input type="text" class="form-control" id="a-title" placeholder="请输入文章标题" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">所属分类</label>
+                        <select class="form-select" id="a-category">
+                            <option value="1">默认分类</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="a-notice">
+                        <label class="form-check-label" for="a-notice">设为置顶公告 (在首页轮播或置顶显示)</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">文章内容 (支持 HTML)</label>
+                    <textarea class="form-control" id="a-content" rows="12" placeholder="在此输入文章内容..."></textarea>
+                    <div class="form-text text-muted" style="font-size: 12px;">可以使用 &lt;p&gt;, &lt;b&gt;, &lt;img src="..."&gt; 等 HTML 标签排版。</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveArticle()">保存文章</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 权限与配置
+    const TOKEN = localStorage.getItem('ADMIN_TOKEN');
+    if(!TOKEN) window.location.href = '/admin/index.html';
+    if (window.SITE_CONFIG && window.SITE_CONFIG.version) {
+        document.getElementById('app-version').innerText = window.SITE_CONFIG.version;
+    } else {
+        document.getElementById('app-version').innerText = '1.0.0';
+    }
+    function logout() { if(confirm('确定要退出登录吗？')) { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; } }
+    
+    async function api(path, options = {}) {
+        options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+        try { const res = await fetch('/api/admin/' + path, options); if(res.status === 401) { logout(); return {}; } return res.json(); } catch(e) { console.error(e); return {}; }
+    }
+
+    // 页面逻辑
+    const modal = new bootstrap.Modal(document.getElementById('article-modal'));
+    let allArticles = [];
+    let allCategories = [];
+
+    async function initData() {
+        // 并行加载文章列表和分类列表
+        const [articles, categories] = await Promise.all([
+            api('articles/list'),
+            api('article_categories/list')
+        ]);
         
-        async function api(path, options = {}) {
-            options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
-            const res = await fetch('/api/admin/' + path, options);
-            if (res.status === 401) logout();
-            return res.json();
-        }
-
-        const articleModal = new bootstrap.Modal(document.getElementById('article-modal'));
-        let allArticles = [];
-        let allCategories = [];
-
-        function formatTime(timestamp) {
-            return new Date(timestamp * 1000).toLocaleString();
-        }
-
-        async function loadArticles() {
-            allArticles = await api('articles/list');
-            const listEl = document.getElementById('article-list');
-            listEl.innerHTML = allArticles.map(a => `
-                <tr>
-                    <td>${a.id}</td>
-                    <td>${a.title}</td>
-                    <td><span class="badge bg-secondary">${a.category_name}</span></td>
-                    <td><span class="badge bg-${a.is_notice ? 'success' : 'light text-dark'}">${a.is_notice ? '是' : '否'}</span></td>
-                    <td>${a.view_count}</td>
-                    <td>${formatTime(a.created_at)}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-2" onclick="openModal(${a.id})">编辑</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteArticle(${a.id})">删除</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+        allArticles = Array.isArray(articles) ? articles : [];
+        allCategories = Array.isArray(categories) ? categories : [];
         
-        async function loadCategories() {
-            allCategories = await api('article_categories/list');
-            const catSelect = document.getElementById('article-category');
-            catSelect.innerHTML = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        renderArticles();
+    }
+
+    function renderArticles() {
+        const tbody = document.getElementById('article-list');
+        const searchInput = document.getElementById('search-input').value.toLowerCase().trim();
+        
+        const filtered = allArticles.filter(a => {
+            if(!searchInput) return true;
+            return a.title.toLowerCase().includes(searchInput);
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">暂无文章</td></tr>';
+            return;
         }
 
-        async function initEditor() {
-            await tinymce.init({
-                selector: '#article-content',
-                height: 400,
-                menubar: false,
-                plugins: 'lists link image media table code',
-                toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image media | table | code'
-            });
-        }
+        tbody.innerHTML = filtered.map(a => {
+            const createTime = a.created_at ? new Date(a.created_at * 1000).toLocaleString() : '-';
+            const categoryName = a.category_name || '默认分类';
+            const noticeBadge = a.is_notice ? '<span class="badge bg-danger">置顶</span>' : '<span class="badge bg-secondary">普通</span>';
 
-        async function openModal(id = null) {
-            await initEditor(); // 确保编辑器已初始化
-            await loadCategories(); // 确保分类已加载
-            
-            if (id) {
-                const article = allArticles.find(a => a.id === id);
-                document.getElementById('modal-title').innerText = '编辑文章';
-                document.getElementById('article-id').value = article.id;
-                document.getElementById('article-title').value = article.title;
-                document.getElementById('article-category').value = article.category_id;
-                document.getElementById('article-is-notice').checked = article.is_notice;
-                tinymce.get('article-content').setContent(article.content || '');
-            } else {
-                document.getElementById('modal-title').innerText = '新建文章';
-                document.getElementById('article-id').value = '';
-                document.getElementById('article-title').value = '';
-                document.getElementById('article-category').value = '1'; // 默认选中第一个
-                document.getElementById('article-is-notice').checked = false;
-                tinymce.get('article-content').setContent('');
+            // 高亮搜索词
+            let displayTitle = a.title;
+            if (searchInput) {
+                const regex = new RegExp(`(${searchInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                displayTitle = displayTitle.replace(regex, '<span class="bg-warning text-dark">$1</span>');
             }
-            articleModal.show();
-        }
-        
-        async function saveArticle() {
-            const data = {
-                id: document.getElementById('article-id').value || null,
-                title: document.getElementById('article-title').value,
-                content: tinymce.get('article-content').getContent(),
-                is_notice: document.getElementById('article-is-notice').checked ? 1 : 0,
-                category_id: document.getElementById('article-category').value
-            };
-            
-            if (!data.title) return alert('请填写标题');
-            
-            const res = await api('article/save', { method: 'POST', body: JSON.stringify(data) });
-            if (res.success) {
-                articleModal.hide();
-                tinymce.remove('#article-content'); // 必须销毁编辑器实例
-                loadArticles();
-            } else {
-                alert('保存失败: ' + (res.error || '未知错误'));
-            }
-        }
-        
-        async function deleteArticle(id) {
-            if (!confirm(`确定要删除文章 (ID: ${id}) 吗？`)) return;
-            const res = await api('article/delete', { method: 'POST', body: JSON.stringify({ id }) });
-            if (res.success) {
-                loadArticles();
-            } else {
-                alert('删除失败');
-            }
-        }
 
-        // 初始化
-        loadArticles();
-    </script>
+            return `
+            <tr>
+                <td style="text-align: center;">
+                    <input class="form-check-input a-check" type="checkbox" value="${a.id}" onchange="updateBatchBtn()">
+                </td>
+                <td>${a.id}</td>
+                <td>${displayTitle}</td>
+                <td><span class="badge bg-info text-dark">${categoryName}</span></td>
+                <td class="text-center">${a.view_count || 0}</td>
+                <td class="text-center">${noticeBadge}</td>
+                <td><small>${createTime}</small></td>
+                <td style="text-align: center;">
+                    <button class="btn btn-sm btn-outline-primary" onclick="openModal(${a.id})" title="编辑"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteArticle(${a.id})" title="删除"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+            `;
+        }).join('');
+        
+        document.getElementById('select-all').checked = false; 
+        updateBatchBtn();
+    }
+
+    // 编辑/新建
+    function openModal(id = null) {
+        // 填充分类下拉框
+        const catSelect = document.getElementById('a-category');
+        catSelect.innerHTML = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+        if (id) {
+            const article = allArticles.find(a => a.id === id);
+            if (!article) return;
+            
+            document.getElementById('modal-title').innerText = '编辑文章';
+            document.getElementById('a-id').value = article.id;
+            document.getElementById('a-title').value = article.title;
+            document.getElementById('a-category').value = article.category_id || 1;
+            document.getElementById('a-notice').checked = !!article.is_notice;
+            document.getElementById('a-content').value = article.content || '';
+        } else {
+            document.getElementById('modal-title').innerText = '发布文章';
+            document.getElementById('a-id').value = '';
+            document.getElementById('a-title').value = '';
+            // 默认选中第一个分类
+            if(allCategories.length > 0) document.getElementById('a-category').value = allCategories[0].id;
+            document.getElementById('a-notice').checked = false;
+            document.getElementById('a-content').value = '';
+        }
+        modal.show();
+    }
+
+    async function saveArticle() {
+        const data = {
+            id: document.getElementById('a-id').value || null,
+            title: document.getElementById('a-title').value,
+            category_id: document.getElementById('a-category').value,
+            is_notice: document.getElementById('a-notice').checked ? 1 : 0,
+            content: document.getElementById('a-content').value
+        };
+
+        if (!data.title) return alert('请输入文章标题');
+        
+        const res = await api('article/save', { method: 'POST', body: JSON.stringify(data) });
+        if (res.success) {
+            modal.hide();
+            initData(); // 重新加载列表
+        } else {
+            alert('保存失败: ' + (res.error || '未知错误'));
+        }
+    }
+
+    // 单个删除
+    async function deleteArticle(id) {
+        if (!confirm('确定要删除这篇文章吗？')) return;
+        const res = await api('article/delete', { method: 'POST', body: JSON.stringify({ id }) });
+        if (res.success) { 
+            initData(); 
+        } else { 
+            alert('删除失败: ' + (res.error || '未知错误')); 
+        }
+    }
+
+    // 批量删除
+    document.getElementById('select-all').addEventListener('change', function() {
+        const isChecked = this.checked;
+        document.querySelectorAll('.a-check').forEach(cb => { cb.checked = isChecked; });
+        updateBatchBtn();
+    });
+    function updateBatchBtn() {
+        const selectedCount = document.querySelectorAll('.a-check:checked').length;
+        const btn = document.getElementById('batch-delete-btn');
+        document.getElementById('selected-count').innerText = selectedCount;
+        btn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
+    }
+    async function batchDelete() {
+        const checkboxes = document.querySelectorAll('.a-check:checked');
+        if (checkboxes.length === 0) return;
+        if (!confirm(`确定要删除选中的 ${checkboxes.length} 篇文章吗？`)) return;
+
+        const btn = document.getElementById('batch-delete-btn');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
+
+        try {
+            const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            // 循环调用删除接口
+            await Promise.all(ids.map(id => api('article/delete', { method: 'POST', body: JSON.stringify({ id }) })));
+            alert('批量删除完成'); 
+            initData();
+        } catch (e) { 
+            alert('部分删除失败'); 
+            initData(); 
+        } finally { 
+            btn.disabled = false; 
+        }
+    }
+
+    initData();
+
+    // 移动端菜单
+    const mobileBtn = document.getElementById('mobile-menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.admin-overlay');
+    function toggleMenu() {
+        sidebar.classList.toggle('is-visible');
+        overlay.classList.toggle('is-visible');
+        const icon = mobileBtn.querySelector('i');
+        icon.classList.toggle('fa-bars'); icon.classList.toggle('fa-times');
+    }
+    mobileBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+    overlay.addEventListener('click', toggleMenu);
+    document.querySelectorAll('.admin-sidebar a').forEach(link => { link.addEventListener('click', () => { if (window.innerWidth <= 800) toggleMenu(); }); });
+</script>
 </body>
 </html>
