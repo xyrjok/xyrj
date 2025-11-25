@@ -1150,9 +1150,9 @@ async function handleApi(request, env, url) {
                                         .bind(order.variant_id, order.variant_id).run();
                                         
                             } else {
-                                await db.prepare("ROLLBACK").run();
-                                console.error(`Notify Error: Insufficient stock for order ${out_trade_no}`);
-                            }
+                                await db.prepare("COMMIT").run(); 
+                                    console.error(`Notify Warning: Order ${out_trade_no} paid but insufficient stock.`);
+                                }
                         } else {
                             // === 手动发货逻辑 ===
                             await db.batch([
