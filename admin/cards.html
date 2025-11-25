@@ -70,33 +70,22 @@
         .admin-content h3 { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
         .logout-btn { color: #e74c3c !important; }
 
-        /* ================== Modal (弹窗) 风格优化 ================== */
-        .modal-content {
-            border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.15); font-size: 14px;
-        }
-        .modal-header {
-            border-bottom: 1px solid #eee; padding: 15px 20px; background-color: #f8f9fa;
-            border-top-left-radius: 4px; border-top-right-radius: 4px;
-        }
-        .modal-title { font-size: 16px; font-weight: bold; color: #333; }
-        .modal-body { padding: 20px; }
-        .modal-footer {
-            border-top: 1px solid #eee; padding: 12px 20px; background-color: #fff;
-        }
-        /* 表单控件优化 */
-        .form-label { font-weight: 500; margin-bottom: 6px; color: #333; }
-        .form-control, .form-select {
-            font-size: 14px; padding: 8px 10px; border-color: #ddd; border-radius: 4px;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: #409EFF; box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-        }
+        /* ================== 风格优化 ================== */
+        .modal-content { border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.15); font-size: 14px; }
+        .modal-header { border-bottom: 1px solid #eee; padding: 15px 20px; background-color: #f8f9fa; }
+        .form-control, .form-select { font-size: 14px; }
         .btn-primary { background-color: #409EFF; border-color: #409EFF; }
-        .btn-primary:hover { background-color: #66b1ff; border-color: #66b1ff; }
-
-        /* 状态标签 */
+        
         .status-unsold { background-color: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
         .status-sold { background-color: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+        /* 卡密内容小字体优化 */
+        .card-code-text {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 12px; /* 调小字体 */
+            color: #444;
+            word-break: break-all;
+        }
 
         /* ================== 响应式适配 ================== */
         @media (max-width: 800px) {
@@ -140,24 +129,26 @@
     <div class="admin-content">
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
             <h3>卡密管理</h3>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <select class="form-select form-select-sm" id="filter-product" style="width: 150px;" onchange="loadVariants(this.value)">
-                    <option value="">选择商品...</option>
+            <div class="d-flex align-items-center gap-2 flex-wrap bg-white p-2 rounded shadow-sm w-100">
+                <select class="form-select form-select-sm" id="filter-product" style="width: 130px;" onchange="loadVariants(this.value)">
+                    <option value="">所有商品</option>
                 </select>
-                <select class="form-select form-select-sm" id="filter-variant" style="width: 150px;">
-                    <option value="">先选商品...</option>
+                <select class="form-select form-select-sm" id="filter-variant" style="width: 130px;" onchange="currentPage=1; loadCards()">
+                    <option value="">所有规格</option>
                 </select>
-                <button class="btn btn-outline-secondary btn-sm" onclick="loadCards()">
-                    <i class="fas fa-search"></i> 查询
-                </button>
                 
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <input type="text" class="form-control" id="search-kw" placeholder="搜索卡密内容..." onkeypress="if(event.keyCode==13) { currentPage=1; loadCards(); }">
+                    <button class="btn btn-outline-secondary" onclick="currentPage=1; loadCards()"><i class="fas fa-search"></i></button>
+                </div>
+
                 <div class="vr mx-2"></div>
 
+                <button class="btn btn-success btn-sm" onclick="openImportModal()">
+                    <i class="fas fa-file-import"></i> 导入
+                </button>
                 <button class="btn btn-danger btn-sm" id="batch-delete-btn" onclick="batchDelete()" style="display: none;">
                     <i class="fas fa-trash"></i> 删除 (<span id="selected-count">0</span>)
-                </button>
-                <button class="btn btn-success btn-sm" onclick="openImportModal()">
-                    <i class="fas fa-file-import"></i> 导入卡密
                 </button>
             </div>
         </div>
@@ -171,22 +162,42 @@
                                 <th style="width: 40px; text-align: center;"><input class="form-check-input" type="checkbox" id="select-all"></th>
                                 <th style="width: 60px;">ID</th>
                                 <th>卡密内容</th>
-                                <th style="width: 100px;">状态</th>
+                                <th>归属商品</th>
+                                <th style="width: 80px;">状态</th>
                                 <th style="width: 120px;">关联订单</th>
                                 <th style="width: 150px;">导入时间</th>
-                                <th style="width: 80px; text-align: center;">操作</th>
+                                <th style="width: 60px; text-align: center;">操作</th>
                             </tr>
                         </thead>
                         <tbody id="card-list">
-                            <tr><td colspan="7" class="text-center text-muted py-4">请先选择商品规格进行查询</td></tr>
+                            <tr><td colspan="8" class="text-center py-4">加载中...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted" style="font-size: 13px;">共 <span id="total-count">0</span> 条</span>
+                    <select class="form-select form-select-sm" id="page-size" style="width: 70px;" onchange="currentPage=1; loadCards()">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item"><button class="page-link" onclick="changePage(-1)" id="btn-prev">上一页</button></li>
+                        <li class="page-item disabled"><span class="page-link" id="page-num">1</span></li>
+                        <li class="page-item"><button class="page-link" onclick="changePage(1)" id="btn-next">下一页</button></li>
+                    </ul>
+                </nav>
+            </div>
         </div>
         
-        <div class="alert alert-info mt-3" style="font-size: 13px;">
-            <i class="fas fa-info-circle"></i> 提示：仅显示所选规格下的卡密。若要删除卡密，请先确保卡密未被售出（已售出的卡密需删除对应订单释放）。
+        <div class="alert alert-info mt-3 py-2" style="font-size: 12px;">
+            <i class="fas fa-info-circle"></i> 提示：支持输入关键字模糊搜索。导入卡密时支持 <code>卡密内容 #[备注信息]</code> 格式，备注信息将作为自选号码展示给用户。
         </div>
     </div>
 </div>
@@ -207,7 +218,10 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">卡密内容 (一行一个)</label>
-                    <textarea class="form-control" id="import-content" rows="8" placeholder="卡密123456&#10;卡密abcdef&#10;..."></textarea>
+                    <textarea class="form-control" id="import-content" rows="8" placeholder="例如：
+Card123456
+CardABCDEF #[推荐号码]"></textarea>
+                    <div class="form-text">支持 <code>#[备注]</code> 语法用于自选商品展示</div>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="import-remove-dup" checked>
@@ -224,14 +238,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // 权限与配置
     const TOKEN = localStorage.getItem('ADMIN_TOKEN');
     if(!TOKEN) window.location.href = '/admin/index.html';
-    if (window.SITE_CONFIG && window.SITE_CONFIG.version) {
-        document.getElementById('app-version').innerText = window.SITE_CONFIG.version;
-    } else {
-        document.getElementById('app-version').innerText = '1.0.0';
-    }
+    if (window.SITE_CONFIG && window.SITE_CONFIG.version) document.getElementById('app-version').innerText = window.SITE_CONFIG.version;
     function logout() { if(confirm('确定要退出登录吗？')) { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; } }
     
     async function api(path, options = {}) {
@@ -239,47 +248,100 @@
         try { const res = await fetch('/api/admin/' + path, options); if(res.status === 401) { logout(); return {}; } return res.json(); } catch(e) { console.error(e); return {}; }
     }
 
-    // 页面数据
     let allProducts = [];
+    let currentPage = 1;
+    let totalPages = 1;
     const importModal = new bootstrap.Modal(document.getElementById('importModal'));
 
-    // 加载商品和规格列表
     async function initData() {
         allProducts = await api('products/list');
         const pSelect = document.getElementById('filter-product');
-        pSelect.innerHTML = '<option value="">选择商品...</option>' + allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        // 保留"所有商品"选项
+        if(Array.isArray(allProducts)) {
+            allProducts.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.innerText = p.name;
+                pSelect.appendChild(opt);
+            });
+        }
+        // 初始化直接加载卡密
+        loadCards();
     }
 
-    // 级联加载规格
     function loadVariants(productId) {
         const vSelect = document.getElementById('filter-variant');
-        vSelect.innerHTML = '<option value="">选择规格...</option>';
-        if (!productId) return;
-
-        const product = allProducts.find(p => p.id == productId);
-        if (product && product.variants) {
-            vSelect.innerHTML += product.variants.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-        }
-    }
-
-    // 加载卡密列表
-    async function loadCards() {
-        const variantId = document.getElementById('filter-variant').value;
-        const tbody = document.getElementById('card-list');
-        
-        if (!variantId) {
-            alert('请先选择商品和规格');
+        vSelect.innerHTML = '<option value="">所有规格</option>';
+        if (!productId) {
+            // 如果清空了商品选择，重新加载所有卡密
+            currentPage = 1; loadCards();
             return;
         }
 
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">加载中...</td></tr>';
-        
-        // 注意：后端接口需要 variant_id
-        const res = await api(`cards/list?variant_id=${variantId}`);
-        const list = Array.isArray(res) ? res : [];
+        const product = allProducts.find(p => p.id == productId);
+        if (product && product.variants) {
+            product.variants.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.id;
+                opt.innerText = v.name;
+                vSelect.appendChild(opt);
+            });
+        }
+        currentPage = 1;
+        loadCards();
+    }
 
-        if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center">暂无卡密</td></tr>';
+    async function changePage(delta) {
+        const newPage = currentPage + delta;
+        if (newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            loadCards();
+        }
+    }
+
+    async function loadCards() {
+        const variantId = document.getElementById('filter-variant').value;
+        const kw = document.getElementById('search-kw').value;
+        const pageSize = document.getElementById('page-size').value;
+        const tbody = document.getElementById('card-list');
+        
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center"><div class="spinner-border spinner-border-sm"></div> 加载中...</td></tr>';
+        document.getElementById('select-all').checked = false; 
+        updateBatchBtn();
+
+        // 构建查询参数
+        const params = new URLSearchParams({
+            page: currentPage,
+            limit: pageSize
+        });
+        if(variantId) params.append('variant_id', variantId);
+        if(kw) params.append('kw', kw);
+
+        const res = await api(`cards/list?${params.toString()}`);
+        
+        // 兼容处理：检查返回格式是新版对象还是旧版数组（防止后端未更新导致报错）
+        let list = [];
+        let total = 0;
+
+        if (Array.isArray(res)) {
+            // 旧版API回退
+            list = res; 
+            total = res.length;
+        } else if (res.data) {
+            // 新版API
+            list = res.data;
+            total = res.total;
+        }
+
+        // 更新分页UI
+        document.getElementById('total-count').innerText = total;
+        document.getElementById('page-num').innerText = currentPage;
+        totalPages = Math.ceil(total / pageSize) || 1;
+        document.getElementById('btn-prev').parentElement.classList.toggle('disabled', currentPage <= 1);
+        document.getElementById('btn-next').parentElement.classList.toggle('disabled', currentPage >= totalPages);
+
+        if (!list || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">暂无卡密</td></tr>';
             return;
         }
 
@@ -287,38 +349,39 @@
             const isSold = c.status === 1;
             const statusHtml = isSold ? '<span class="status-sold">已售出</span>' : '<span class="status-unsold">未售出</span>';
             const createTime = c.created_at ? new Date(c.created_at * 1000).toLocaleString() : '-';
-            // 已售出的卡密不能删除 (后端限制)
             const deleteDisabled = isSold ? 'disabled title="已售出卡密不可删除"' : '';
+            
+            // 组装商品信息 (如果API返回了联表数据)
+            let productInfo = '-';
+            if (c.product_name || c.variant_name) {
+                productInfo = `<small class="text-muted d-block">${c.product_name || ''}</small>
+                               <span class="badge bg-light text-dark border">${c.variant_name || ''}</span>`;
+            }
 
             return `
             <tr>
                 <td style="text-align: center;">
                     <input class="form-check-input c-check" type="checkbox" value="${c.id}" ${isSold ? 'disabled' : ''} onchange="updateBatchBtn()">
                 </td>
-                <td>${c.id}</td>
-                <td class="text-break" style="max-width: 300px; font-family: monospace;">${c.content}</td>
+                <td><small>${c.id}</small></td>
+                <td><div class="card-code-text">${c.content}</div></td>
+                <td>${productInfo}</td>
                 <td>${statusHtml}</td>
-                <td>${c.order_id ? `<small>${c.order_id}</small>` : '-'}</td>
-                <td><small>${createTime}</small></td>
+                <td>${c.order_id ? `<a href="/admin/orders.html?id=${c.order_id}" class="text-decoration-none small">${c.order_id}</a>` : '-'}</td>
+                <td><small class="text-muted">${createTime}</small></td>
                 <td style="text-align: center;">
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCard(${c.id})" ${deleteDisabled}><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteCard(${c.id})" ${deleteDisabled}><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
             `;
         }).join('');
-        
-        document.getElementById('select-all').checked = false; updateBatchBtn();
     }
 
-    // 打开导入模态框
     function openImportModal() {
         const currentVariantId = document.getElementById('filter-variant').value;
         const importSelect = document.getElementById('import-variant-select');
         
-        // 同步当前的筛选选项到模态框
         importSelect.innerHTML = '<option value="">请选择规格...</option>';
-        
-        // 扁平化所有规格供选择 (方便直接选择)
         allProducts.forEach(p => {
             if(p.variants && p.variants.length > 0) {
                 p.variants.forEach(v => {
@@ -330,12 +393,10 @@
                 });
             }
         });
-        
         document.getElementById('import-content').value = '';
         importModal.show();
     }
 
-    // 执行导入
     async function importCards() {
         const variantId = document.getElementById('import-variant-select').value;
         let content = document.getElementById('import-content').value;
@@ -361,35 +422,32 @@
         if (res.imported !== undefined) {
             alert(`成功导入 ${res.imported} 条卡密`);
             importModal.hide();
-            // 如果当前列表显示的是该规格，刷新列表
-            if (document.getElementById('filter-variant').value == variantId) {
-                loadCards();
-            }
+            loadCards(); // 刷新列表
         } else {
             alert('导入失败: ' + (res.error || '未知错误'));
         }
         btn.disabled = false; btn.innerText = '开始导入';
     }
 
-    // 单个删除
     async function deleteCard(id) {
         if (!confirm('确定要删除这条卡密吗？')) return;
         const res = await api('card/delete', { method: 'POST', body: JSON.stringify({ id }) });
         if (res.success) { loadCards(); } else { alert('删除失败: ' + (res.error || '未知错误')); }
     }
 
-    // 批量删除
     document.getElementById('select-all').addEventListener('change', function() {
         const isChecked = this.checked;
         document.querySelectorAll('.c-check:not(:disabled)').forEach(cb => { cb.checked = isChecked; });
         updateBatchBtn();
     });
+
     function updateBatchBtn() {
         const selectedCount = document.querySelectorAll('.c-check:checked').length;
         const btn = document.getElementById('batch-delete-btn');
         document.getElementById('selected-count').innerText = selectedCount;
         btn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
     }
+
     async function batchDelete() {
         const checkboxes = document.querySelectorAll('.c-check:checked');
         if (checkboxes.length === 0) return;
@@ -398,9 +456,9 @@
         const btn = document.getElementById('batch-delete-btn');
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
 
-        // 循环调用删除接口 (后端无批量接口时)
         try {
             const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            // 并发删除，实际生产环境建议后端增加批量删除接口
             await Promise.all(ids.map(id => api('card/delete', { method: 'POST', body: JSON.stringify({ id }) })));
             alert('批量删除完成'); loadCards();
         } catch (e) { alert('部分删除失败'); loadCards(); } finally { btn.disabled = false; }
@@ -408,7 +466,7 @@
 
     initData();
 
-    // 移动端菜单
+    // Mobile menu handlers
     const mobileBtn = document.getElementById('mobile-menu-toggle');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.querySelector('.admin-overlay');
@@ -420,7 +478,6 @@
     }
     mobileBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
     overlay.addEventListener('click', toggleMenu);
-    document.querySelectorAll('.admin-sidebar a').forEach(link => { link.addEventListener('click', () => { if (window.innerWidth <= 800) toggleMenu(); }); });
 </script>
 </body>
 </html>
