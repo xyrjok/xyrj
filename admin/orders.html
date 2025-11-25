@@ -292,15 +292,18 @@
             else if(o.status == 2) statusBadge = '<span class="status-badge status-paid">已完成</span>';
             else if(o.status == -1) statusBadge = '<span class="status-badge status-closed">已关闭</span>';
 
+            // [修复] 时间乘以 1000
+            const createTimeStr = o.created_at ? new Date(o.created_at * 1000).toLocaleString() : '-';
+
             return `
             <tr>
                 <td style="text-align: center;"><input class="form-check-input o-check" type="checkbox" value="${o.id}" onchange="updateBatchBtn()"></td>
                 <td><small>${o.id}</small></td>
                 <td><div class="text-truncate" style="max-width: 150px;" title="${o.product_name}">${o.product_name}</div></td>
-                <td>￥${o.price}</td>
+                <td>￥${o.total_amount || o.price}</td>
                 <td>${o.contact || '-'}</td>
                 <td>${statusBadge}</td>
-                <td><small>${o.create_time ? new Date(o.create_time).toLocaleString() : '-'}</small></td>
+                <td><small>${createTimeStr}</small></td>
                 <td style="text-align: center;">
                     <button class="btn btn-sm btn-outline-info" onclick="viewOrder('${o.id}')" title="详情"><i class="fas fa-eye"></i></button>
                     <button class="btn btn-sm btn-outline-primary" onclick="openEditModal('${o.id}')" title="编辑"><i class="fas fa-edit"></i></button>
@@ -323,16 +326,16 @@
         document.getElementById('v-out-trade-no').innerText = o.id;
         document.getElementById('v-trade-no').innerText = o.trade_no || '-';
         document.getElementById('v-product-name').innerText = o.product_name;
-        // [新增] 显示规格
         document.getElementById('v-variant-name').innerText = o.variant_name || '-';
         document.getElementById('v-quantity').innerText = o.quantity || 1;
-        document.getElementById('v-price').innerText = '￥' + o.total_amount;
+        document.getElementById('v-price').innerText = '￥' + (o.total_amount || o.price);
         document.getElementById('v-payment').innerText = o.payment_method || 'Unknown';
         document.getElementById('v-contact').innerText = o.contact || '-';
-        // [新增] 显示查单密码
         document.getElementById('v-query-password').innerText = o.query_password || '-';
-        document.getElementById('v-create-time').innerText = o.create_time ? new Date(o.create_time).toLocaleString() : '-';
-        document.getElementById('v-pay-time').innerText = o.pay_time ? new Date(o.pay_time).toLocaleString() : '-';
+        
+        // [修复] 时间乘以 1000
+        document.getElementById('v-create-time').innerText = o.created_at ? new Date(o.created_at * 1000).toLocaleString() : '-';
+        document.getElementById('v-pay-time').innerText = o.paid_at ? new Date(o.paid_at * 1000).toLocaleString() : '-';
         
         // 卡密展示
         const cardsDiv = document.getElementById('v-cards');
@@ -408,7 +411,7 @@
         } catch (error) { alert('部分删除失败'); loadOrders(1); } finally { btn.disabled = false; }
     }
     
-    // 单个删除 (新增)
+    // 单个删除
     async function deleteOrder(id) {
         if (!confirm('确定要删除此订单吗？此操作不可恢复。')) return;
         const res = await api('order/delete', { method: 'POST', body: JSON.stringify({ id }) });
