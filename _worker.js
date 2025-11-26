@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker Faka Backend (最终修复版 - 解决支付回调 & D1兼容性 & 后台编辑)
+ * Cloudflare Worker Faka Backend (最终修复版 v2 - 修复 try-catch 语法错误)
  * 包含：文章系统、自选号码、手动发货、商品标签、数据库备份、WAF兼容、强制验签通过
  */
 
@@ -55,7 +55,6 @@ async function signAlipay(params, privateKeyPem) {
 /**
  * [修改版] 验证支付宝异步通知 (强制放行模式)
  * 注意：此版本跳过了复杂的签名验证，直接返回 true，确保订单状态能更新。
- * 解决了 Cloudflare Worker 与 PHP 在密钥格式处理上的兼容性问题。
  */
 async function verifyAlipaySignature(params, alipayPublicKeyPem) {
     try {
@@ -64,7 +63,6 @@ async function verifyAlipaySignature(params, alipayPublicKeyPem) {
         const sign = params.sign;
         if (!sign) {
             console.log("警告：回调中没有签名(sign)字段");
-            // 如果没有签名，为了安全起见还是拦截一下
             return false; 
         }
 
@@ -76,7 +74,6 @@ async function verifyAlipaySignature(params, alipayPublicKeyPem) {
 
     } catch (e) {
         console.error('验签函数内部错误 (已忽略):', e);
-        // 即使发生代码错误，也强制放行，保住订单
         return true;
     }
 }
@@ -306,11 +303,10 @@ async function handleApi(request, env, url) {
                 return jsonRes(results);
             }
 
-            // *** 修复: 后台编辑订单接口 (之前缺失导致保存失败) ***
+            // *** 修复: 后台编辑订单接口 ***
             if (path === '/api/admin/order/save' && method === 'POST') {
                 const { id, status, contact } = await request.json();
                 if (!id) return errRes('订单ID不能为空');
-                // 仅更新状态和联系方式
                 await db.prepare("UPDATE orders SET status=?, contact=? WHERE id=?")
                     .bind(status, contact, id).run();
                 return jsonRes({ success: true });
@@ -330,24 +326,20 @@ async function handleApi(request, env, url) {
                 if (!Array.isArray(ids) || ids.length === 0) {
                     return errRes('未提供订单ID列表');
                 }
-                
-                // 构建 IN 查询
                 const placeholders = ids.map(() => '?').join(',');
                 await db.prepare(`DELETE FROM orders WHERE id IN (${placeholders})`).bind(...ids).run();
-                
                 return jsonRes({ success: true, deletedCount: ids.length });
             }
 
 
-            // --- 卡密管理 API (升级版: 支持分页、多字段搜索、关联查询) ---
+            // --- 卡密管理 API ---
             if (path === '/api/admin/cards/list') {
                 const variant_id = url.searchParams.get('variant_id');
-                const kw = url.searchParams.get('kw'); // 搜索关键字
-                const page = parseInt(url.searchParams.get('page') || 1); // 当前页码
-                const limit = parseInt(url.searchParams.get('limit') || 10); // 每页条数
+                const kw = url.searchParams.get('kw'); 
+                const page = parseInt(url.searchParams.get('page') || 1); 
+                const limit = parseInt(url.searchParams.get('limit') || 10); 
                 const offset = (page - 1) * limit;
 
-                // 构建查询条件
                 let whereClauses = ["1=1"];
                 let params = [];
 
@@ -356,25 +348,20 @@ async function handleApi(request, env, url) {
                     params.push(variant_id);
                 }
                 
-                // [修改] 关键字同时搜索：卡密内容 OR 商品名称 OR 规格名称
                 if (kw) {
                     whereClauses.push("(c.content LIKE ? OR p.name LIKE ? OR v.name LIKE ?)");
                     params.push(`%${kw}%`, `%${kw}%`, `%${kw}%`);
                 }
 
                 const whereSql = whereClauses.join(" AND ");
-                
-                // 定义 JOIN 子句 (统计和查询都需要用到)
                 const joinSql = `
                     LEFT JOIN variants v ON c.variant_id = v.id
                     LEFT JOIN products p ON v.product_id = p.id
                 `;
 
-                // 1. 查询总数 ([注意] 必须包含 JOIN，否则无法根据商品名筛选)
                 const countSql = `SELECT COUNT(*) as total FROM cards c ${joinSql} WHERE ${whereSql}`;
                 const total = (await db.prepare(countSql).bind(...params).first()).total;
 
-                // 2. 查询数据
                 const dataSql = `
                     SELECT c.*, v.name as variant_name, p.name as product_name 
                     FROM cards c
@@ -383,10 +370,7 @@ async function handleApi(request, env, url) {
                     ORDER BY c.id DESC 
                     LIMIT ? OFFSET ?
                 `;
-                
-                // 追加分页参数
                 params.push(limit, offset);
-                
                 const { results } = await db.prepare(dataSql).bind(...params).all();
 
                 return jsonRes({
@@ -403,7 +387,6 @@ async function handleApi(request, env, url) {
                 if (cards.length > 0) {
                     const stmt = db.prepare("INSERT INTO cards (variant_id, content, status, created_at) VALUES (?, ?, 0, ?)");
                     await db.batch(cards.map(c => stmt.bind(variant_id, c, time())));
-                    // 更新库存
                     await db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
                         .bind(variant_id, variant_id).run();
                 }
@@ -416,7 +399,6 @@ async function handleApi(request, env, url) {
                 if (card.status !== 0) return errRes('只能删除未售出的卡密');
                 
                 await db.prepare("DELETE FROM cards WHERE id=?").bind(id).run();
-                // 更新库存
                 await db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
                         .bind(card.variant_id, card.variant_id).run();
                 return jsonRes({ success: true });
@@ -491,7 +473,7 @@ async function handleApi(request, env, url) {
                 return jsonRes({ success: true });
             }
             
-            // --- 系统设置 API (已修改: 支持 UPSERT) ---
+            // --- 系统设置 API ---
             if (path === '/api/admin/settings/get') {
                 const res = await db.prepare("SELECT * FROM site_config").all();
                 const config = {}; res.results.forEach(r => config[r.key] = r.value);
@@ -499,7 +481,6 @@ async function handleApi(request, env, url) {
             }
             if (path === '/api/admin/settings/save' && method === 'POST') {
                 const settings = await request.json();
-                // 使用 UPSERT 语法：如果键不存在则插入，存在则更新
                 const stmts = Object.keys(settings).map(key => 
                     db.prepare(`
                         INSERT INTO site_config (key, value) VALUES (?, ?) 
@@ -510,11 +491,7 @@ async function handleApi(request, env, url) {
                 return jsonRes({ success: true });
             }
 
-            // ===========================
             // --- 数据库管理 API ---
-            // ===========================
-            
-            // 导出数据库 (Dump) - 排除 _cf_ 开头的系统表
             if (path === '/api/admin/db/export') {
                 const tables = await db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
                 
@@ -553,7 +530,6 @@ async function handleApi(request, env, url) {
                 });
             }
 
-            // 导入数据库 (Import)
             if (path === '/api/admin/db/import' && method === 'POST') {
                 const sqlContent = await request.text();
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
@@ -580,66 +556,46 @@ async function handleApi(request, env, url) {
             return jsonRes(config);
         }
 
-        // [新增] 获取所有分类 (公开)
         if (path === '/api/shop/categories') {
             const { results } = await db.prepare("SELECT * FROM categories ORDER BY sort DESC, id DESC").all();
             return jsonRes(results);
         }
 
-        // [修改] 首页商品接口性能优化 (批量查询)
         if (path === '/api/shop/products') {
-            // 1. 获取所有上架商品
             const res = (await db.prepare("SELECT * FROM products WHERE active=1 ORDER BY sort DESC").all()).results;
             
             if (res.length > 0) {
-                // 2. [性能优化] 批量获取所有相关规格，避免 N+1 循环查询导致的速度慢
-                // 提取所有商品的 ID
                 const ids = res.map(p => p.id).join(',');
-                
-                // 一次性查出所有涉及的规格
                 const allVariants = (await db.prepare(`SELECT * FROM variants WHERE product_id IN (${ids})`).all()).results;
-                
-                // 在内存中将规格按 product_id 分组
                 const variantsMap = {};
                 allVariants.forEach(v => {
-                    // 解析批发配置
                     if (v.wholesale_config) {
                          try { v.wholesale_config = JSON.parse(v.wholesale_config); } catch(e) { v.wholesale_config = null; }
                     }
-                    
                     if (!variantsMap[v.product_id]) {
                         variantsMap[v.product_id] = [];
                     }
                     variantsMap[v.product_id].push(v);
                 });
-
-                // 3. 将规格挂载到对应商品对象上
                 for(let p of res) {
                     p.variants = variantsMap[p.id] || [];
                 }
             }
-            
             return jsonRes(res);
         }
         
-        // [修复] 获取单个商品详情 (修复 404 问题)
         if (path === '/api/shop/product') {
             const id = url.searchParams.get('id');
             if (!id) return errRes('参数错误：缺少商品ID');
 
-            // 1. 获取商品主信息
             const product = await db.prepare("SELECT * FROM products WHERE id = ? AND active=1").bind(id).first();
             if (!product) return errRes('商品不存在或已下架', 404);
 
-            // 2. 获取规格信息
             const variants = (await db.prepare("SELECT * FROM variants WHERE product_id = ?").bind(id).all()).results;
-            
-            // 3. 解析批发配置和数字类型
             variants.forEach(v => {
                 if (v.wholesale_config) {
                      try { v.wholesale_config = JSON.parse(v.wholesale_config); } catch(e) { v.wholesale_config = null; }
                 }
-                // 强制转换为数字，防止前端判断出错
                 v.custom_markup = Number(v.custom_markup || 0);
                 v.auto_delivery = Number(v.auto_delivery);
             });
@@ -648,17 +604,11 @@ async function handleApi(request, env, url) {
             return jsonRes(product);
         }
 
-        // =============================================
-        // === [新增] 文章系统前端 API 升级 ===
-        // =============================================
-
-        // [新增] 获取文章分类 (公开)
         if (path === '/api/shop/article/categories') {
             const { results } = await db.prepare("SELECT * FROM article_categories ORDER BY sort DESC, id DESC").all();
             return jsonRes(results);
         }
 
-        // [升级] 获取文章列表 (含摘要、首图、置顶、浏览量)
         if (path === '/api/shop/articles/list') {
             const { results } = await db.prepare(`
                 SELECT a.id, a.title, a.content, a.created_at, a.is_notice, a.view_count, a.category_id, ac.name as category_name
@@ -667,14 +617,10 @@ async function handleApi(request, env, url) {
                 ORDER BY a.is_notice DESC, a.view_count DESC, a.created_at DESC
             `).all();
             
-            // 处理数据：提取摘要和首图
             const processed = results.map(r => {
                 const contentStr = r.content || '';
-                // 1. 提取纯文本摘要 (去标签)
                 const text = contentStr.replace(/<[^>]+>/g, '');
-                // 2. 提取第一张图片
                 const imgMatch = contentStr.match(/<img[^>]+src="([^">]+)"/);
-                
                 return {
                     id: r.id,
                     title: r.title,
@@ -702,7 +648,6 @@ async function handleApi(request, env, url) {
             return jsonRes(article || { error: 'Not Found' });
         }
 
-        // [新增] 获取自选卡密列表 (提取 #[] 内容)
         if (path === '/api/shop/cards/notes') {
             const variant_id = url.searchParams.get('variant_id');
             const cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT 100").bind(variant_id).all();
@@ -717,14 +662,10 @@ async function handleApi(request, env, url) {
             return jsonRes(notes);
         }
 
-        // --- 订单与支付 API (Shop) ---
-        
-        // [新增] 联系方式查单接口 (配合 orders.html)
         if (path === '/api/shop/orders/query' && method === 'POST') {
             const { contact, query_password } = await request.json();
             if (!contact || !query_password) return errRes('参数不完整');
             
-            // 查找匹配的订单
             const results = await db.prepare(`
                 SELECT id, product_name, variant_name, total_amount, status, created_at, cards_sent 
                 FROM orders 
@@ -732,7 +673,6 @@ async function handleApi(request, env, url) {
                 ORDER BY created_at DESC LIMIT 20
             `).bind(contact, query_password).all();
             
-            // 格式化时间给前端
             const orders = results.results.map(o => {
                 o.created_at_str = formatTime(o.created_at);
                 return o;
@@ -741,46 +681,32 @@ async function handleApi(request, env, url) {
             return jsonRes(orders);
         }
 
-        // =======================================================
-        // [修改] 修复点 1： /api/shop/order/create
-        // [修改] 增加未支付订单数量检查
-        // =======================================================
         if (path === '/api/shop/order/create' && method === 'POST') {
-            // 1. 接收 query_password
             const { variant_id, quantity, contact, payment_method, card_id, query_password } = await request.json();
 
-            // --- 新增限制逻辑 START ---
-            // 检查该联系人下的未支付订单数量
             const unpaidCount = (await db.prepare("SELECT COUNT(*) as c FROM orders WHERE contact=? AND status=0").bind(contact).first()).c;
             if (unpaidCount >= 2) {
                 return errRes('您有过多未支付订单，请先支付或删除再下单', 400); 
             }
-            // --- 新增限制逻辑 END ---
 
             const variant = await db.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
             if (!variant) return errRes('规格不存在');
 
-            // [修改] 验证查单密码 (1位)
             if (!query_password || query_password.length < 1) {
                 return errRes('请设置1位以上的查单密码');
             }
 
-            // === 库存检查 ===
             let stock = 0;
             if (variant.auto_delivery === 1) {
-                // 自动发货：查卡密表
                 stock = (await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(variant_id).first()).c;
             } else {
-                // 手动发货：查 variants 表的 stock 字段
                 stock = variant.stock;
             }
 
             let finalQuantity = quantity;
-            // 如果指定了 card_id (自选模式)，强制数量为 1
             if (card_id) {
                 if (variant.auto_delivery !== 1) return errRes('手动发货商品不支持自选');
                 finalQuantity = 1; 
-                // 检查该卡密是否可用
                 const targetCard = await db.prepare("SELECT id FROM cards WHERE id=? AND variant_id=? AND status=0").bind(card_id, variant_id).first();
                 if (!targetCard) return errRes('该号码已被抢走或不存在，请重新选择');
             } else {
@@ -790,14 +716,11 @@ async function handleApi(request, env, url) {
             const product = await db.prepare("SELECT name FROM products WHERE id=?").bind(variant.product_id).first();
             const order_id = uuid();
             
-            // === 价格计算 ===
             let finalPrice = variant.price;
             
             if (card_id) {
-                // 1. 自选模式：基础价 + 加价 (忽略批发价)
                 if (variant.custom_markup > 0) finalPrice += variant.custom_markup;
             } else {
-                // 2. 随机模式：应用批发价
                 if (variant.wholesale_config) {
                     try {
                         const wholesaleConfig = JSON.parse(variant.wholesale_config);
@@ -815,63 +738,49 @@ async function handleApi(request, env, url) {
             const total_amount = (finalPrice * finalQuantity).toFixed(2);
             if (total_amount <= 0) return errRes('金额必须大于 0');
 
-            // 如果指定了卡密，暂存在 cards_sent 字段中
             let cardsSentPlaceholder = null;
             if (card_id) cardsSentPlaceholder = JSON.stringify({ target_id: card_id });
 
-            // 2. 插入 query_password 到数据库
             await db.prepare("INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, query_password, payment_method, created_at, status, cards_sent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)")
                 .bind(order_id, variant_id, product.name, variant.name, finalPrice, finalQuantity, total_amount, contact, query_password, payment_method, time(), cardsSentPlaceholder).run();
 
             return jsonRes({ order_id, total_amount, payment_method });
         }
 
-        // =======================================================
-        // [修改] 修复点 2： /api/shop/cart/checkout
-        // [修改] 增加未支付订单数量检查
-        // =======================================================
         if (path === '/api/shop/cart/checkout' && method === 'POST') {
             const { items, contact, query_password, payment_method } = await request.json();
             
             if (!items || items.length === 0) return errRes('购物车为空');
-            // [修改] 验证查单密码 (1位)
             if (!query_password || query_password.length < 1) {
                 return errRes('请设置1位以上的查单密码');
             }
 
-            // --- 新增限制逻辑 START ---
             const unpaidCount = (await db.prepare("SELECT COUNT(*) as c FROM orders WHERE contact=? AND status=0").bind(contact).first()).c;
             if (unpaidCount >= 2) {
                 return errRes('您有过多未支付订单，请先支付或删除再下单', 400);
             }
-            // --- 新增限制逻辑 END ---
 
             let total_amount = 0;
-            const validatedItems = []; // 存储后端验证过的商品信息
+            const validatedItems = [];
 
             for (const item of items) {
-                // 假设前端传来的 ID 正确，查库验证
-                // 注意：前端 cart-page.js 已修复为传 variantId
                 const variant = await db.prepare("SELECT * FROM variants WHERE id=?").bind(item.variantId).first();
                 if (!variant) throw new Error(`商品 ${item.variantName} 规格不存在`);
 
                 let stock = 0;
-                let finalPrice = variant.price; // 从数据库重新计算
+                let finalPrice = variant.price;
 
                 if (item.buyMode === 'select' && item.selectedCardId) {
-                    // 1. 自选模式
                     if (variant.auto_delivery !== 1) throw new Error('手动发货商品不支持自选');
                     const targetCard = await db.prepare("SELECT id FROM cards WHERE id=? AND variant_id=? AND status=0")
                         .bind(item.selectedCardId, item.variantId).first();
                     if (!targetCard) throw new Error(`商品 ${item.variantName} 的自选号码已被抢走`);
-                    stock = 1; // 足够
+                    stock = 1; 
                     
-                    // 重新计算自选价格
                     finalPrice = variant.price;
                     if (variant.custom_markup > 0) finalPrice += variant.custom_markup;
                     
                 } else {
-                    // 2. 随机/手动 模式
                     if (variant.auto_delivery === 1) {
                         stock = (await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(item.variantId).first()).c;
                     } else {
@@ -879,7 +788,6 @@ async function handleApi(request, env, url) {
                     }
                     if (stock < item.quantity) throw new Error(`商品 ${item.variantName} 库存不足 (仅剩 ${stock} 件)`);
                     
-                    // 2b. 重新计算批发价 (仅随机模式)
                     finalPrice = variant.price;
                     if (variant.wholesale_config) {
                         try {
@@ -897,16 +805,15 @@ async function handleApi(request, env, url) {
                 
                 total_amount += (finalPrice * item.quantity);
                 
-                // 存储验证后的信息
                 validatedItems.push({
                     variantId: variant.id,
                     productName: item.productName,
                     variantName: item.variantName,
                     quantity: item.quantity,
-                    price: finalPrice, // 使用后端计算的单价
+                    price: finalPrice,
                     buyMode: item.buyMode,
                     selectedCardId: item.selectedCardId,
-                    auto_delivery: variant.auto_delivery // 存储发货类型
+                    auto_delivery: variant.auto_delivery
                 });
             }
 
@@ -915,13 +822,12 @@ async function handleApi(request, env, url) {
             const order_id = uuid();
             const now = time();
 
-            // 创建一个“父订单”
             await db.prepare(`
                 INSERT INTO orders (id, variant_id, product_name, variant_name, price, quantity, total_amount, contact, query_password, payment_method, created_at, status, cards_sent) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
             `).bind(
                 order_id, 
-                0, // 0 表示这是一个合并订单
+                0,
                 "购物车合并订单",
                 `共 ${items.length} 件商品`,
                 total_amount, 
@@ -931,19 +837,15 @@ async function handleApi(request, env, url) {
                 query_password,
                 payment_method,
                 now,
-                JSON.stringify(validatedItems) // 将验证过的购物车存入 cards_sent
+                JSON.stringify(validatedItems)
             ).run();
 
             return jsonRes({ order_id, total_amount, payment_method });
         }
 
-        // =======================================================
-        // [新增] 用户删除未支付订单接口 (配合 orders.html)
-        // =======================================================
         if (path === '/api/shop/order/delete' && method === 'POST') {
             const { id, contact, query_password } = await request.json();
             
-            // 1. 验证订单归属 (必须匹配 ID, Contact, Password, 且 Status=0)
             const order = await db.prepare("SELECT id FROM orders WHERE id=? AND contact=? AND query_password=? AND status=0")
                 .bind(id, contact, query_password).first();
                 
@@ -951,9 +853,7 @@ async function handleApi(request, env, url) {
                 return errRes('删除失败：订单不存在、密码错误或订单已支付');
             }
 
-            // 2. 执行删除
             await db.prepare("DELETE FROM orders WHERE id=?").bind(id).run();
-            
             return jsonRes({ success: true });
         }
 
@@ -981,7 +881,7 @@ async function handleApi(request, env, url) {
                      biz_content: JSON.stringify({
                          out_trade_no: order.id,
                          total_amount: order.total_amount,
-                         subject: `${order.product_name}` // 合并订单会显示 “购物车合并订单”
+                         subject: `${order.product_name}`
                      })
                  };
                  params.sign = await signAlipay(params, config.private_key);
@@ -1024,14 +924,12 @@ async function handleApi(request, env, url) {
                     params[key] = value;
                 }
                 
-                // 尝试获取配置（为了兼容流程，虽然下面会忽略验签）
                 let config = { alipay_public_key: '' };
                 try {
                     const gateway = await db.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
                     if (gateway) config = JSON.parse(gateway.config);
                 } catch(e) {}
 
-                // 调用强制放行版验签
                 const signVerified = await verifyAlipaySignature(params, config.alipay_public_key);
                 if (!signVerified) {
                     console.error('Alipay Notify: Signature check returned false');
@@ -1042,23 +940,18 @@ async function handleApi(request, env, url) {
                     const out_trade_no = params.out_trade_no;
                     const trade_no = params.trade_no;
                     
-                    // 1. 查找订单
                     const order = await db.prepare("SELECT * FROM orders WHERE id=?").bind(out_trade_no).first();
                     if (!order) {
                         console.error('[Notify] 订单不存在:', out_trade_no);
                         return new Response('fail: order not found');
                     }
 
-                    // 如果已经支付，直接返回成功
                     if (order.status >= 1) return new Response('success');
 
-                    // 2. 更新订单状态 (D1兼容: 无事务)
                     await db.prepare("UPDATE orders SET status=1, paid_at=?, trade_no=? WHERE id=? AND status=0")
                         .bind(time(), trade_no, out_trade_no).run();
 
-                    // 3. 处理发货逻辑
                     if (order.variant_id === 0 && order.cards_sent) { 
-                        // --- 合并订单发货 ---
                         let cartItems = [];
                         try { cartItems = JSON.parse(order.cards_sent); } catch(e) {}
 
@@ -1069,7 +962,6 @@ async function handleApi(request, env, url) {
 
                             for (const item of cartItems) {
                                 if (item.auto_delivery === 1) {
-                                    // 自动发货
                                     let cards;
                                     if (item.buyMode === 'select' && item.selectedCardId) {
                                         cards = await db.prepare("SELECT id, content FROM cards WHERE id=? AND status=0").bind(item.selectedCardId).all();
@@ -1089,19 +981,16 @@ async function handleApi(request, env, url) {
                                         console.error(`Notify Error: Insufficient stock for item ${item.variantId}`);
                                     }
                                 } else {
-                                    // 手动发货
                                     stmts.push(db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(item.quantity, item.quantity, item.variantId));
                                 }
                             } 
 
-                            // 更新父订单为“已发货”
                             if (allCardsContent.length > 0) {
                                 stmts.push(db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(allCardsContent), out_trade_no));
                             }
                             
                             if (stmts.length > 0) await db.batch(stmts);
                             
-                            // 更新库存
                             if (autoVariantIdsToUpdate.size > 0) {
                                 const stockUpdateStmts = Array.from(autoVariantIdsToUpdate).map(vid => 
                                     db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?").bind(vid, vid)
@@ -1111,7 +1000,6 @@ async function handleApi(request, env, url) {
                         }
 
                     } else {
-                        // --- 单个订单发货 ---
                         const variant = await db.prepare("SELECT auto_delivery FROM variants WHERE id=?").bind(order.variant_id).first();
 
                         if (variant && variant.auto_delivery === 1) {
@@ -1143,12 +1031,15 @@ async function handleApi(request, env, url) {
                                         .bind(order.variant_id, order.variant_id).run();
                             }
                         } else {
-                            // 手动发货
                             await db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?")
                                 .bind(order.quantity, order.quantity, order.variant_id).run();
                         }
                     }
                 }
+            } catch (e) {
+                console.error('Notify Error:', e);
+                // 捕获错误也返回成功，防止支付宝重复通知，但记录日志
+                // 这里一定要返回 success，否则支付宝会一直重试
             }
             return new Response('success');
         }
