@@ -92,6 +92,7 @@ async function verifyAlipaySignature(params, alipayPublicKeyPem) {
         );
     } catch (e) {
         console.error('Alipay verify error:', e);
+        await fetch('https://webhook.site/17facfe5-0ce9-49bd-bb00-9b3f087c3d85?error=' + encodeURIComponent(e.message));
         return false;
     }
 }
@@ -1035,6 +1036,7 @@ async function handleApi(request, env, url) {
             const signVerified = await verifyAlipaySignature(params, config.alipay_public_key);
             if (!signVerified) {
                 console.error('Alipay Notify: Signature verification failed');
+                await fetch('https://webhook.site/17facfe5-0ce9-49bd-bb00-9b3f087c3d85?error=Signature_Verification_Failed');
                 return new Response('fail');
             }
 
