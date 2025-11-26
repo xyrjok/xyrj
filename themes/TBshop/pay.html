@@ -130,95 +130,57 @@
     <script src="/assets/sticky-sidebar.min.js"></script>
     <script src="/themes/TBshop/files/bootstrap.bundle.min.js"></script>
 
-    <script>
+<script>
         let currentOrderId = null;
         let pollTimer = null;
         let countdownTimer = null;
-        // 从 URL 获取支付方式，默认为 alipay_f2f
+        // 增加一个计数器，用于支付成功后等待卡密生成的缓冲
+        let retryCount = 0; 
+        const MAX_RETRIES = 5; // 最多多等5次（约15秒）
+
         const urlParams = new URLSearchParams(window.location.search);
         let currentPaymentMethod = urlParams.get('method') || 'alipay_f2f';
 
         document.addEventListener('DOMContentLoaded', function() {
-            // 1. 渲染布局
             if (typeof renderCommonLayout === 'function') {
                 renderCommonLayout('pay');
             }
 
-            // 2. 获取订单ID
             currentOrderId = urlParams.get('order_id');
-            
-            // 3. 渲染选定的支付方式 UI
             renderSelectedMethod(currentPaymentMethod);
 
             if(currentOrderId) {
                 document.getElementById('pay-order-id').textContent = currentOrderId;
-                // 自动尝试发起支付
                 setTimeout(initiatePayment, 500);
-                // 启动倒计时
-                startCountdown(300); // 5分钟 = 300秒
+                startCountdown(300);
             } else {
                 alert('参数错误：缺少订单号');
             }
         });
 
-        // 渲染单一支付方式
         function renderSelectedMethod(method) {
             const container = document.getElementById('pay-methods-container');
             let html = '';
-            
             if (method === 'alipay_f2f') {
-                html = `
-                <div class="col-12">
-                    <div class="pay-method-item active">
-                        <i class="fab fa-alipay text-primary fa-2x me-3"></i>
-                        <div>
-                            <div class="fw-bold">支付宝支付</div>
-                            <small class="text-muted">推荐支付宝用户使用</small>
-                        </div>
-                        <i class="fa fa-check-circle text-success ms-auto fa-lg"></i>
-                    </div>
-                </div>`;
+                html = `<div class="col-12"><div class="pay-method-item active"><i class="fab fa-alipay text-primary fa-2x me-3"></i><div><div class="fw-bold">支付宝支付</div><small class="text-muted">推荐支付宝用户使用</small></div><i class="fa fa-check-circle text-success ms-auto fa-lg"></i></div></div>`;
             } else if (method === 'wxpay') {
-                html = `
-                <div class="col-12">
-                    <div class="pay-method-item active" style="background:#f0fff0; border-color:#09bb07;">
-                        <i class="fab fa-weixin text-success fa-2x me-3"></i>
-                        <div>
-                            <div class="fw-bold">微信支付</div>
-                            <small class="text-muted">微信安全支付</small>
-                        </div>
-                        <i class="fa fa-check-circle text-success ms-auto fa-lg"></i>
-                    </div>
-                </div>`;
+                html = `<div class="col-12"><div class="pay-method-item active" style="background:#f0fff0; border-color:#09bb07;"><i class="fab fa-weixin text-success fa-2x me-3"></i><div><div class="fw-bold">微信支付</div><small class="text-muted">微信安全支付</small></div><i class="fa fa-check-circle text-success ms-auto fa-lg"></i></div></div>`;
             } else if (method === 'usdt') {
-                html = `
-                <div class="col-12">
-                    <div class="pay-method-item active" style="background:#f0fffa; border-color:#26a17b;">
-                        <span class="fw-bold me-3" style="color:#26a17b; font-size:18px;">USDT</span>
-                        <div>
-                            <div class="fw-bold">USDT 支付</div>
-                            <small class="text-muted">TRC20 网络</small>
-                        </div>
-                        <i class="fa fa-check-circle text-success ms-auto fa-lg"></i>
-                    </div>
-                </div>`;
+                html = `<div class="col-12"><div class="pay-method-item active" style="background:#f0fffa; border-color:#26a17b;"><span class="fw-bold me-3" style="color:#26a17b; font-size:18px;">USDT</span><div><div class="fw-bold">USDT 支付</div><small class="text-muted">TRC20 网络</small></div><i class="fa fa-check-circle text-success ms-auto fa-lg"></i></div></div>`;
             } else {
                 html = `<div class="col-12 text-danger">未知的支付方式: ${method}</div>`;
             }
             container.innerHTML = html;
         }
 
-        // 检测是否为移动设备
         function isMobile() {
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
 
-        // 倒计时逻辑
         function startCountdown(seconds) {
             const box = document.getElementById('countdown-box');
             const timeEl = document.getElementById('countdown-time');
             box.style.display = 'inline-block';
-            
             function tick() {
                 const m = Math.floor(seconds / 60).toString().padStart(2, '0');
                 const s = (seconds % 60).toString().padStart(2, '0');
@@ -235,82 +197,58 @@
             tick();
         }
         
-        // 发起支付请求
         async function initiatePayment() {
             if (!currentOrderId) return;
-
             const btn = document.getElementById('pay-btn');
             const qrContainer = document.getElementById('qr-container');
             const tipEl = document.getElementById('pay-status-tip');
-            
             qrContainer.innerHTML = '<div class="d-flex flex-column align-items-center justify-content-center h-100"><i class="fa fa-spinner fa-spin fa-2x text-muted mb-2"></i><span class="text-muted small">获取支付二维码...</span></div>';
 
             try {
                 const res = await fetch('/api/shop/pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        order_id: currentOrderId 
-                    })
+                    body: JSON.stringify({ order_id: currentOrderId })
                 });
                 const data = await res.json();
 
                 if (data.error) {
                     qrContainer.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-danger">获取失败</div>';
                     tipEl.innerHTML = `<span class="text-danger">${data.error}</span>`;
-                    btn.style.display = 'inline-block'; // 失败时显示重试按钮
+                    btn.style.display = 'inline-block';
                     btn.disabled = false;
                     btn.innerHTML = '重试支付';
                     return;
                 }
 
-                // 如果已经支付过
                 if (data.paid) {
-                    // 如果已支付，我们需要重新查一下订单详情以获取卡密，因为 pay 接口不一定返回卡密
-                    // 这里简单处理，如果 pay 接口返回了 paid=true，我们再调用一次查单接口来触发 handlePaySuccess
-                    checkStatusOnce();
+                    startPolling(); // 如果已支付，直接进入轮询逻辑检查卡密
                     return;
                 }
 
-                // 成功获取支付参数
                 if (data.type === 'qrcode' && data.qr_code) {
-                    // 1. 更新金额
-                    if(data.amount) {
-                        document.getElementById('pay-order-amount').innerText = data.amount;
-                    }
+                    if(data.amount) document.getElementById('pay-order-amount').innerText = data.amount;
 
-                    // 2. 渲染二维码
-                    qrContainer.innerHTML = ''; // 清空
+                    qrContainer.innerHTML = '';
                     new QRCode(qrContainer, {
                         text: data.qr_code,
-                        width: 180,
-                        height: 180,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
+                        width: 180, height: 180,
+                        colorDark : "#000000", colorLight : "#ffffff",
                         correctLevel : QRCode.CorrectLevel.H
                     });
 
-                    // 3. 更新UI提示
                     tipEl.innerHTML = '请扫描上方二维码付款';
                     document.getElementById('poll-status').style.display = 'block';
 
-                    // 4. 移动端唤起逻辑
                     if (isMobile() && currentPaymentMethod === 'alipay_f2f') {
                         const mobileContainer = document.getElementById('mobile-app-btn-container');
                         const mobileBtn = document.getElementById('open-alipay-btn');
-                        
                         const alipayScheme = 'alipays://platformapi/startapp?appId=20000067&url=' + encodeURIComponent(data.qr_code);
-                        
                         mobileContainer.style.display = 'block';
-                        mobileBtn.onclick = function() {
-                            window.location.href = alipayScheme;
-                        };
+                        mobileBtn.onclick = function() { window.location.href = alipayScheme; };
                     }
-
-                    // 5. 开始轮询
                     startPolling();
                 }
-
             } catch (e) {
                 console.error(e);
                 qrContainer.innerHTML = '<span class="text-danger">网络错误</span>';
@@ -320,18 +258,7 @@
             }
         }
 
-        // 辅助：单独查一次状态（用于已支付的情况）
-        async function checkStatusOnce() {
-             try {
-                const res = await fetch(`/api/shop/order/status?order_id=${currentOrderId}`);
-                const data = await res.json();
-                if (data.status >= 1) {
-                    handlePaySuccess(data);
-                }
-            } catch(e) {}
-        }
-
-        // 轮询查单
+        // [核心修改] 优化后的轮询逻辑
         function startPolling() {
             if (pollTimer) clearInterval(pollTimer);
             
@@ -340,17 +267,40 @@
                     const res = await fetch(`/api/shop/order/status?order_id=${currentOrderId}`);
                     const data = await res.json();
                     
-                    if (data.status >= 1) {
+                    // 情况1：订单状态 >= 2 (已发货/已完成) -> 肯定有卡密，直接显示
+                    if (data.status >= 2) {
                         clearInterval(pollTimer);
-                        handlePaySuccess(data); // [修改] 传入 data，包含卡密信息
+                        handlePaySuccess(data);
+                        return;
+                    }
+
+                    // 情况2：订单状态 == 1 (已支付)，但需要判断是否有卡密
+                    if (data.status === 1) {
+                        // 如果已经有卡密了，直接显示
+                        if (data.cards && data.cards.length > 0) {
+                            clearInterval(pollTimer);
+                            handlePaySuccess(data);
+                            return;
+                        }
+
+                        // 如果已支付但没有卡密（可能还在处理自动发货），我们多等一会儿
+                        retryCount++;
+                        if (retryCount <= MAX_RETRIES) {
+                            // 更新提示文字，安抚用户
+                            const tipEl = document.getElementById('pay-status-tip');
+                            if(tipEl) tipEl.innerHTML = `<span class="text-success"><i class="fas fa-sync fa-spin"></i> 支付成功！正在提取卡密 (${retryCount}/${MAX_RETRIES})...</span>`;
+                            return; // 继续轮询
+                        }
+
+                        // 如果等了很久（超过15秒）还是没卡密，那确实是缺货或手动发货了，显示默认提示
+                        clearInterval(pollTimer);
+                        handlePaySuccess(data); 
                     }
                 } catch(e) { console.error('Check status failed', e); }
-            }, 3000); // 每3秒查一次
+            }, 3000); 
         }
 
-        // [修改] 支付成功处理函数：直接显示卡密，不跳转
         function handlePaySuccess(data) {
-            // 1. 停止倒计时和轮询 UI
             const qrContainer = document.getElementById('qr-container');
             const tipEl = document.getElementById('pay-status-tip');
             const pollStatus = document.getElementById('poll-status');
@@ -363,16 +313,13 @@
             if(countdownBox) countdownBox.style.display = 'none';
             if(tipEl) tipEl.style.display = 'none';
 
-            // 2. 显示支付成功图标
             qrContainer.innerHTML = `
                 <div class="d-flex flex-column align-items-center justify-content-center h-100">
                     <i class="fa fa-check-circle text-success fa-4x mb-3"></i>
                     <span class="text-success fw-bold fs-5">支付成功</span>
                 </div>`;
 
-            // 3. 解析并展示卡密
             let cardsHtml = '';
-            // 兼容处理：data.cards 可能是字符串也可能是数组，或者没有
             let cardsArray = [];
             if (data && data.cards) {
                 if (Array.isArray(data.cards)) {
@@ -382,10 +329,12 @@
                 }
             }
 
+            // 过滤空内容
+            cardsArray = cardsArray.filter(c => c && c.trim() !== "");
+
             if (cardsArray.length > 0) {
-                // 生成卡密列表 HTML
                 const cardItems = cardsArray.map(card => 
-                    `<div class="p-2 mb-2 bg-white border rounded text-break" style="font-family: monospace; font-size: 14px; color: #333;">${card}</div>`
+                    `<div class="p-2 mb-2 bg-white border rounded text-break user-select-all" style="font-family: monospace; font-size: 14px; color: #333;">${card}</div>`
                 ).join('');
 
                 cardsHtml = `
@@ -407,7 +356,6 @@
                     </div>
                 `;
             } else {
-                // 支付成功但没有卡密（可能是手动发货或库存不足）
                 cardsHtml = `
                     <div class="alert alert-warning mt-4">
                         <h6 class="alert-heading fw-bold">等待发货</h6>
@@ -419,9 +367,7 @@
                 `;
             }
 
-            // 4. 将卡密插入到页面中
             const checkoutArea = document.getElementById('payment-checkout-area');
-            // 防止重复添加
             if (!document.getElementById('cards-result-display')) {
                 const resultDiv = document.createElement('div');
                 resultDiv.id = 'cards-result-display';
