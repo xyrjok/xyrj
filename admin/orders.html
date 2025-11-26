@@ -34,7 +34,7 @@
         }
         .admin-overlay.is-visible { display: block; opacity: 1; }
         
-        /* ================== 左侧侧边栏 ================== */
+        /* ================== 左侧侧边栏 (已同步 cards.html 样式) ================== */
         .admin-sidebar {
             width: 240px; background-color: #2c3e50; color: #ecf0f1;
             position: fixed; height: 100%; left: 0; top: 0; z-index: 100; 
@@ -42,7 +42,6 @@
             display: flex; flex-direction: column;
             transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        /* 侧边栏内部样式由 admin-layout.js 填充，这里只保留容器基础样式 */
         .sidebar-header {
             padding: 20px; text-align: center; font-size: 20px; font-weight: bold;
             border-bottom: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
@@ -56,6 +55,7 @@
             transition: all 0.3s; font-size: 14px;
         }
         .admin-sidebar ul li a:hover { background-color: #34495e; color: #ffffff; }
+        /* 激活状态样式 */
         .admin-sidebar ul li a.active { background-color: #e74c3c; color: #ffffff; border-left-color: #c0392b; }
         .admin-sidebar ul li a i { margin-right: 10px; width: 20px; text-align: center; }
         .sidebar-footer {
@@ -71,7 +71,7 @@
         .admin-content h3 { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
         .logout-btn { color: #e74c3c !important; }
 
-        /* ================== Modal (弹窗) 风格优化 ================== */
+        /* ================== Modal & UI 风格优化 ================== */
         .modal-content {
             border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.15); font-size: 14px;
         }
@@ -84,7 +84,6 @@
         .modal-footer {
             border-top: 1px solid #eee; padding: 12px 20px; background-color: #fff;
         }
-        /* 表单控件优化 */
         .form-label { font-weight: 500; margin-bottom: 6px; color: #333; }
         .form-control, .form-select {
             font-size: 14px; padding: 8px 10px; border-color: #ddd; border-radius: 4px;
@@ -97,9 +96,9 @@
 
         /* 订单状态标签 */
         .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-        .status-paid { background-color: #e1f3d8; color: #67c23a; }
-        .status-pending { background-color: #fdf6ec; color: #e6a23c; }
-        .status-closed { background-color: #f4f4f5; color: #909399; }
+        .status-paid { background-color: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
+        .status-pending { background-color: #fdf6ec; color: #e6a23c; border: 1px solid #faecd8; }
+        .status-closed { background-color: #f4f4f5; color: #909399; border: 1px solid #e9e9eb; }
 
         /* ================== 响应式适配 ================== */
         @media (max-width: 800px) {
@@ -121,16 +120,36 @@
 <div class="admin-overlay"></div>
 
 <div class="admin-container">
-    <div class="admin-sidebar" id="sidebar"></div>
+    <div class="admin-sidebar" id="sidebar">
+        <div class="sidebar-header"><a href="/admin/dashboard.html">XYRJ Faka</a></div>
+        <div class="sidebar-menu-container">
+            <ul>
+                <li><a href="/admin/dashboard.html"><i class="fas fa-tachometer-alt"></i> 仪表盘</a></li>
+                <li><a href="/admin/categories.html"><i class="fas fa-folder"></i> 商品分类</a></li>
+                <li><a href="/admin/products.html"><i class="fas fa-box"></i> 商品管理</a></li>
+                <li><a href="/admin/orders.html" class="active"><i class="fas fa-shopping-cart"></i> 订单管理</a></li>
+                <li><a href="/admin/cards.html"><i class="fas fa-ticket-alt"></i> 卡密管理</a></li>
+                <li><a href="/admin/payments.html"><i class="fas fa-credit-card"></i> 支付设置</a></li>
+                <li><a href="/admin/article_categories.html"><i class="fas fa-tags"></i> 文章分类</a></li>
+                <li><a href="/admin/articles.html"><i class="fas fa-newspaper"></i> 文章管理</a></li>
+                <li><a href="/admin/settings.html"><i class="fas fa-cog"></i> 系统设置</a></li>
+                <li><a href="javascript:logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            </ul>
+        </div>
+        <div class="sidebar-footer">夏雨店铺系统 Version <span id="app-version">...</span></div>
+    </div>
 
     <div class="admin-content">
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
             <h3>订单管理</h3>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap bg-white p-2 rounded shadow-sm w-100">
                 <div class="input-group input-group-sm" style="width: 250px;">
-                    <input type="text" class="form-control" id="search-input" placeholder="搜索订单号/联系方式...">
+                    <input type="text" class="form-control" id="search-input" placeholder="搜索订单号/联系方式..." onkeypress="if(event.keyCode==13) loadOrders()">
                     <button class="btn btn-outline-secondary" type="button" onclick="loadOrders()"><i class="fas fa-search"></i></button>
                 </div>
+                
+                <div class="vr mx-2"></div>
+                
                 <button class="btn btn-danger btn-sm" id="batch-delete-btn" onclick="batchDelete()" style="display: none;">
                     <i class="fas fa-trash"></i> 删除 (<span id="selected-count">0</span>)
                 </button>
@@ -157,11 +176,20 @@
                     </table>
                 </div>
             </div>
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2" id="pagination-container" style="display:none;">
+                 <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted" style="font-size: 13px;">共 <span id="total-count">0</span> 条 (每页50条)</span>
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item"><button class="page-link" onclick="changePage(-1)" id="btn-prev">上一页</button></li>
+                        <li class="page-item disabled"><span class="page-link" id="page-num">1</span></li>
+                        <li class="page-item"><button class="page-link" onclick="changePage(1)" id="btn-next">下一页</button></li>
+                    </ul>
+                </nav>
+            </div>
         </div>
         
-        <div class="d-flex justify-content-center mt-3">
-            <button class="btn btn-sm btn-outline-primary" id="load-more-btn" onclick="loadMore()" style="display:none;">加载更多</button>
-        </div>
     </div>
 </div>
 
@@ -233,22 +261,29 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script src="admin-layout.js"></script>
-
 <script>
     // 权限与配置
     const TOKEN = localStorage.getItem('ADMIN_TOKEN');
     if(!TOKEN) window.location.href = '/admin/index.html';
     
+    // 版本显示
+    if (window.SITE_CONFIG && window.SITE_CONFIG.version) {
+        document.getElementById('app-version').innerText = window.SITE_CONFIG.version;
+    }
+
+    // 退出登录函数 (补充)
+    function logout() {
+        if(confirm('确定要退出登录吗？')) {
+            localStorage.removeItem('ADMIN_TOKEN');
+            window.location.href = '/admin/index.html';
+        }
+    }
+
     async function api(path, options = {}) {
         options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
         try { 
             const res = await fetch('/api/admin/' + path, options); 
-            if(res.status === 401) { 
-                localStorage.removeItem('ADMIN_TOKEN'); 
-                window.location.href = '/admin/index.html';
-                return {}; 
-            } 
+            if(res.status === 401) { logout(); return {}; } 
             return res.json(); 
         } catch(e) { console.error(e); return {}; }
     }
@@ -258,22 +293,35 @@
     const editModal = new bootstrap.Modal(document.getElementById('editModal'));
     let allOrders = [];
     let currentPage = 1;
+    let hasMore = true;
 
     async function loadOrders(page = 1) {
+        currentPage = page;
         const tbody = document.getElementById('order-list');
-        if(page === 1) tbody.innerHTML = '<tr><td colspan="8" class="text-center">加载中...</td></tr>';
+        if(page === 1) tbody.innerHTML = '<tr><td colspan="8" class="text-center"><div class="spinner-border spinner-border-sm"></div> 加载中...</td></tr>';
         
         const search = document.getElementById('search-input').value;
-        const res = await api(`orders/list?page=${page}&search=${encodeURIComponent(search)}`);
+        // 假设API分页每页50条
+        const res = await api(`orders/list?page=${page}&limit=50&search=${encodeURIComponent(search)}`);
         
         const list = Array.isArray(res) ? res : (res.data || []);
         if (page === 1) { allOrders = list; tbody.innerHTML = ''; } 
-        else { allOrders = allOrders.concat(list); }
+        else { allOrders = list; tbody.innerHTML = ''; } // 翻页逻辑
 
-        if (list.length === 0 && page === 1) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center">暂无订单</td></tr>';
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">暂无订单</td></tr>';
+            document.getElementById('pagination-container').style.display = 'none';
             return;
         }
+
+        // 简易前端分页处理 (如果后端未完全实现分页)
+        document.getElementById('pagination-container').style.display = 'flex';
+        document.getElementById('total-count').innerText = list.length >= 50 ? '50+' : list.length;
+        document.getElementById('page-num').innerText = page;
+        
+        // 按钮状态
+        document.getElementById('btn-prev').parentElement.classList.toggle('disabled', page <= 1);
+        document.getElementById('btn-next').parentElement.classList.toggle('disabled', list.length < 50);
 
         const html = list.map(o => {
             let statusBadge = '<span class="status-badge status-closed">未知</span>';
@@ -294,17 +342,22 @@
                 <td>${statusBadge}</td>
                 <td><small>${createTimeStr}</small></td>
                 <td style="text-align: center;">
-                    <button class="btn btn-sm btn-outline-info" onclick="viewOrder('${o.id}')" title="详情"><i class="fas fa-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-primary" onclick="openEditModal('${o.id}')" title="编辑"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteOrder('${o.id}')" title="删除"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-outline-info border-0" onclick="viewOrder('${o.id}')" title="详情"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-primary border-0" onclick="openEditModal('${o.id}')" title="编辑"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger border-0 ms-1" onclick="deleteOrder('${o.id}')" title="删除"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join('');
 
-        if(page === 1) tbody.innerHTML = html;
-        else tbody.insertAdjacentHTML('beforeend', html);
-        
-        document.getElementById('select-all').checked = false; updateBatchBtn();
+        tbody.innerHTML = html;
+        document.getElementById('select-all').checked = false; 
+        updateBatchBtn();
+    }
+
+    function changePage(delta) {
+        const newPage = currentPage + delta;
+        if (newPage < 1) return;
+        loadOrders(newPage);
     }
 
     // 查看详情
@@ -368,7 +421,7 @@
         
         if(res.success) {
             editModal.hide();
-            loadOrders(1);
+            loadOrders(currentPage);
         } else {
             alert('保存失败: ' + (res.error || '未知错误'));
         }
@@ -394,8 +447,8 @@
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
         try {
             await Promise.all(ids.map(id => api('order/delete', { method: 'POST', body: JSON.stringify({ id }) })));
-            alert('批量删除完成'); loadOrders(1);
-        } catch (error) { alert('部分删除失败'); loadOrders(1); } finally { btn.disabled = false; }
+            alert('批量删除完成'); loadOrders(currentPage);
+        } catch (error) { alert('部分删除失败'); loadOrders(currentPage); } finally { btn.disabled = false; }
     }
     
     // 单个删除
@@ -403,16 +456,24 @@
         if (!confirm('确定要删除此订单吗？此操作不可恢复。')) return;
         const res = await api('order/delete', { method: 'POST', body: JSON.stringify({ id }) });
         if (res.success) {
-            loadOrders(1);
+            loadOrders(currentPage);
         } else {
             alert('删除失败: ' + (res.error || '未知错误'));
         }
     }
 
-    // 回车搜索
-    document.getElementById('search-input').addEventListener('keypress', function(e) {
-        if(e.key === 'Enter') loadOrders(1);
-    });
+    // 移动端菜单切换 (补全 cards.html 的逻辑)
+    const mobileBtn = document.getElementById('mobile-menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.admin-overlay');
+    function toggleMenu() {
+        sidebar.classList.toggle('is-visible');
+        overlay.classList.toggle('is-visible');
+        const icon = mobileBtn.querySelector('i');
+        icon.classList.toggle('fa-bars'); icon.classList.toggle('fa-times');
+    }
+    mobileBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+    overlay.addEventListener('click', toggleMenu);
 
     loadOrders(1);
 </script>
