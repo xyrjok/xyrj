@@ -3,6 +3,7 @@
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
  * [新增] 限制未支付订单数量、删除未支付订单接口
  * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
+ * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  */
 
 // === 工具函数 ===
@@ -1033,6 +1034,8 @@ async function handleApi(request, env, url) {
             const config = JSON.parse(gateway.config);
 
             const signVerified = await verifyAlipaySignature(params, config.alipay_public_key);
+            
+            // 验签失败直接返回
             if (!signVerified) {
                 console.error('Alipay Notify: Signature verification failed');
                 return new Response('fail');
@@ -1042,36 +1045,30 @@ async function handleApi(request, env, url) {
                 const out_trade_no = params.out_trade_no;
                 const trade_no = params.trade_no;
                 
-                await db.batch([
-                    db.prepare("BEGIN TRANSACTION"),
-                    db.prepare("UPDATE orders SET status=1, paid_at=?, trade_no=? WHERE id=? AND status=0")
-                        .bind(time(), trade_no, out_trade_no)
-                ]);
+                // 【修复点1】删除 BEGIN TRANSACTION，直接执行更新
+                await db.prepare("UPDATE orders SET status=1, paid_at=?, trade_no=? WHERE id=? AND status=0")
+                        .bind(time(), trade_no, out_trade_no).run();
 
                 const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status=1").bind(out_trade_no).first();
                 
                 if (order) {
                     
-                    // =============================================
-                    // --- [新增] 合并订单发货逻辑 ---
-                    // =============================================
-                    if (order.variant_id === 0 && order.cards_sent) { // 判断为合并订单
+                    // --- 合并订单发货逻辑 ---
+                    if (order.variant_id === 0 && order.cards_sent) { 
                         let cartItems;
                         try { cartItems = JSON.parse(order.cards_sent); } catch(e) {}
 
                         if (!cartItems || cartItems.length === 0) {
-                            await db.prepare("ROLLBACK").run();
-                            console.error(`Notify Error: Merged order ${out_trade_no} has no items in cards_sent.`);
                             return new Response('success'); 
                         }
                         
-                        const stmts = []; // 存储所有数据库更新
-                        const allCardsContent = []; // 存储所有发出的卡密
-                        const autoVariantIdsToUpdate = new Set(); // 存储需要更新库存的规格ID
+                        const stmts = []; 
+                        const allCardsContent = []; 
+                        const autoVariantIdsToUpdate = new Set(); 
 
                         for (const item of cartItems) {
                             if (item.auto_delivery === 1) {
-                                // --- 自动发货项 ---
+                                // 自动发货
                                 let cards;
                                 if (item.buyMode === 'select' && item.selectedCardId) {
                                     cards = await db.prepare("SELECT id, content FROM cards WHERE id=? AND status=0").bind(item.selectedCardId).all();
@@ -1087,38 +1084,35 @@ async function handleApi(request, env, url) {
                                     stmts.push(db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no));
                                     stmts.push(db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(item.quantity, item.variantId));
                                     autoVariantIdsToUpdate.add(item.variantId);
-
-                                } else {
-                                    console.error(`Notify Error: Insufficient stock for item ${item.variantId} in merged order ${out_trade_no}`);
                                 }
                             } else {
-                                // --- 手动发货项 ---
+                                // 手动发货
                                 stmts.push(db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(item.quantity, item.quantity, item.variantId));
                             }
                         } 
 
-                        // 更新父订单为“已发货”
+                        // 更新父订单
                         stmts.push(db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(allCardsContent), out_trade_no));
-                        await db.batch(stmts);
                         
-                        // 单独更新所有自动发货规格的库存
+                        // 【修复点2】批量执行 (batch 自动保证原子性，无需 COMMIT)
+                        if (stmts.length > 0) {
+                            await db.batch(stmts);
+                        }
+                        
+                        // 更新库存
                         if (autoVariantIdsToUpdate.size > 0) {
                             const stockUpdateStmts = Array.from(autoVariantIdsToUpdate).map(vid => 
                                 db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?").bind(vid, vid)
                             );
                             await db.batch(stockUpdateStmts);
                         }
-                        
-                        await db.prepare("COMMIT").run();
 
                     } else {
-                        // =============================================
-                        // --- [保留] 原始的单个订单发货逻辑 ---
-                        // =============================================
+                        // --- 单个订单发货逻辑 ---
                         const variant = await db.prepare("SELECT auto_delivery FROM variants WHERE id=?").bind(order.variant_id).first();
 
                         if (variant && variant.auto_delivery === 1) {
-                            // === 自动发货逻辑 ===
+                            // 自动发货
                             let targetCardId = null;
                             try {
                                 const placeholder = JSON.parse(order.cards_sent);
@@ -1127,10 +1121,8 @@ async function handleApi(request, env, url) {
 
                             let cards;
                             if (targetCardId) {
-                                // 自选
                                 cards = await db.prepare("SELECT id, content FROM cards WHERE id=? AND status=0").bind(targetCardId).all();
                             } else {
-                                // 随机
                                 cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?")
                                     .bind(order.variant_id, order.quantity).all();
                             }
@@ -1139,31 +1131,27 @@ async function handleApi(request, env, url) {
                                 const cardIds = cards.results.map(c => c.id);
                                 const cardContents = cards.results.map(c => c.content);
                                 
+                                // 【修复点3】删除 COMMIT，直接 batch 执行
                                 await db.batch([
                                     db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no),
                                     db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(cardContents), out_trade_no),
-                                    db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.variant_id),
-                                    db.prepare("COMMIT")
+                                    db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.variant_id)
                                 ]);
                                 
                                 await db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
                                         .bind(order.variant_id, order.variant_id).run();
                                         
                             } else {
-                                await db.prepare("COMMIT").run(); 
-                                    console.error(`Notify Warning: Order ${out_trade_no} paid but insufficient stock.`);
-                                }
+                                console.error(`Notify Warning: Order ${out_trade_no} paid but insufficient stock.`);
+                            }
                         } else {
-                            // === 手动发货逻辑 ===
+                            // 手动发货
+                            // 【修复点4】删除 COMMIT
                             await db.batch([
-                                db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.quantity, order.variant_id),
-                                db.prepare("COMMIT")
+                                db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.quantity, order.variant_id)
                             ]);
                         }
                     }
-                    
-                } else {
-                    await db.prepare("COMMIT").run(); 
                 }
             }
             return new Response('success');
