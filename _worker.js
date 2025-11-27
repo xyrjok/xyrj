@@ -5,6 +5,7 @@
  * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
+ * [修改] 店铺公告只显示后台设置的默认公告，不再调用置顶文章
  */
 
 // === 工具函数 ===
@@ -582,8 +583,11 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/config') {
             const res = await db.prepare("SELECT * FROM site_config").all();
             const config = {}; res.results.forEach(r => config[r.key] = r.value);
-            const notice = await db.prepare("SELECT content FROM articles WHERE is_notice=1 ORDER BY created_at DESC LIMIT 1").first();
-            if(notice) config.notice_content = notice.content;
+            
+            // [修改] 移除调用置顶文章作为公告的逻辑，直接返回 site_config (含 announce)
+            // 原代码：
+            // const notice = await db.prepare("SELECT content FROM articles WHERE is_notice=1 ORDER BY created_at DESC LIMIT 1").first();
+            // if(notice) config.notice_content = notice.content;
             
             return jsonRes(config);
         }
@@ -668,6 +672,7 @@ async function handleApi(request, env, url) {
 
         // [升级] 获取文章列表 (含摘要、首图、置顶、浏览量)
         if (path === '/api/shop/articles/list') {
+            // [注意] 此处依然使用 is_notice 进行排序，保证文章列表页置顶功能生效
             const { results } = await db.prepare(`
                 SELECT a.id, a.title, a.content, a.created_at, a.is_notice, a.view_count, a.category_id, ac.name as category_name
                 FROM articles a
