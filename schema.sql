@@ -98,14 +98,16 @@ INSERT INTO article_categories (name, sort) VALUES ('默认分类', 0);
 
 DROP TABLE IF EXISTS articles;
 CREATE TABLE articles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    category_id INTEGER DEFAULT 1,
-    title TEXT NOT NULL,
-    content TEXT,
-    is_notice INTEGER DEFAULT 0,
-    view_count INTEGER DEFAULT 0,
-    created_at INTEGER,
-    updated_at INTEGER,
+    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+    category_id INTEGER DEFAULT 1, 
+    title TEXT NOT NULL, 
+    content TEXT, 
+    is_notice INTEGER DEFAULT 0, 
+    view_count INTEGER DEFAULT 0, 
+    created_at INTEGER, 
+    updated_at INTEGER, 
+    cover_image TEXT, 
+    active INTEGER DEFAULT 1, 
     FOREIGN KEY (category_id) REFERENCES article_categories(id) ON DELETE SET DEFAULT
 );
 
