@@ -6,6 +6,7 @@
     <title>文章管理 - 夏雨店铺系统</title>
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <script src="../assets/tinymce/tinymce.min.js"></script>
     <style>
         /* ================== 全局样式 ================== */
         body { 
@@ -13,6 +14,17 @@
             margin: 0; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
         }
+        
+        /* 修复 TinyMCE 在 Bootstrap Modal 中的层级问题 */
+        .tox-tinymce-aux { z-index: 1060 !important; }
+
+        /* TinyMCE 移动端自动换行适配 */
+        .tox .tox-toolbar__primary, 
+        .tox .tox-menubar {
+            flex-wrap: wrap !important;
+            white-space: normal !important;
+        }
+        .tox .tox-tbtn { margin: 2px !important; }
         
         /* 布局主容器 */
         .admin-container { display: flex; min-height: 100vh; width: 100%; }
@@ -161,7 +173,7 @@
                                 <th>标题</th>
                                 <th style="width: 120px;">分类</th>
                                 <th style="width: 80px; text-align: center;">浏览量</th>
-                                <th style="width: 80px; text-align: center;">状态</th>
+                                <th style="width: 100px; text-align: center;">状态</th>
                                 <th style="width: 150px;">发布时间</th>
                                 <th style="width: 110px; text-align: center;" class="text-nowrap">操作</th>
                             </tr>
@@ -175,8 +187,8 @@
     </div>
 </div>
 
-<div class="modal fade" id="article-modal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+<div class="modal fade" id="article-modal" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modal-title">发布文章</h5>
@@ -185,29 +197,41 @@
             <div class="modal-body">
                 <input type="hidden" id="a-id">
                 <div class="row mb-3">
-                    <div class="col-md-8">
+                    <div class="col-md-7">
                         <label class="form-label">文章标题</label>
                         <input type="text" class="form-control" id="a-title" placeholder="请输入文章标题" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">所属分类</label>
                         <select class="form-select" id="a-category">
                             <option value="1">默认分类</option>
                         </select>
                     </div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="a-notice">
-                        <label class="form-check-label" for="a-notice">设为置顶公告 (在首页轮播或置顶显示)</label>
+                    <div class="col-md-2">
+                        <label class="form-label">浏览量 (View)</label>
+                        <input type="number" class="form-control" id="a-views" value="0">
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">文章内容 (支持 HTML)</label>
+                    <label class="form-label">封面图片 URL (Cover Image)</label>
+                    <input type="text" class="form-control" id="a-cover" placeholder="https://example.com/cover.jpg">
+                </div>
+                
+                <div class="mb-3 d-flex gap-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="a-active" checked>
+                        <label class="form-check-label" for="a-active">显示文章 (Active)</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="a-notice">
+                        <label class="form-check-label" for="a-notice">置顶公告 (Pinned)</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">文章内容</label>
                     <textarea class="form-control" id="a-content" rows="12" placeholder="在此输入文章内容..."></textarea>
-                    <div class="form-text text-muted" style="font-size: 12px;">可以使用 &lt;p&gt;, &lt;b&gt;, &lt;img src="..."&gt; 等 HTML 标签排版。</div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -270,7 +294,21 @@
         tbody.innerHTML = filtered.map(a => {
             const createTime = a.created_at ? new Date(a.created_at * 1000).toLocaleString() : '-';
             const categoryName = a.category_name || '默认分类';
-            const noticeBadge = a.is_notice ? '<span class="badge bg-danger">置顶</span>' : '<span class="badge bg-secondary">普通</span>';
+            
+            // 状态徽章：置顶
+            let statusBadges = '';
+            if (a.is_notice) {
+                statusBadges += '<span class="badge bg-danger me-1">置顶</span>';
+            }
+            
+            // 状态徽章：显示/隐藏
+            // 如果后端未返回 active 字段，默认视为显示
+            const isActive = (a.active !== undefined) ? a.active : 1; 
+            if (isActive == 0) {
+                statusBadges += '<span class="badge bg-secondary">隐藏</span>';
+            } else {
+                statusBadges += '<span class="badge bg-success">显示</span>';
+            }
 
             // 高亮搜索词
             let displayTitle = a.title;
@@ -285,10 +323,13 @@
                     <input class="form-check-input a-check" type="checkbox" value="${a.id}" onchange="updateBatchBtn()">
                 </td>
                 <td>${a.id}</td>
-                <td>${displayTitle}</td>
+                <td>
+                    ${displayTitle}
+                    ${a.cover_image ? '<i class="fas fa-image text-muted ms-1" title="有封面图"></i>' : ''}
+                </td>
                 <td><span class="badge bg-info text-dark">${categoryName}</span></td>
                 <td class="text-center">${a.view_count || 0}</td>
-                <td class="text-center">${noticeBadge}</td>
+                <td class="text-center">${statusBadges}</td>
                 <td><small>${createTime}</small></td>
                 <td style="text-align: center;">
                     <button class="btn btn-sm btn-outline-primary" onclick="openModal(${a.id})" title="编辑"><i class="fas fa-edit"></i></button>
@@ -308,35 +349,56 @@
         const catSelect = document.getElementById('a-category');
         catSelect.innerHTML = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
+        // 默认值
+        let article = { 
+            id: '', title: '', category_id: (allCategories[0]?.id || 1), 
+            is_notice: 0, active: 1, view_count: 0, cover_image: '', content: '' 
+        };
+
         if (id) {
-            const article = allArticles.find(a => a.id === id);
-            if (!article) return;
-            
+            const found = allArticles.find(a => a.id === id);
+            if (found) article = found;
             document.getElementById('modal-title').innerText = '编辑文章';
-            document.getElementById('a-id').value = article.id;
-            document.getElementById('a-title').value = article.title;
-            document.getElementById('a-category').value = article.category_id || 1;
-            document.getElementById('a-notice').checked = !!article.is_notice;
-            document.getElementById('a-content').value = article.content || '';
         } else {
             document.getElementById('modal-title').innerText = '发布文章';
-            document.getElementById('a-id').value = '';
-            document.getElementById('a-title').value = '';
-            // 默认选中第一个分类
-            if(allCategories.length > 0) document.getElementById('a-category').value = allCategories[0].id;
-            document.getElementById('a-notice').checked = false;
-            document.getElementById('a-content').value = '';
         }
+
+        document.getElementById('a-id').value = article.id;
+        document.getElementById('a-title').value = article.title;
+        document.getElementById('a-category').value = article.category_id;
+        document.getElementById('a-notice').checked = !!article.is_notice;
+        document.getElementById('a-active').checked = (article.active !== 0); // 默认为1(true)
+        document.getElementById('a-views').value = article.view_count || 0;
+        document.getElementById('a-cover').value = article.cover_image || '';
+        
+        // 设置 TinyMCE 内容
+        const content = article.content || '';
+        document.getElementById('a-content').value = content;
+        if (tinymce.get('a-content')) {
+            tinymce.get('a-content').setContent(content);
+        }
+
         modal.show();
     }
 
     async function saveArticle() {
+        // 获取 TinyMCE 内容
+        let content = '';
+        if (tinymce.get('a-content')) {
+            content = tinymce.get('a-content').getContent();
+        } else {
+            content = document.getElementById('a-content').value;
+        }
+
         const data = {
             id: document.getElementById('a-id').value || null,
             title: document.getElementById('a-title').value,
             category_id: document.getElementById('a-category').value,
             is_notice: document.getElementById('a-notice').checked ? 1 : 0,
-            content: document.getElementById('a-content').value
+            active: document.getElementById('a-active').checked ? 1 : 0,
+            view_count: parseInt(document.getElementById('a-views').value) || 0,
+            cover_image: document.getElementById('a-cover').value,
+            content: content
         };
 
         if (!data.title) return alert('请输入文章标题');
@@ -410,6 +472,28 @@
     mobileBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
     overlay.addEventListener('click', toggleMenu);
     document.querySelectorAll('.admin-sidebar a').forEach(link => { link.addEventListener('click', () => { if (window.innerWidth <= 800) toggleMenu(); }); });
+
+    // --- 初始化 TinyMCE ---
+    document.addEventListener("DOMContentLoaded", function() {
+        tinymce.init({
+            selector: '#a-content',
+            language: 'zh_CN',
+            base_url: '/assets/tinymce',
+            suffix: '.min', 
+            height: 500, // 文章编辑框稍微高一点
+            menubar: true,
+            plugins: 'lists link image charmap preview code searchreplace wordcount textcolor',
+            toolbar: 'undo redo | blocks fontselect fontsizeselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist | lineheight | forecolor backcolor | link image | code removeformat',
+            toolbar_mode: 'wrap',
+            branding: false,
+            promotion: false,
+            setup: function (editor) {
+                editor.on('change', function () {
+                    editor.save();
+                });
+            }
+        });
+    });
 </script>
 </body>
 </html>
