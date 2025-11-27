@@ -12,65 +12,183 @@
     <script src="/themes/TBshop/files/articles-page.js" defer></script>
 
     <style>
-        /* === 文章列表专用样式 === */
-        .article-item {
-            transition: background-color 0.2s;
-        }
-        .article-item:hover {
-            background-color: #fcfcfc;
-        }
-        .article-item:last-child {
-            border-bottom: none !important;
+        /* === 移植自 xyrj 主题的文章列表样式 === */
+        
+        :root {
+            --Maincolor: #409EFF;
+            --MaincolorHover: #66b1ff;
+            --text-color-light: #777;
         }
 
-        /* [修复] 针对 p-0 容器内标题红竖位置过偏的问题 */
-        .module-box.p-0 .module-title::before {
-            left: 1rem !important; 
-        }
-        /* 让标题文字相应右移 */
-        .module-box.p-0 .module-title {
-            padding-left: 30px !important; 
+        .article-list-wrap {
+            background-color: #fff;
+            border: 1px solid #eee; /* 保持原有边框风格 */
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
-        /* 文章左侧缩略图 */
-        .art-item-img {
-            width: 160px;
-            height: 100px;
-            flex-shrink: 0;
-            border-radius: 4px;
+        .article-item-box {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 25px;
+            text-decoration: none; /* 修复链接下划线 */
+        }
+
+        .article-item-box:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .article-item-image {
+            flex: 0 0 220px;
+            margin-right: 20px;
             overflow: hidden;
-            border: 1px solid #eee;
             position: relative;
+            border-radius: 3px;
+            height: 140px; /* 固定高度 */
         }
-        .art-item-img img {
+
+        .article-item-image a {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .article-item-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.3s;
-        }
-        .art-item-img:hover img {
-            transform: scale(1.05);
+            border-radius: 3px;
+            transition: transform 0.3s ease;
         }
 
-        /* 移动端适配 */
+        .article-item-image:hover img {
+            transform: scale(1.03);
+        }
+
+        /* 图片上的分类标签 */
+        .image-category {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,.6);
+            color: #fff;
+            padding: 3px 8px;
+            font-size: 12px;
+            border-radius: 3px;
+            line-height: 1.5;
+            z-index: 2;
+            pointer-events: none; /* 让点击穿透到图片链接 */
+        }
+
+        .article-item-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* 防止 flex 子项溢出 */
+        }
+
+        .article-item-content h3 {
+            word-break: break-all;
+            margin: 0 0 10px;
+            font-size: 17px;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .article-item-content h3 a {
+            color: #333;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .article-item-content h3 a:hover {
+            color: var(--MaincolorHover);
+        }
+
+        /* 置顶标签 */
+        .label-pinned {
+            background-color: #ff4d4f; /* 使用红色突出置顶 */
+            color: #fff;
+            font-size: 12px;
+            padding: 1px 5px;
+            border-radius: 2px;
+            margin-right: 5px;
+            font-weight: normal;
+            vertical-align: 2px;
+        }
+
+        .article-item-content p {
+            margin: 0 0 10px;
+            color: #666;
+            overflow: hidden;
+            word-break: break-all;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2; /* 限制显示2行 */
+            -webkit-box-orient: vertical;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .article-meta {
+            font-size: 13px;
+            color: #999;
+            display: flex;
+            align-items: center;
+            margin-top: auto; /* 底部对齐 */
+        }
+
+        .article-meta span {
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .article-meta i {
+            margin-right: 4px;
+        }
+
+        .article-meta .views {
+            margin-left: auto; /* 浏览量靠右 */
+            margin-right: 0;
+        }
+
+        /* === 移动端适配 === */
         @media (max-width: 768px) {
-            .art-item-img {
-                width: 100px;
-                height: 70px;
-                margin-right: 10px !important;
+            .article-list-wrap {
+                padding: 15px;
             }
-            .art-item-desc {
-                display: none;
+            
+            .article-item-image {
+                flex: 0 0 120px; /* 缩小图片宽度 */
+                height: 80px;
+                margin-right: 12px;
             }
-            .art-item-title {
-                font-size: 14px;
-                line-height: 1.4;
-                margin-bottom: 5px !important;
-                height: 40px;
-                overflow: hidden;
+            
+            .article-item-content h3 {
+                font-size: 15px;
+                margin-bottom: 5px;
                 display: -webkit-box;
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            
+            /* 移动端隐藏摘要，保持简洁 */
+            .article-item-content p {
+                display: none;
+            }
+            
+            .image-category {
+                display: none; /* 移动端隐藏图片上的分类 */
+            }
+            
+            .article-meta {
+                font-size: 12px;
             }
         }
     </style>
@@ -92,10 +210,11 @@
                         </div>
                 </div>
 
-                <div class="module-box p-0" style="overflow: hidden; min-height: 500px;">
-                    <div class="module-title p-3 border-bottom mb-0">
-                        热门文章
+                <div class="article-list-wrap" style="min-height: 500px;">
+                    <div class="border-bottom pb-2 mb-3 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-dark"><i class="fa fa-list-ul me-2 text-primary"></i>文章列表</h5>
                     </div>
+                    
                     <div id="article-list-container">
                         <div class="text-center py-5 text-muted">
                             <i class="fa fa-spinner fa-spin"></i> 加载中...
