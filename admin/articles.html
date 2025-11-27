@@ -264,6 +264,13 @@
     let allArticles = [];
     let allCategories = [];
 
+    // --- 修复 TinyMCE 在 Bootstrap Modal 中焦点被抢占的问题 (导致无法编辑源代码) ---
+    document.addEventListener('focusin', (e) => {
+        if (e.target.closest(".tox-tinymce-aux, .moxman-window, .tam-assetmanager-root") !== null) {
+            e.stopImmediatePropagation();
+        }
+    });
+
     async function initData() {
         // 并行加载文章列表和分类列表
         const [articles, categories] = await Promise.all([
@@ -483,13 +490,22 @@
             height: 500, // 文章编辑框稍微高一点
             menubar: true,
             plugins: 'lists link image charmap preview code searchreplace wordcount textcolor',
-            toolbar: 'undo redo | blocks fontselect fontsizeselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist | lineheight | forecolor backcolor | link image | code removeformat',
+            // [修改] 添加了 verticalline 按钮到工具栏
+            toolbar: 'undo redo | blocks fontselect fontsizeselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist | lineheight | forecolor backcolor | link image verticalline | code removeformat',
             toolbar_mode: 'wrap',
             branding: false,
             promotion: false,
             setup: function (editor) {
                 editor.on('change', function () {
                     editor.save();
+                });
+                // [新增] 注册竖条按钮
+                editor.ui.registry.addButton('verticalline', {
+                    text: '|',
+                    tooltip: '插入竖条',
+                    onAction: function (_) {
+                        editor.insertContent('&nbsp;|&nbsp;');
+                    }
                 });
             }
         });
