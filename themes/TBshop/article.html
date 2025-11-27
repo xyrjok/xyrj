@@ -15,7 +15,7 @@
         #article-content {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #333;
-            /* [修改点2] 将行高从 1.8 改为 1.6，将字号从 16px 改为 14px，以匹配后台编辑器默认感觉 */
+            /* 将行高从 1.8 改为 1.6，将字号从 16px 改为 14px，以匹配后台编辑器默认感觉 */
             line-height: 1.5; 
             word-wrap: break-word;
             font-size: 15px; 
@@ -68,7 +68,7 @@
             border-radius: 0 4px 4px 0;
         }
         
-        /* 5. 标题增强 - [修改点1] 强制按比例重置 H1-H6 大小 */
+        /* 5. 标题增强 - 强制按比例重置 H1-H6 大小 */
         /* 使用 em 单位，使其相对于基础字号(14px)进行缩放，还原编辑器默认比例 */
         #article-content h1, #article-content h2, #article-content h3, 
         #article-content h4, #article-content h5, #article-content h6 {
@@ -81,7 +81,7 @@
 
         #article-content h1 { font-size: 2em; }     /* 约 28px */
         #article-content h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 10px; } /* 约 21px */
-        #article-content h3 { font-size: 1.3em; }  /* 约 16.5px (此前Bootstrap默认为28px左右，这是主要差异点) */
+        #article-content h3 { font-size: 1.3em; }  /* 约 16.5px */
         #article-content h4 { font-size: 1em; }     /* 约 14px */
         #article-content h5 { font-size: 0.83em; }  /* 约 11.6px */
         #article-content h6 { font-size: 0.67em; }  /* 约 9.3px */
@@ -119,8 +119,8 @@
                 <div class="module-box p-0 overflow-hidden" style="min-height: 600px;">
                     <div class="p-4 border-bottom bg-light bg-opacity-10">
                         
-                        <div class="d-flex align-items-center text-muted small mb-3" style="font-size: 0.85rem;">
-                             <i class="fa fa-home me-1"></i> 
+                        <div class="d-flex align-items-center text-muted mb-3" style="font-size: 13px;">
+                             <i class="fa fa-home me-1" style="position: relative; top: -1px;"></i> 
                              <a href="/articles.html" class="text-decoration-none text-muted me-1">文章中心</a> 
                              <span class="mx-1">/</span> 
                              <span id="article-path-cat">加载中...</span>
@@ -128,7 +128,7 @@
 
                         <h4 class="fw-bold mb-3 mt-1 text-center" id="article-title">加载中...</h4>
                         
-                        <div class="text-center text-muted small d-flex justify-content-center align-items-center flex-wrap">
+                        <div class="text-center text-muted d-flex justify-content-center align-items-center flex-wrap" style="font-size: 12px;">
                             <span class="me-3"><i class="fa fa-calendar-alt me-1"></i> <span id="article-time">--</span></span>
                             <span class="me-3"><i class="fa fa-folder me-1"></i> <span id="article-cat">--</span></span>
                             <span><i class="fa fa-eye me-1"></i> <span id="article-views">--</span></span>
@@ -197,7 +197,7 @@
                      return;
                 }
 
-                // [新增] 填充左上角分类路径
+                // 填充左上角分类路径
                 const catName = data.category_name || '默认分类';
                 const pathCatEl = document.getElementById('article-path-cat');
                 if (pathCatEl) {
@@ -211,8 +211,6 @@
                 document.getElementById('article-views').innerText = data.view_count;
                 document.getElementById('article-content').innerHTML = data.content; // 注入富文本 HTML
 
-                // 这里不需要额外的 JS 来处理图片，因为 head 里的 CSS 已经处理了
-                // 但保留这段代码也不影响
                 document.querySelectorAll('#article-content img').forEach(img => {
                     img.classList.add('img-fluid'); 
                 });
