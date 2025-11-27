@@ -473,15 +473,15 @@
     overlay.addEventListener('click', toggleMenu);
     document.querySelectorAll('.admin-sidebar a').forEach(link => { link.addEventListener('click', () => { if (window.innerWidth <= 800) toggleMenu(); }); });
 
+    // [关键修复]：解决 Bootstrap 5 模态框阻止 TinyMCE 弹窗（如源代码编辑、链接窗口）获取焦点的问题
+    document.addEventListener('focusin', (e) => {
+        if (e.target.closest(".tox-tinymce-aux, .moxman-window, .tam-assetmanager-root") !== null) {
+            e.stopImmediatePropagation();
+        }
+    });
+
     // --- 初始化 TinyMCE ---
     document.addEventListener("DOMContentLoaded", function() {
-        // [修复点1] 解决 Bootstrap 模态框劫持焦点导致 TinyMCE 弹窗（如源代码、图片链接）无法输入的问题
-        document.addEventListener('focusin', function(e) { 
-            if (e.target.closest('.tox-tinymce, .tox-tinymce-aux, .moxman-window, .tam-assetmanager-root') !== null) { 
-                e.stopImmediatePropagation(); 
-            } 
-        });
-
         tinymce.init({
             selector: '#a-content',
             language: 'zh_CN',
@@ -490,38 +490,38 @@
             height: 500, // 文章编辑框稍微高一点
             menubar: true,
             plugins: 'lists link image charmap preview code searchreplace wordcount textcolor',
-            // [修改点2] 在工具栏添加自定义按钮 toggle-vertical-bar
-            toolbar: 'undo redo | blocks fontselect fontsizeselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist | lineheight | forecolor backcolor | link image | toggle-vertical-bar | code removeformat',
+            // [修改] 在工具栏最后添加了 toggle-vertical-bar 自定义按钮
+            toolbar: 'undo redo | blocks fontselect fontsizeselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist | lineheight | forecolor backcolor | link image | code removeformat | toggle-vertical-bar',
             toolbar_mode: 'wrap',
             branding: false,
             promotion: false,
-            // [修改点3] 注册自定义按钮
             setup: function (editor) {
-                // 注册“竖条标题”按钮
-                editor.ui.registry.addButton('toggle-vertical-bar', {
-                    text: '竖条标题',
-                    icon: 'bookmark', // 使用书签图标代替
-                    tooltip: '插入/移除竖条标题样式',
-                    onAction: function () {
-                        var selectedText = editor.selection.getContent();
-                        var styleStr = 'border-left: 3px solid #000; padding-left: 10px;';
-                        
-                        // 简单的切换逻辑：如果有竖条样式则尝试移除，否则添加
-                        if (selectedText.indexOf(styleStr) !== -1) {
-                           // 移除样式 (简单替换)
-                           var newText = selectedText.replace('<span style="border-left: 3px solid #000; padding-left: 10px;">', '').replace('</span>', '');
-                           editor.insertContent(newText);
-                        } else {
-                           // 添加样式
-                           var newText = '<span style="border-left: 3px solid #000; padding-left: 10px;">' + selectedText + '</span>';
-                           editor.insertContent(newText);
-                        }
-                    }
-                });
-
-                // 保持原有的 change 事件监听
                 editor.on('change', function () {
                     editor.save();
+                });
+
+                // [新增] 竖条标题 自定义按钮
+                editor.ui.registry.addButton('toggle-vertical-bar', {
+                    text: '竖条标题',
+                    // icon: 'bookmark', // 如果有合适的图标可以用
+                    tooltip: '插入/移除左侧蓝色竖条样式',
+                    onAction: function () {
+                        var selectedText = editor.selection.getContent();
+                        var hasBar = selectedText.includes('border-left: 5px solid #409EFF');
+                        var newText;
+
+                        if (hasBar) {
+                            // 移除竖条样式 (尝试匹配包含该样式的 span 并移除标签，保留内容)
+                            // 这里使用正则替换更稳健，防止因为空格或属性顺序不同导致匹配失败
+                            newText = selectedText.replace(/<span style="border-left: 5px solid #409EFF;[^>]*">/g, '').replace(/<\/span>/g, '');
+                        } else {
+                            // 添加竖条样式
+                            // [微调] 增加了 display: inline-block; 确保高度属性生效，避免竖条消失
+                            newText = '<span style="border-left: 5px solid #409EFF; padding-left: 10px; height: 100%; display: inline-block;">' + selectedText + '</span>';
+                        }
+                        
+                        editor.insertContent(newText);
+                    }
                 });
             }
         });
