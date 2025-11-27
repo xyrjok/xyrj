@@ -7,6 +7,91 @@
     <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="/assets/css/all.min.css" rel="stylesheet">
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
+
+    <style>
+        /* ================== 文章内容富文本适配 ================== */
+        /* 作用于 #article-content 容器内 */
+        
+        #article-content {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #333;
+            line-height: 1.8; /* 文章阅读通常需要更大的行高 */
+            word-wrap: break-word;
+            font-size: 16px; /* 稍微调大字体提升阅读体验 */
+        }
+        
+        /* 1. 图片自适应 */
+        #article-content img {
+            max-width: 100% !important;
+            height: auto !important;
+            display: block;
+            margin: 1em 0;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* 给图片加一点阴影 */
+        }
+
+        /* 2. 列表样式恢复 */
+        #article-content ul, #article-content ol {
+            padding-left: 2em;
+            margin-bottom: 1em;
+        }
+        #article-content ul { list-style-type: disc; }
+        #article-content ol { list-style-type: decimal; }
+        #article-content li { margin-bottom: 0.5em; }
+
+        /* 3. 表格样式适配 */
+        #article-content table {
+            width: 100%;
+            max-width: 100%;
+            margin-bottom: 1rem;
+            border-collapse: collapse;
+            border: 1px solid #dee2e6;
+        }
+        #article-content table td, #article-content table th {
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        #article-content table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        /* 4. 引用块样式 */
+        #article-content blockquote {
+            border-left: 5px solid #0d6efd;
+            padding: 1rem 1.5rem;
+            color: #555;
+            margin: 1.5rem 0;
+            background-color: #f8f9fa;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        /* 5. 标题增强 */
+        #article-content h1, #article-content h2, #article-content h3 {
+            margin-top: 1.5em;
+            margin-bottom: 0.75em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        #article-content h2 { border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        /* 6. TinyMCE 对齐类支持 */
+        #article-content .alignleft { float: left; margin: 0 15px 15px 0; }
+        #article-content .alignright { float: right; margin: 0 0 15px 15px; }
+        #article-content .aligncenter { display: block; margin-left: auto; margin-right: auto; text-align: center; }
+        
+        /* 7. 超链接样式 */
+        #article-content a {
+            color: #0d6efd;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        #article-content a:hover {
+            border-bottom-color: #0d6efd;
+        }
+    </style>
     
     <script src="/themes/TBshop/files/common.js" defer></script>
 </head>
@@ -31,7 +116,7 @@
                         </div>
                     </div>
                     
-                    <div class="p-4 p-md-5" style="font-size: 15px; line-height: 1.8; color: #333;">
+                    <div class="p-4 p-md-5">
                         <div id="article-content">
                             <div class="text-center py-5"><i class="fa fa-spinner fa-spin"></i></div>
                         </div>
@@ -71,15 +156,9 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // [修改3] 将 'article_detail' 改为 'article'
-            // 这样 common.js 才会识别并自动加载销量排行、教程分类和标签云
             if (typeof renderCommonLayout === 'function') {
                 renderCommonLayout('article');
             }
-            
-            // [修改4] 删除了这里手动 fetch 产品的代码
-            // 因为 renderCommonLayout('article') 会自动调用 loadGlobalSidebarData() 来完成这件事
-            
             loadArticle();
         });
 
@@ -104,16 +183,17 @@
                 document.getElementById('article-time').innerText = new Date(data.created_at * 1000).toLocaleDateString();
                 document.getElementById('article-cat').innerText = data.category_name || '默认';
                 document.getElementById('article-views').innerText = data.view_count;
-                document.getElementById('article-content').innerHTML = data.content;
-                
-                // 图片自适应
+                document.getElementById('article-content').innerHTML = data.content; // 注入富文本 HTML
+
+                // 这里不需要额外的 JS 来处理图片，因为 head 里的 CSS 已经处理了
+                // 但保留这段代码也不影响
                 document.querySelectorAll('#article-content img').forEach(img => {
-                    img.classList.add('img-fluid');
-                    img.style.height = 'auto';
+                    img.classList.add('img-fluid'); 
                 });
 
             } catch (e) {
                 document.getElementById('article-title').innerText = '加载失败';
+                console.error(e);
             }
         }
     </script>
