@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/articles-page.js
-// === (修复版：适配 xyrj 主题列表样式 + 对接 D1 数据)
+// === (修复版：修复封面图不显示 & PC端摘要空白问题)
 // =============================================
 
 let allArticles = [];
@@ -14,9 +14,7 @@ async function initArticlesPage() {
     await loadArticles();
     
     if (catParam) {
-        // 如果 URL 带分类参数，尝试自动选中
         const decodedCat = decodeURIComponent(catParam);
-        // 延迟一点执行，确保分类栏已渲染（虽然 common.js 会处理侧边栏，但这里处理顶部药丸）
         setTimeout(() => {
             const pills = document.querySelectorAll('.cat-pill');
             let found = false;
@@ -26,7 +24,6 @@ async function initArticlesPage() {
                     found = true;
                 }
             });
-            // 如果没找到对应 pill，手动触发筛选
             if (!found) {
                 currentCat = decodedCat;
                 renderArticles();
@@ -50,13 +47,9 @@ async function loadArticles() {
         }
 
         // 过滤掉下架的文章 (active == 0)
-        // 注意：如果后端没返回 active 字段，默认显示
         allArticles = data.filter(a => a.active !== 0);
         
-        // 渲染顶部分类栏
         renderCategoryBar();
-        
-        // 初次渲染列表
         renderArticles();
 
     } catch (e) {
@@ -65,19 +58,17 @@ async function loadArticles() {
     }
 }
 
-// 渲染分类药丸 (Pills)
+// 渲染分类药丸
 function renderCategoryBar() {
     const catContainer = document.getElementById('article-cat-container');
     if (!catContainer) return;
 
-    // 提取所有分类并去重
     const cats = ['all', ...new Set(allArticles.map(a => a.category_name || '默认分类'))];
     
     let html = '';
     cats.forEach(c => {
         const label = c === 'all' ? '全部文章' : c;
         const activeClass = (c === 'all') ? 'active' : '';
-        // 注意：onclick 调用 filterArticles
         html += `<div class="cat-pill ${activeClass}" onclick="filterArticles('${c}', this)">${label}</div>`;
     });
     
@@ -87,17 +78,14 @@ function renderCategoryBar() {
 // 筛选逻辑
 function filterArticles(catName, el) {
     currentCat = catName;
-    
-    // 更新样式
     if (el) {
         document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
         el.classList.add('active');
     }
-    
     renderArticles();
 }
 
-// [核心] 渲染文章列表 (仿 xyrj 样式)
+// [核心] 渲染文章列表
 function renderArticles() {
     const container = document.getElementById('article-list-container');
     if (!container) return;
@@ -108,12 +96,12 @@ function renderArticles() {
         list = list.filter(a => (a.category_name || '默认分类') === currentCat);
     }
 
-    // 2. 排序：置顶优先 (is_notice=1)，其次按时间倒序
+    // 2. 排序：置顶优先，其次按时间
     list.sort((a, b) => {
         const noticeA = a.is_notice || 0;
         const noticeB = b.is_notice || 0;
-        if (noticeA !== noticeB) return noticeB - noticeA; // 置顶大的在前
-        return (b.created_at || 0) - (a.created_at || 0);  // 新的在前
+        if (noticeA !== noticeB) return noticeB - noticeA;
+        return (b.created_at || 0) - (a.created_at || 0);
     });
 
     if (list.length === 0) {
@@ -125,20 +113,17 @@ function renderArticles() {
     const html = list.map(article => {
         const date = new Date((article.created_at || 0) * 1000).toLocaleDateString();
         const cat = article.category_name || '默认';
-        // 处理摘要：去除 HTML 标签，截取前80字
-        const rawContent = (article.content || '').replace(/<[^>]+>/g, ''); 
-        const summary = rawContent.substring(0, 80) + (rawContent.length > 80 ? '...' : '');
         
-        // 封面图逻辑：如果有 cover_image 则使用，否则使用默认图或首图
-        // 这里我们使用一个简单的占位逻辑，如果您有默认图可以替换
-        const hasImage = !!article.cover_image;
-        const imgUrl = article.cover_image || '/assets/noimage.jpg'; // 假设您上传了默认图，或者使用空图片逻辑
+        // 【修复点1】直接使用后端返回的 snippet 作为摘要
+        // 因为后端 API 不返回完整的 content，所以之前自己截取的逻辑会失效变为空白
+        const summary = article.snippet || '暂无介绍';
+        
+        // 【修复点2】直接使用后端返回的 cover_image
+        // 后端逻辑已经处理过：如果后台设置了封面图就用后台的，否则用文章首图，再没有就返回 null
+        const imgUrl = article.cover_image || '/assets/noimage.jpg';
 
-        // 置顶标签 HTML
         const pinnedHtml = article.is_notice ? '<span class="label-pinned">置顶</span>' : '';
 
-        // 只有当有图片时才渲染左侧图片区域 (或者始终渲染占位图，这里为了美观始终渲染)
-        // 您可以根据需求决定：如果没有图片是否隐藏左侧
         const imageSection = `
             <div class="article-item-image">
                 <div class="image-category">${cat}</div>
