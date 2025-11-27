@@ -507,20 +507,20 @@
                     tooltip: '插入/移除左侧竖条样式(跟随文字颜色)',
                     onAction: function () {
                         var selectedText = editor.selection.getContent();
-                        // 修改：判断条件改为检查是否存在 border-left: 5px solid (不限制颜色)
-                        var hasBar = selectedText.includes('border-left: 5px solid');
+                        // 修改：判断条件改为检查是否存在 border-left: 4px solid (不限制颜色)
+                        var hasBar = selectedText.includes('border-left: 4px solid');
                         var newText;
 
                         if (hasBar) {
                             // 移除竖条样式
-                            // 使用正则匹配移除带有 border-left: 5px solid 的 span 标签
+                            // 使用正则匹配移除带有 border-left: 4px solid 的 span 标签
                             newText = selectedText.replace(/<span\s+style="[^"]*border-left:\s*5px\s+solid[^"]*"[^>]*>/g, '').replace(/<\/span>/g, '');
                         } else {
                             // 添加竖条样式
-                            // 1. border-left: 5px solid; (不指定颜色，默认继承文字颜色)
+                            // 1. border-left: 4px solid; (不指定颜色，默认继承文字颜色)
                             // 2. line-height: 1; (强制行高为1，使竖条高度与文字字号一致，垂直居中)
                             // 3. display: inline-block; (确保宽高生效)
-                            newText = '<span style="border-left: 5px solid; padding-left: 10px; display: inline-block; line-height: 1;">' + selectedText + '</span>';
+                            newText = '<span style="border-left: 4px solid; padding-left: 10px; display: inline-block; line-height: 1;">' + selectedText + '</span>';
                         }
                         
                         editor.insertContent(newText);
