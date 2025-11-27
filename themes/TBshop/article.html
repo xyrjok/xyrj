@@ -118,7 +118,16 @@
                 
                 <div class="module-box p-0 overflow-hidden" style="min-height: 600px;">
                     <div class="p-4 border-bottom bg-light bg-opacity-10">
-                        <h3 class="fw-bold mb-3 mt-1 text-center" id="article-title">加载中...</h3>
+                        
+                        <div class="d-flex align-items-center text-muted small mb-3" style="font-size: 0.85rem;">
+                             <i class="fa fa-home me-1"></i> 
+                             <a href="/articles.html" class="text-decoration-none text-muted me-1">文章中心</a> 
+                             <span class="mx-1">/</span> 
+                             <span id="article-path-cat">加载中...</span>
+                        </div>
+
+                        <h4 class="fw-bold mb-3 mt-1 text-center" id="article-title">加载中...</h4>
+                        
                         <div class="text-center text-muted small d-flex justify-content-center align-items-center flex-wrap">
                             <span class="me-3"><i class="fa fa-calendar-alt me-1"></i> <span id="article-time">--</span></span>
                             <span class="me-3"><i class="fa fa-folder me-1"></i> <span id="article-cat">--</span></span>
@@ -188,10 +197,17 @@
                      return;
                 }
 
+                // [新增] 填充左上角分类路径
+                const catName = data.category_name || '默认分类';
+                const pathCatEl = document.getElementById('article-path-cat');
+                if (pathCatEl) {
+                    pathCatEl.innerText = catName;
+                }
+
                 document.title = data.title + ' - TB Shop';
                 document.getElementById('article-title').innerText = data.title;
                 document.getElementById('article-time').innerText = new Date(data.created_at * 1000).toLocaleDateString();
-                document.getElementById('article-cat').innerText = data.category_name || '默认';
+                document.getElementById('article-cat').innerText = catName;
                 document.getElementById('article-views').innerText = data.view_count;
                 document.getElementById('article-content').innerHTML = data.content; // 注入富文本 HTML
 
