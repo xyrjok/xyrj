@@ -4,6 +4,7 @@
  * [新增] 限制未支付订单数量、删除未支付订单接口
  * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
+ * [修复] 文章管理支持保存封面图、浏览量和显示状态
  */
 
 // === 工具函数 ===
@@ -479,15 +480,16 @@ async function handleApi(request, env, url) {
                 `).all();
                 return jsonRes(results);
             }
+            // [修复] 文章保存逻辑：增加了 cover_image, active, view_count 字段
             if (path === '/api/admin/article/save' && method === 'POST') {
-                const { id, title, content, is_notice, category_id } = await request.json();
+                const { id, title, content, is_notice, category_id, cover_image, active, view_count } = await request.json();
                 const now = time();
                 if (id) {
-                    await db.prepare("UPDATE articles SET title=?, content=?, is_notice=?, category_id=?, updated_at=? WHERE id=?")
-                        .bind(title, content, is_notice, category_id, now, id).run();
+                    await db.prepare("UPDATE articles SET title=?, content=?, is_notice=?, category_id=?, updated_at=?, cover_image=?, active=?, view_count=? WHERE id=?")
+                        .bind(title, content, is_notice, category_id, now, cover_image, active, view_count, id).run();
                 } else {
-                    await db.prepare("INSERT INTO articles (title, content, is_notice, category_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)")
-                        .bind(title, content, is_notice, category_id, now, now).run();
+                    await db.prepare("INSERT INTO articles (title, content, is_notice, category_id, created_at, updated_at, cover_image, active, view_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                        .bind(title, content, is_notice, category_id, now, now, cover_image, active, view_count).run();
                 }
                 return jsonRes({ success: true });
             }
