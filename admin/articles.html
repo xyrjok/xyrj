@@ -500,36 +500,28 @@
                     editor.save();
                 });
 
-                // [修改] 竖条标题 自定义按钮 (优化版：圆角胶囊+垂直居中)
+                // [新增] 竖条标题 自定义按钮
                 editor.ui.registry.addButton('toggle-vertical-bar', {
                     text: '竖条标题',
-                    tooltip: '插入/移除左侧圆角竖条样式(跟随文字颜色)',
+                    // icon: 'bookmark', // 如果有合适的图标可以用
+                    tooltip: '插入/移除左侧竖条样式(跟随文字颜色)',
                     onAction: function () {
                         var selectedText = editor.selection.getContent();
-                        
-                        // 特征检测
-                        // 1. 检测旧样式 (border-left)
-                        var isOldStyle = selectedText.includes('border-left: 4px solid');
-                        // 2. 检测新样式 (background-color: currentColor 且包含 radius)
-                        var isNewStyle = selectedText.includes('background-color: currentColor') && selectedText.includes('border-radius:');
-
+                        // 修改：判断条件改为检查是否存在 border-left: 4px solid (不限制颜色)
+                        var hasBar = selectedText.includes('border-left: 4px solid');
                         var newText;
 
-                        if (isOldStyle) {
-                            // 清理旧样式：移除带 border-left 的 span
+                        if (hasBar) {
+                            // 移除竖条样式
+                            // 使用正则匹配移除带有 border-left: 4px solid 的 span 标签
                             newText = selectedText.replace(/<span\s+style="[^"]*border-left:\s*5px\s+solid[^"]*"[^>]*>/g, '').replace(/<\/span>/g, '');
-                        } else if (isNewStyle) {
-                            // 清理新样式
-                            // 第一步：移除竖条 span (<span ... background-color: currentColor ...></span>)
-                            var step1 = selectedText.replace(/<span\s+style="[^"]*background-color:\s*currentColor[^"]*"[^>]*><\/span>/g, '');
-                            // 第二步：移除外层 wrapper span (display: inline-flex)
-                            newText = step1.replace(/<span\s+style="[^"]*display:\s*inline-flex[^"]*"[^>]*>/g, '').replace(/<\/span>/g, '');
                         } else {
-                            // 应用新样式
-                            // 竖条：独立 span，width: 4px, height: 1em (随字号), radius: 10px (全圆角), background: currentColor (随字色)
-                            var bar = '<span style="display: inline-block; width: 4px; height: 1em; background-color: currentColor; border-radius: 10px; margin-right: 8px; flex-shrink: 0;"></span>';
-                            // 容器：inline-flex 实现垂直居中对齐
-                            newText = '<span style="display: inline-flex; align-items: center;">' + bar + '<span>' + selectedText + '</span></span>';
+                            // 添加竖条样式
+                            // 1. border-left: 4px solid; (不指定颜色，默认继承文字颜色)
+                            // 2. line-height: 1; (强制行高为1，使竖条高度与文字字号一致，垂直居中)
+                            // 3. display: inline-block; (确保宽高生效)
+                            // 4. border-radius: 3px; (设置圆角)
+                            newText = '<span style="border-left: 4px solid; padding-left: 8px; display: inline-block; line-height: 1.05;">' + selectedText + '</span>';
                         }
                         
                         editor.insertContent(newText);
