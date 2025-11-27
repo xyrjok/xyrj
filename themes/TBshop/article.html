@@ -8,16 +8,17 @@
     <link href="/assets/css/all.min.css" rel="stylesheet">
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
 
-    <style>
-        /* ================== 文章内容富文本适配 ================== */
+   <style>
+        /* ================== 文章内容富文本适配 (编辑器风格还原版) ================== */
         /* 作用于 #article-content 容器内 */
         
         #article-content {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #333;
-            line-height: 1.8; /* 文章阅读通常需要更大的行高 */
+            /* [修改点2] 将行高从 1.8 改为 1.6，将字号从 16px 改为 14px，以匹配后台编辑器默认感觉 */
+            line-height: 1.6; 
             word-wrap: break-word;
-            font-size: 16px; /* 稍微调大字体提升阅读体验 */
+            font-size: 14px; 
         }
         
         /* 1. 图片自适应 */
@@ -27,7 +28,7 @@
             display: block;
             margin: 1em 0;
             border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* 给图片加一点阴影 */
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
         /* 2. 列表样式恢复 */
@@ -67,14 +68,23 @@
             border-radius: 0 4px 4px 0;
         }
         
-        /* 5. 标题增强 */
-        #article-content h1, #article-content h2, #article-content h3 {
-            margin-top: 1.5em;
-            margin-bottom: 0.75em;
+        /* 5. 标题增强 - [修改点1] 强制按比例重置 H1-H6 大小 */
+        /* 使用 em 单位，使其相对于基础字号(14px)进行缩放，还原编辑器默认比例 */
+        #article-content h1, #article-content h2, #article-content h3, 
+        #article-content h4, #article-content h5, #article-content h6 {
+            margin-top: 1.2em;
+            margin-bottom: 0.6em;
             font-weight: bold;
             color: #2c3e50;
+            line-height: 1.4;
         }
-        #article-content h2 { border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+        #article-content h1 { font-size: 2em; }     /* 约 28px */
+        #article-content h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 10px; } /* 约 21px */
+        #article-content h3 { font-size: 1.17em; }  /* 约 16.5px (此前Bootstrap默认为28px左右，这是主要差异点) */
+        #article-content h4 { font-size: 1em; }     /* 约 14px */
+        #article-content h5 { font-size: 0.83em; }  /* 约 11.6px */
+        #article-content h6 { font-size: 0.67em; }  /* 约 9.3px */
         
         /* 6. TinyMCE 对齐类支持 */
         #article-content .alignleft { float: left; margin: 0 15px 15px 0; }
