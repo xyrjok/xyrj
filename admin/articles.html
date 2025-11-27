@@ -507,17 +507,17 @@
                     tooltip: '插入/移除左侧蓝色竖条样式',
                     onAction: function () {
                         var selectedText = editor.selection.getContent();
-                        var hasBar = selectedText.includes('border-left: 5px solid #409EFF');
+                        var hasBar = selectedText.includes('border-left: 4px solid #409EFF');
                         var newText;
 
                         if (hasBar) {
                             // 移除竖条样式 (尝试匹配包含该样式的 span 并移除标签，保留内容)
                             // 这里使用正则替换更稳健，防止因为空格或属性顺序不同导致匹配失败
-                            newText = selectedText.replace(/<span style="border-left: 5px solid #409EFF;[^>]*">/g, '').replace(/<\/span>/g, '');
+                            newText = selectedText.replace(/<span style="border-left: 4px solid #409EFF;[^>]*">/g, '').replace(/<\/span>/g, '');
                         } else {
                             // 添加竖条样式
                             // [微调] 增加了 display: inline-block; 确保高度属性生效，避免竖条消失
-                            newText = '<span style="border-left: 5px solid #409EFF; padding-left: 10px; height: 100%; display: inline-block;">' + selectedText + '</span>';
+                            newText = '<span style="border-left: 4px solid #409EFF; padding-left: 10px; height: 100%; display: inline-block;">' + selectedText + '</span>';
                         }
                         
                         editor.insertContent(newText);
