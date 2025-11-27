@@ -672,20 +672,20 @@ async function handleApi(request, env, url) {
 
         // [升级] 获取文章列表 (含摘要、首图、置顶、浏览量)
         if (path === '/api/shop/articles/list') {
-            // [注意] 此处依然使用 is_notice 进行排序，保证文章列表页置顶功能生效
+            // 修改点：增加查询 a.cover_image 字段
             const { results } = await db.prepare(`
-                SELECT a.id, a.title, a.content, a.created_at, a.is_notice, a.view_count, a.category_id, ac.name as category_name
+                SELECT a.id, a.title, a.content, a.created_at, a.is_notice, a.view_count, a.category_id, a.cover_image, ac.name as category_name
                 FROM articles a
                 LEFT JOIN article_categories ac ON a.category_id = ac.id
                 ORDER BY a.is_notice DESC, a.view_count DESC, a.created_at DESC
             `).all();
             
-            // 处理数据：提取摘要和首图
+            // 处理数据
             const processed = results.map(r => {
                 const contentStr = r.content || '';
                 // 1. 提取纯文本摘要 (去标签)
                 const text = contentStr.replace(/<[^>]+>/g, '');
-                // 2. 提取第一张图片
+                // 2. 提取第一张图片 (作为备选)
                 const imgMatch = contentStr.match(/<img[^>]+src="([^">]+)"/);
                 
                 return {
@@ -696,8 +696,10 @@ async function handleApi(request, env, url) {
                     created_at: r.created_at,
                     is_notice: r.is_notice,
                     view_count: r.view_count || 0,
-                    snippet: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
-                    image: imgMatch ? imgMatch[1] : null
+                    // 修改点：返回后台设置的封面图，如果没有设置，则自动使用文章内第一张图
+                    cover_image: r.cover_image || (imgMatch ? imgMatch[1] : null),
+                    // 修改点：返回后端处理好的摘要 snippet
+                    snippet: text.substring(0, 100) + (text.length > 100 ? '...' : '')
                 };
             });
             return jsonRes(processed);
