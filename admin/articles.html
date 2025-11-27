@@ -520,7 +520,8 @@
                             // 1. border-left: 4px solid; (不指定颜色，默认继承文字颜色)
                             // 2. line-height: 1; (强制行高为1，使竖条高度与文字字号一致，垂直居中)
                             // 3. display: inline-block; (确保宽高生效)
-                            newText = '<span style="border-left: 4px solid; padding-left: 10px; display: inline-block; line-height: 1;">' + selectedText + '</span>';
+                            // 4. border-radius: 3px; (设置圆角)
+                            newText = '<span style="border-left: 4px solid; padding-left: 8px; display: inline-block; line-height: 1; border-radius: 3px;">' + selectedText + '</span>';
                         }
                         
                         editor.insertContent(newText);
