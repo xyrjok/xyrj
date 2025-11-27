@@ -12,6 +12,71 @@
     <link href="/assets/css/all.min.css" rel="stylesheet">
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
 
+    <style>
+        /* ================== 商品描述富文本适配 ================== */
+        /* 作用于 product-page.js 中生成的 .product-desc 容器内 */
+        
+        .product-desc {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #333;
+            line-height: 1.6;
+            word-wrap: break-word; /* 强制长单词换行 */
+            font-size: 15px; /* 稍微调大字体提升阅读体验 */
+        }
+        
+        /* 1. 图片自适应：防止大图撑破手机屏幕 */
+        .product-desc img {
+            max-width: 100% !important;
+            height: auto !important;
+            display: block; /* 消除图片底部的空隙 */
+            margin: 0.5em 0;
+            border-radius: 4px;
+        }
+
+        /* 2. 列表样式恢复：Bootstrap 可能默认去掉了列表样式 */
+        .product-desc ul, .product-desc ol {
+            padding-left: 2em;
+            margin-bottom: 1em;
+        }
+        .product-desc ul { list-style-type: disc; }
+        .product-desc ol { list-style-type: decimal; }
+
+        /* 3. 表格样式适配 */
+        .product-desc table {
+            width: 100%;
+            max-width: 100%;
+            margin-bottom: 1rem;
+            border-collapse: collapse;
+            border: 1px solid #dee2e6;
+        }
+        .product-desc table td, .product-desc table th {
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+
+        /* 4. 引用块样式 */
+        .product-desc blockquote {
+            border-left: 4px solid #ddd;
+            padding-left: 1rem;
+            color: #666;
+            margin: 1rem 0;
+            background-color: #f9f9f9;
+            padding: 0.5rem 1rem;
+        }
+        
+        /* 5. TinyMCE 对齐类支持 */
+        .product-desc .alignleft { float: left; margin: 0 10px 10px 0; }
+        .product-desc .alignright { float: right; margin: 0 0 10px 10px; }
+        .product-desc .aligncenter { display: block; margin-left: auto; margin-right: auto; }
+        
+        /* 6. 超链接样式 */
+        .product-desc a {
+            color: #0d6efd;
+            text-decoration: underline;
+        }
+    </style>
+
     <script src="/themes/TBshop/files/common.js" defer></script>
     <script src="/themes/TBshop/files/product-page.js" defer></script>
 </head>
