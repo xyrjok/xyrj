@@ -18,6 +18,18 @@
         /* 修复 TinyMCE 在 Bootstrap Modal 中的层级问题 */
         .tox-tinymce-aux { z-index: 1060 !important; }
 
+        /* ================== TinyMCE 移动端自动换行适配 ================== */
+        /* 强制工具栏和菜单栏换行，而不是隐藏或滚动 */
+        .tox .tox-toolbar__primary, 
+        .tox .tox-menubar {
+            flex-wrap: wrap !important;
+            white-space: normal !important;
+        }
+        /* 调整移动端工具栏按钮的间距，防止过于拥挤 */
+        .tox .tox-tbtn {
+            margin: 2px !important;
+        }
+
         /* 布局主容器 */
         .admin-container { display: flex; min-height: 100vh; width: 100%; }
 
@@ -475,16 +487,18 @@
     document.addEventListener("DOMContentLoaded", function() {
         tinymce.init({
             selector: '#p-desc',
-            language: 'zh_CN', // 确保 assets/tinymce/langs/zh_CN.js 存在
-            base_url: '/assets/tinymce', // 强制指定资源根目录
+            language: 'zh_CN',
+            base_url: '/assets/tinymce',
             suffix: '.min', 
             height: 300,
-            menubar: false,
-            plugins: 'lists link image charmap preview code searchreplace wordcount',
-            toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code',
+            menubar: true, // 开启菜单栏
+            // 增加 textcolor 插件
+            plugins: 'lists link image charmap preview code searchreplace wordcount textcolor',
+            // 增加字体、字号、行高、颜色工具栏
+            toolbar: 'undo redo | blocks fontselect fontsizeselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist | lineheight | forecolor backcolor | link image | code removeformat',
+            toolbar_mode: 'wrap', // 设置工具栏模式为换行（配合 CSS 实现）
             branding: false,
             promotion: false,
-            // 解决 Modal 中点击弹出层（如插入链接）焦点丢失的问题
             setup: function (editor) {
                 editor.on('change', function () {
                     editor.save();
