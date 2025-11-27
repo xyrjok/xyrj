@@ -132,7 +132,7 @@ function renderArticles() {
         // 封面图逻辑：如果有 cover_image 则使用，否则使用默认图或首图
         // 这里我们使用一个简单的占位逻辑，如果您有默认图可以替换
         const hasImage = !!article.cover_image;
-        const imgUrl = article.cover_image || '/themes/xyrj/files/noimage.jpg'; // 假设您上传了默认图，或者使用空图片逻辑
+        const imgUrl = article.cover_image || '/assets/noimage.jpg'; // 假设您上传了默认图，或者使用空图片逻辑
 
         // 置顶标签 HTML
         const pinnedHtml = article.is_notice ? '<span class="label-pinned">置顶</span>' : '';
@@ -143,7 +143,7 @@ function renderArticles() {
             <div class="article-item-image">
                 <div class="image-category">${cat}</div>
                 <a href="/article.html?id=${article.id}">
-                    <img src="${imgUrl}" alt="${article.title}" onerror="this.src='/themes/xyrj/files/noimage.jpg'">
+                    <img src="${imgUrl}" alt="${article.title}" onerror="this.src='/assets/noimage.jpg'">
                 </a>
             </div>
         `;
