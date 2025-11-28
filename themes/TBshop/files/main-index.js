@@ -91,20 +91,40 @@ function renderHotArticlesHome(articles) {
     const listEl = document.getElementById('hot-articles-list');
     if (!listEl) return;
 
-    if (articles.length === 0) {
-        listEl.innerHTML = '<div class="text-muted small text-center">暂无文章</div>';
+    if (!articles || articles.length === 0) {
+        listEl.innerHTML = '<div class="text-muted small text-center py-3">暂无文章</div>';
         return;
     }
 
-    // 取前5篇
-    listEl.innerHTML = articles.slice(0, 5).map((a, idx) => `
+    // 1. 按浏览量(view_count) 从大到小排序
+    // 注意：确保 API 返回了 view_count，如果没有则默认为 0
+    articles.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+
+    // 2. 只取前 5 篇
+    const top5 = articles.slice(0, 5);
+
+    // 3. 生成 HTML
+    listEl.innerHTML = top5.map((a, idx) => {
+        const rank = idx + 1;
+        // 根据排名应用对应的颜色 Class (rank-1 到 rank-5)
+        const badgeClass = `hot-rank-badge rank-${rank}`;
+        
+        // 格式化时间
+        const dateStr = new Date(a.created_at * 1000).toLocaleDateString();
+
+        return `
         <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light">
-            <a href="/article.html?id=${a.id}" class="text-truncate text-dark" style="max-width: 85%;">
-                <span class="badge bg-light text-dark border me-2">${idx + 1}</span>${a.title}
-            </a>
-            <small class="text-muted">${new Date(a.created_at * 1000).toLocaleDateString()}</small>
+            <div class="d-flex align-items-center overflow-hidden" style="flex: 1; margin-right: 10px;">
+                <span class="${badgeClass}">${rank}</span>
+                
+                <a href="/article.html?id=${a.id}" class="hot-article-title" title="${a.title}">
+                    ${a.title}
+                </a>
+            </div>
+            <small class="text-muted flex-shrink-0" style="font-size: 12px;">${dateStr}</small>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 /**
