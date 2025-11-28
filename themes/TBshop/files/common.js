@@ -88,7 +88,7 @@ const TB_LAYOUT = {
              <span id="cart-badge-mobile" class="badge bg-danger rounded-pill" 
                   style="position: absolute; top: 2px; right: 15px; font-size: 8px; padding: 2px 4px; display: none;">0</span>
         </a>
-        <a href="/articles.html" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-contact-sheet', 'mobile-contact-overlay');">
+        <a href="/articles.html" class="mbn-item ${activePage === 'articles' ? 'active' : ''}">
             <i class="fas fa-book"></i>
             <span>文章</span>
         </a>
