@@ -1158,18 +1158,58 @@ header, .tb-header, .mobile-header {
         padding-bottom: 1px; /* 防止内部高度计算塌陷 */
     }
 }
-/* =============================================
-   修复：移动端商品标题单行时下方间距过大
-   ============================================= */
-@media (max-width: 991px) {
-    /* 假设商品标题的类名为 .product-item-content h3 或 .goods-title 
-       如果您使用了不同的类名，请修改下方的选择器 */
+/* =================================================================
+   [终极修复] 移动端商品列表：解决单行标题间距过大 & 布局错位问题
+   ================================================================= */
+@media (max-width: 991.98px) {
     
-    .product-item-content h3,
-    .product-title,
-    .goods-info h3 { 
-        height: auto !important;       /* 取消固定高度 */
-        min-height: 0 !important;      /* 取消最小高度限制 */
-        margin-bottom: 8px !important; /* 保持一个合理的下方间距 */
+    /* 1. 卡片整体：改为顶部对齐，防止单行标题时内容垂直居中导致上下留白 */
+    .tb-card {
+        align-items: flex-start !important; 
+        padding-top: 10px;    /* 给顶部增加一点内边距，更美观 */
+        padding-bottom: 10px; /* 底部同理 */
+        min-height: auto !important; /* 取消最小高度限制 */
+    }
+
+    /* 2. 图片容器：保持原状，但防止被压缩 */
+    .tb-img-wrap {
+        flex-shrink: 0; 
+        margin-right: 10px; /* 图片和右侧内容的间距 */
+    }
+
+    /* 3. 右侧信息容器：紧凑排列 */
+    .tb-info {
+        padding: 0 !important; /* 移除内边距，完全由 flex gap 或 margin 控制 */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start; /* 内容向上顶 */
+        height: auto !important;
+    }
+
+    /* 4. 标题核心修复：取消固定高度，取消行数限制带来的空白 */
+    .tb-title {
+        height: auto !important;       /* [核心] 取消 36px 固定高度 */
+        min-height: 0 !important;
+        line-height: 1.4 !important;
+        margin-bottom: 6px !important; /* 控制标题和标签的间距 */
+        display: -webkit-box;          /* 保持省略号功能 */
+        -webkit-line-clamp: 2;         /* 依然限制最多两行 */
+        -webkit-box-orient: vertical;
+        white-space: normal;           /* 允许换行 */
+    }
+
+    /* 5. 标签栏：紧贴标题下方 */
+    .tb-tags-row {
+        margin-bottom: 6px !important;
+        min-height: 0 !important;      /* 取消最小高度占位 */
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    /* 6. 价格栏：位于最下方，但在 flex-column 中自然跟随 */
+    .tb-price-row {
+        margin-top: auto;   /* 如果卡片被拉高，价格栏沉底；否则紧跟上方 */
+        padding-top: 0 !important;
     }
 }
