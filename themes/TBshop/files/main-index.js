@@ -166,7 +166,7 @@ function renderTagsLocal(tags) {
 
         // 生成 HTML
         // return `<span class="dynamic-tag" style="display:inline-block;margin-right:6px;margin-bottom:4px;padding:1px 5px;border:1px solid ${borderColor};background:${bgColor};color:${textColor};border-radius:3px;font-size:11px;">${text}</span>`;
-        return `<span class="dynamic-tag" style="display:inline-block;margin-bottom:2px;margin-right:3px;padding:0px 2px;border:1px solid ${borderColor};background:${bgColor};color:${textColor};border-radius:3px;font-size:11px;">${text}</span>`;
+        return `<span class="dynamic-tag" style="display:inline-block;margin-bottom:2px;margin-right:3px;padding:0px 2px;border:1px solid ${borderColor};background:${bgColor};color:${textColor};border-radius:2px;font-size:11px;">${text}</span>`;
     }).join('');
 }
 
