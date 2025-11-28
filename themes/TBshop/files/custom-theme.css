@@ -157,10 +157,10 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
 /* PC端图片微调 */
 @media (min-width: 992px) {
     .tb-img {
-        width: 100%; height: 100%;  top: 0; left: 0; object-fit: contain;
+        width: 80%; height: 80%; top: 10%; left: 10%; object-fit: contain; 
     }
-    .tb-img-wrap { width: 80%; padding-bottom: 80%; margin: 10% auto; border: 1px solid #eee; border-radius: 5px; }
-    .sidebar-inner { padding-bottom: 1px; } 
+    .tb-img-wrap { padding-bottom: 80%; }
+    .sidebar-inner { padding-bottom: 1px; } /* 防止Sticky计算塌陷 */
 }
 
 /* 信息区域 */
