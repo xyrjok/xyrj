@@ -487,12 +487,16 @@
             language: 'zh_CN',
             base_url: '/assets/tinymce',
             suffix: '.min', 
-            height: 500, // 文章编辑框稍微高一点
-            menubar: true,
+            height: 500,
+            menubar: true, // 确保菜单栏开启
             plugins: 'lists link image charmap preview code searchreplace wordcount textcolor',
-            // [修改] 在工具栏最后添加了 toggle-vertical-bar 自定义按钮
             toolbar: 'undo redo | blocks fontselect fontsizeselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist | lineheight | forecolor backcolor | link image | code removeformat | toggle-vertical-bar',
-            toolbar_mode: 'wrap',
+            toolbar_mode: 'wrap', // PC端换行模式
+            mobile: {
+                theme: 'silver',   // 强制使用 PC 主题
+                toolbar_mode: 'wrap', // 移动端也开启换行
+                menubar: true      // 移动端显示菜单栏
+            },
             branding: false,
             promotion: false,
             setup: function (editor) {
