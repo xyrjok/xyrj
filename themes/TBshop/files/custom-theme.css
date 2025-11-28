@@ -1230,3 +1230,15 @@ header, .tb-header, .mobile-header {
         align-items: flex-end;
     }
 }
+/* 1. 针对热门教程列表中的文章链接进行样式覆盖 */
+#hot-articles-list a {
+    font-size: 14px !important;       /* [修改] 强制将字号改为 14px */
+    transition: all 0.2s ease;        /* [新增] 添加平滑过渡动画 */
+    text-decoration: none;            /* 去掉下划线 */
+}
+
+/* 2. 鼠标悬停 (Hover) 效果 */
+#hot-articles-list a:hover {
+    color: var(--tb-orange) !important; /* [新增] 悬停时变更为主题橙色 */
+    padding-left: 0px;                  /* [新增] 悬停时向右轻微移动 5px */
+}
