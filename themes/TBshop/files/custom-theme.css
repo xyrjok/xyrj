@@ -1158,3 +1158,18 @@ header, .tb-header, .mobile-header {
         padding-bottom: 1px; /* 防止内部高度计算塌陷 */
     }
 }
+/* =============================================
+   修复：移动端商品标题单行时下方间距过大
+   ============================================= */
+@media (max-width: 991px) {
+    /* 假设商品标题的类名为 .product-item-content h3 或 .goods-title 
+       如果您使用了不同的类名，请修改下方的选择器 */
+    
+    .product-item-content h3,
+    .product-title,
+    .goods-info h3 { 
+        height: auto !important;       /* 取消固定高度 */
+        min-height: 0 !important;      /* 取消最小高度限制 */
+        margin-bottom: 8px !important; /* 保持一个合理的下方间距 */
+    }
+}
