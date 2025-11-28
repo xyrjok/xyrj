@@ -1195,7 +1195,7 @@ header, .tb-header, .mobile-header {
         display: flex !important;
         flex-direction: column !important;
         justify-content: flex-start !important;
-        padding: 0 !important;
+        padding: 2px 0 0 0 !important;
         height: auto !important; /* 配合 stretch，高度会自动填满 */
         position: relative;
     }
