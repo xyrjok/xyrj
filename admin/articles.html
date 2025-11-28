@@ -481,56 +481,59 @@
     });
 
     // --- 初始化 TinyMCE ---
-    document.addEventListener("DOMContentLoaded", function() {
-        tinymce.init({
-            selector: '#a-content',
-            language: 'zh_CN',
-            base_url: '/assets/tinymce',
-            suffix: '.min', 
-            height: 500,
-            menubar: true, // 确保菜单栏开启
-            plugins: 'lists link image charmap preview code searchreplace wordcount textcolor',
-            toolbar: 'undo redo blocks fontselect fontsizeselect bold italic underline strikethrough alignleft aligncenter alignright alignjustify bullist numlist lineheight forecolor backcolor link image code removeformat toggle-vertical-bar',
-            toolbar_mode: 'wrap', // PC端换行模式
-            mobile: {
-                theme: 'silver',   // 强制使用 PC 主题
-                toolbar_mode: 'wrap', // 移动端也开启换行
-                menubar: true      // 移动端显示菜单栏
-            },
-            branding: false,
-            promotion: false,
-            setup: function (editor) {
-                editor.on('change', function () {
-                    editor.save();
-                });
+    document.addEventListener("DOMContentLoaded", function () {
+    tinymce.init({
+        selector: '#p-desc',
+        language: 'zh_CN',
+        base_url: '/assets/tinymce',
+        suffix: '.min',
+        height: 500,
+        menubar: true,
+        plugins: 'lists link image charmap preview code searchreplace wordcount',
+        toolbar: 'undo redo blocks fontselect fontsizeselect bold italic underline strikethrough alignleft aligncenter alignright alignjustify bullist numlist lineheight forecolor backcolor link image code removeformat toggle-vertical-bar',
+        toolbar_mode: 'wrap',
+        mobile: {
+            theme: 'silver',
+            toolbar_mode: 'wrap'
+        },
+        branding: false,
+        promotion: false,
 
-                // [新增] 竖条标题 自定义按钮
-                editor.ui.registry.addButton('toggle-vertical-bar', {
-                    text: '竖条标题',
-                    // icon: 'bookmark', // 如果有合适的图标可以用
-                    tooltip: '插入/移除左侧竖条样式(跟随文字颜色)',
-                    onAction: function () {
-                        var selectedText = editor.selection.getContent();
-                        // 修改：判断条件改为检查是否存在 border-left: 4px solid (不限制颜色)
-                        var hasBar = selectedText.includes('border-left: 4px solid');
-                        var newText;
+        setup: function (editor) {
 
-                        if (hasBar) {
-                            // 移除竖条样式
-                            // 使用正则匹配移除带有 border-left: 4px solid 的 span 标签
-                            newText = selectedText.replace(/<span\s+style="[^"]*border-left:\s*5px\s+solid[^"]*"[^>]*>/g, '').replace(/<\/span>/g, '');
-                        } else {
-                            // 添加竖条样式
-                            // 1. border-left: 4px solid; (不指定颜色，默认继承文字颜色)
-                            // 2. line-height: 1; (强制行高为1，使竖条高度与文字字号一致，垂直居中)
-                            // 3. display: inline-block; (确保宽高生效)
-                            // 4. border-radius: 3px; (设置圆角)
-                            newText = '<span style="border-left: 4px solid; padding-left: 8px; display: inline-block; line-height: 1.05;">' + selectedText + '</span>';
-                        }
-                        
-                        editor.insertContent(newText);
+            editor.on('change', function () {
+                editor.save();
+            });
+
+            // ⭐ 自定义竖条标题按钮
+            editor.ui.registry.addButton('toggle-vertical-bar', {
+                text: '竖条标题',
+                tooltip: '插入/移除左侧竖条样式（跟随文字颜色）',
+                onAction: function () {
+                    var selectedText = editor.selection.getContent();
+
+                    // ⭐ 检查是否有我们插入的 span
+                    var hasBar = selectedText.includes('data-vertical-bar="1"');
+
+                    if (hasBar) {
+                        // ⭐ 删除我们插入的竖条 span，不影响其他 span
+                        var cleaned = selectedText
+                            .replace(/<span[^>]*data-vertical-bar="1"[^>]*>/g, '')
+                            .replace(/<\/span>/g, '');
+
+                        editor.insertContent(cleaned);
+                    } else {
+                        // ⭐ 插入新的竖条 span
+                        var wrapped =
+                            '<span data-vertical-bar="1" ' +
+                            'style="border-left: 4px solid; padding-left: 6px; vertical-align: middle; display: inline-block; line-height: 1;">' +
+                            selectedText +
+                            '</span>';
+
+                        editor.insertContent(wrapped);
                     }
-                });
+                }
+            });
             }
         });
     });
