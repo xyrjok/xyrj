@@ -32,19 +32,39 @@ async function initHomePage() {
         // [新增] 检查 URL 是否带有分类参数 (从移动端侧边栏跳转过来)
         const urlParams = new URLSearchParams(window.location.search);
         const catId = urlParams.get('cat');
+        const searchQuery = urlParams.get('q'); // 获取搜索关键词
 
-        if (catId) {
-            // 如果有 cat 参数，直接筛选该分类
+        if (searchQuery) {
+            // === 情况 1: 如果是搜索跳转过来的 ===
+            const val = decodeURIComponent(searchQuery);
+            
+            // 1. 把搜索词回填到输入框，让用户知道搜了什么
+            const pcInput = document.getElementById('search-input');
+            const mobileInput = document.getElementById('mobile-search-input');
+            if(pcInput) pcInput.value = val;
+            if(mobileInput) mobileInput.value = val;
+
+            // 2. 执行筛选并显示
+            // 确保 allProducts 已经加载
+            if (allProducts && allProducts.length > 0) {
+                const filtered = allProducts.filter(p => p.name.toLowerCase().includes(val.toLowerCase()));
+                renderSingleGrid(filtered, `"${val}" 的搜索结果`);
+            } else {
+                renderCategorizedView('all');
+            }
+
+        } else if (catId) {
+            // === 情况 2: 如果是分类跳转过来的 ===
             renderCategorizedView(catId);
-            // (可选) 清除 URL 参数，避免刷新或点击返回时卡死在该分类
+            // (可选) 清除 URL 参数
             if (window.history && window.history.replaceState) {
                 window.history.replaceState({}, '', window.location.pathname);
             }
         } else {
-            // 默认视图 (全部商品)
+            // === 情况 3: 默认视图 ===
             renderCategorizedView('all');
         }
-
+        
     } catch (e) {
         console.error('Products load failed:', e);
         if (prodListArea) prodListArea.innerHTML = '<div class="text-center py-5 text-danger">商品加载失败，请刷新重试</div>';
