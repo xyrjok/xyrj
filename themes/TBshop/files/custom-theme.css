@@ -1,19 +1,38 @@
-/* === 全局配色 & 基础 === */
+/* ===================================================================
+=== 1. 全局设置 & 基础变量 (Global & Basics) ===
+=================================================================== 
+*/
 :root {
     --tb-orange: #ff5000;
     --tb-red: #ff0036;
     --bg-gray: #f4f4f4;
     --tb-grad: linear-gradient(135deg, #ff9000, #ff5000); /* 淘宝橙色渐变 */
 }
+
 body { 
     background-color: #f4f4f4; 
     background-color: var(--bg-gray); 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+    /* 页脚吸底功能：Flex布局 */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
+
 a { text-decoration: none; color: #333; transition: color 0.2s; }
 a:hover { color: var(--tb-orange); }
 
-/* === 1. 顶部导航栏 (62px) === */
+/* 通用布局修正 */
+#global-footer { margin-top: auto; width: 100%; }
+header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; }
+#main-content-row { margin-bottom: 30px; } /* 主体底部留白 */
+
+/* ===================================================================
+=== 2. PC端样式 (Desktop Styles) ===
+=================================================================== 
+*/
+
+/* --- 2.1 顶部导航栏 (62px) --- */
 .tb-header {
     background: #fff;
     height: 62px;
@@ -28,8 +47,6 @@ a:hover { color: var(--tb-orange); }
     align-items: center;
     justify-content: space-between;
 }
-
-/* Logo / 店名 */
 .site-brand {
     font-size: 22px;
     font-weight: bold;
@@ -39,27 +56,17 @@ a:hover { color: var(--tb-orange); }
 }
 .site-brand i { margin-right: 8px; font-size: 24px; }
 
-/* 中间导航链接 */
-.main-nav { 
-    display: flex; 
-    flex: 1; 
-    align-items: center;
-}
+.main-nav { display: flex; flex: 1; align-items: center; }
 .nav-link-item { 
-    font-size: 14px; 
-    font-weight: 500; 
-    color: #333; 
-    margin-right: 25px;
+    font-size: 14px; font-weight: 500; color: #333; margin-right: 25px;
 }
 .nav-link-item:last-child { margin-right: 0; }
 .nav-link-item:hover { color: var(--tb-orange); }
 
-/* 右侧搜索与登录 */
+/* --- 2.2 搜索与登录 --- */
 .header-right { display: flex; align-items: center; }
-
 .tb-search-group {
-    display: flex;
-    align-items: center;
+    display: flex; align-items: center;
     border: 2px solid var(--tb-red);
     border-radius: 20px;
     overflow: hidden;
@@ -69,110 +76,66 @@ a:hover { color: var(--tb-orange); }
     margin-right: 15px; 
 }
 .tb-search-input {
-    border: none;
-    outline: none;
-    padding: 0 15px;
-    flex: 1;
-    font-size: 13px;
-    width: 100%;
-    background: transparent;
+    border: none; outline: none; padding: 0 15px;
+    flex: 1; font-size: 13px; width: 100%; background: transparent;
 }
 .tb-search-btn {
-    background: var(--tb-red);
-    color: white;
-    border: none;
-    padding: 0 20px;
-    font-weight: bold;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 18px;
-    margin: 2px;
-    height: 28px;
+    background: var(--tb-red); color: white; border: none;
+    padding: 0 20px; font-weight: bold; font-size: 14px;
+    cursor: pointer; border-radius: 18px; margin: 2px; height: 28px;
 }
 .tb-search-btn:hover { background: #d6002a; }
 
 .btn-login {
-    color: var(--tb-red);
-    border: 1px solid var(--tb-red);
-    padding: 4px 15px;
-    border-radius: 6px;
-    font-size: 14px;
-    background: #fff;
+    color: var(--tb-red); border: 1px solid var(--tb-red);
+    padding: 4px 15px; border-radius: 6px; font-size: 14px; background: #fff;
 }
 .btn-login:hover { background: #fff0f0; color: var(--tb-red); }
 
-/* === 布局模块通用 === */
+/* --- 2.3 模块容器与标题 --- */
 .module-box {
-    background: #fff;
-    border-radius: 5px;
-    padding: 15px;
-    margin-bottom: 15px;
+    background: #fff; border-radius: 5px; padding: 15px; margin-bottom: 15px;
 }
-
-/* [修改 2.1] 模块标题 - 移除border，为伪元素做准备 */
 .module-title {
-    font-size: 16px;
-    font-weight: bold;
-    border-left: none; /* 修改 */
-    padding-left: 14px; /* 修改：4px竖条宽度 + 10px间距 */
+    font-size: 16px; font-weight: bold;
+    border-left: none; 
+    padding-left: 14px; 
     margin-bottom: 12px;
     display: flex; justify-content: space-between; align-items: center;
-    position: relative; /* 添加 */
+    position: relative; 
 }
-
-/* [修改 2.2] 模块标题 - 添加伪元素竖条 */
 .module-title::before {
-    border-radius: 12px;
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 1em; /* 关键：高度关联字体大小 (font-size: 16px) */
-    background-color: var(--tb-orange);
+    border-radius: 12px; content: ""; position: absolute;
+    left: 0; top: 50%; transform: translateY(-50%);
+    width: 4px; height: 1em; background-color: var(--tb-orange);
 }
-
 .module-title a { font-size: 12px; font-weight: normal; color: #999; }
 
-/* === 左侧模块 === */
-.category-bar { 
-    display: flex; 
-    flex-wrap: wrap; 
-}
-
+/* --- 2.4 分类导航 (Category Bar) --- */
+.category-bar { display: flex; flex-wrap: wrap; }
 .cat-pill {
-    display: inline-flex; 
-    align-items: center;
+    display: inline-flex; align-items: center;
     padding: 4px 12px 4px 8px;
-    background: #f5f5f5;
-    border-radius: 20px;
-    font-size: 13px;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.2s;
-    margin-right: 8px; 
-    margin-bottom: 8px;
+    background: #f5f5f5; border-radius: 20px;
+    font-size: 13px; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.2s;
+    margin-right: 8px; margin-bottom: 8px;
 }
 .cat-pill.active, .cat-pill:hover {
-    background: #fff3eb;
-    color: var(--tb-orange);
-    border-color: var(--tb-orange);
+    background: #fff3eb; color: var(--tb-orange); border-color: var(--tb-orange);
 }
 .cat-pill img {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    margin-right: 6px;
-    object-fit: cover;
+    width: 18px; height: 18px; border-radius: 50%; margin-right: 6px; object-fit: cover;
 }
 
+/* --- 2.5 商品网格布局 (修复 gap 兼容性) --- */
 .taobao-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -5px; /* 抵消子元素的 margin */
 }
 
+/* 商品卡片基础 */
 .tb-card {
     background: #fff;
     border-radius: 8px;
@@ -180,33 +143,29 @@ a:hover { color: var(--tb-orange); }
     border: 1px solid #eee;
     overflow: hidden;
     display: flex; 
-    flex-direction: column; 
+    flex-direction: column;
+    /* PC端宽度计算：4列布局，使用 margin 代替 gap */
+    width: calc(25% - 10px); 
+    margin: 0 5px 10px 5px;
 }
 .tb-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+
+/* 图片区域 */
 .tb-img-wrap { width: 100%; padding-bottom: 100%; position: relative; background: #f9f9f9; }
 .tb-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
 
+/* PC端图片微调 */
 @media (min-width: 992px) {
     .tb-img {
-        width: 80%;
-        height: 80%;
-        top: 10%;
-        left: 10%;
-        object-fit: contain; 
+        width: 80%; height: 80%; top: 10%; left: 10%; object-fit: contain; 
     }
-    .tb-img-wrap {
-        padding-bottom: 80%;
-    }
+    .tb-img-wrap { padding-bottom: 80%; }
+    .sidebar-inner { padding-bottom: 1px; } /* 防止Sticky计算塌陷 */
 }
 
-.tb-info { 
-    padding: 8px; 
-    display: flex; 
-    flex-direction: column; 
-    flex-grow: 1; 
-}
+/* 信息区域 */
+.tb-info { padding: 8px; display: flex; flex-direction: column; flex-grow: 1; }
 
-/* [修改 3] 商品标题 - 强制换行 */
 .tb-title { 
     font-size: 13px; 
     height: 38px; 
@@ -217,41 +176,38 @@ a:hover { color: var(--tb-orange); }
     display: -webkit-box; 
     -webkit-line-clamp: 2; 
     -webkit-box-orient: vertical; 
-    word-break: break-all; /* <-- 添加此行 */
+    word-break: break-all; 
 }
 
 .tb-price-row { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: flex-end; 
-    margin-top: auto; 
-    padding-top: 5px; 
-    flex-wrap: nowrap;
+    display: flex; justify-content: space-between; align-items: flex-end; 
+    margin-top: auto; padding-top: 5px; flex-wrap: nowrap;
 }
 .tb-price { color: var(--tb-orange); font-weight: bold; font-size: 20px; }
-.tb-price small { font-size: 13px;margin-right: 1px;}
-.tb-sales { font-size: 12px; color: #999;text-align: right; white-space: nowrap; flex-shrink: 0; margin-bottom: 3px; }
+.tb-price small { font-size: 13px; margin-right: 1px;}
+.tb-sales { font-size: 12px; color: #999; text-align: right; white-space: nowrap; flex-shrink: 0; margin-bottom: 3px; }
 
 .tb-tags-row {
-    height: auto;
-    min-height: 16px; 
-    overflow: hidden;
-    margin-bottom: 3px;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    height: auto; min-height: 16px; overflow: hidden;
+    margin-bottom: 3px; display: flex; align-items: center; flex-wrap: wrap;
 }
 .dynamic-tag {
-    margin-bottom:2px;
-    display:inline-block;
-    font-size:11px;
-    padding:0px 2px;
-    border-radius:3px;
-    margin-right:3px;
-    line-height:normal;
-    border:1px solid transparent;
-    white-space:nowrap;
+    margin-bottom: 2px; display: inline-block; font-size: 11px;
+    padding: 0px 2px; border-radius: 3px; margin-right: 3px;
+    line-height: normal; border: 1px solid transparent; white-space: nowrap;
 }
+
+/* --- 2.6 右侧模块 (热门文章/标签/通知) --- */
+.notice-content { font-size: 13px; line-height: 1.6; color: #666; }
+
+.top-item { display: flex; margin-bottom: 12px; align-items: center; }
+.top-img { 
+    width: 45px; height: 45px; border-radius: 4px; object-fit: cover; 
+    border: 1px solid #eee; margin-right: 10px; 
+}
+.top-info { flex: 1; overflow: hidden; }
+.top-title { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.top-price { color: var(--tb-orange); font-weight: bold; font-size: 14px; }
 
 .hot-article-item {
     display: flex; justify-content: space-between; padding: 8px 0;
@@ -260,1028 +216,411 @@ a:hover { color: var(--tb-orange); }
 .hot-article-item:last-child { border-bottom: none; }
 .hot-rank {
     display: inline-block; width: 18px; height: 18px;
-    background: #ccc; color: #fff; 
-    text-align: center; line-height: 18px; border-radius: 4px; font-size: 12px; margin-right: 8px;
+    background: #ccc; color: #fff; text-align: center; line-height: 18px;
+    border-radius: 4px; font-size: 12px; margin-right: 8px;
 }
 .hot-rank.top-3 { background: var(--tb-orange); }
 
-/* === 右侧模块 === */
-.notice-content { font-size: 13px; line-height: 1.6; color: #666; }
-.top-item { 
-    display: flex; 
-    margin-bottom: 12px; 
-    align-items: center; 
+/* 热门文章链接 */
+#hot-articles-list a {
+    font-size: 14px !important; transition: all 0.2s ease; text-decoration: none;
 }
-.top-img { 
-    width: 45px; height: 45px;
-    border-radius: 4px; object-fit: cover; border: 1px solid #eee; 
-    margin-right: 10px; 
+#hot-articles-list a:hover {
+    color: var(--tb-orange) !important; padding-left: 5px;
 }
-.top-info { flex: 1; overflow: hidden; }
-.top-title { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
-.top-price { color: var(--tb-orange); font-weight: bold; font-size: 14px; }
+.hot-rank-badge {
+    display: inline-block; width: 20px; height: 20px; line-height: 20px;
+    text-align: center; border-radius: 4px; color: #fff; font-size: 12px;
+    font-weight: bold; margin-right: 8px; flex-shrink: 0;
+}
+.rank-1 { background-color: #ff0036; }
+.rank-2 { background-color: #ff5000; }
+.rank-3 { background-color: #ff9000; }
+.rank-4 { background-color: #19be6b; }
+.rank-5 { background-color: #409eff; }
 
 .art-cat-list a { 
-	position: relative;
-	padding-left: 13px !important; 
-	display: block; 
-	padding: 6px 0;
-	border-bottom: 1px solid #f5f5f5; 
-	font-size: 14px; 
-	}
-.art-cat-list a:hover { 
-	color: var(--tb-orange); 
-	}
+	position: relative; padding-left: 13px !important; display: block; 
+	padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; 
+}
+.art-cat-list a:hover { color: var(--tb-orange); }
 .art-cat-list a:before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 55%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border: 4px solid transparent;
-    border-left: 5px solid #ccc; /* 灰色三角 */
-}
-.tag-cloud { 
-    display: flex; 
-    flex-wrap: wrap; 
-}
-.tag-cloud-item {
-    font-size: 13px;
-    padding: 3px 8px;
-    background: #f8f9fa;
-    border: 1px solid #eee;
-    border-radius: 15px;
-    color: #666;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-right: 6px;
-    margin-bottom: 6px;
-}
-.tag-cloud-item:hover, .tag-cloud-item.active {
-    background: #fff3eb;
-    color: var(--tb-orange);
-    border-color: var(--tb-orange);
+    content: ""; position: absolute; left: 0; top: 55%; transform: translateY(-50%);
+    width: 0; height: 0; border: 4px solid transparent; border-left: 5px solid #ccc;
 }
 
-/* === 4. Footer === */
+.tag-cloud { display: flex; flex-wrap: wrap; }
+.tag-cloud-item {
+    font-size: 13px; padding: 3px 8px; background: #f8f9fa;
+    border: 1px solid #eee; border-radius: 15px; color: #666;
+    cursor: pointer; transition: all 0.2s; margin-right: 6px; margin-bottom: 6px;
+}
+.tag-cloud-item:hover, .tag-cloud-item.active {
+    background: #fff3eb; color: var(--tb-orange); border-color: var(--tb-orange);
+}
+
+/* --- 2.7 页脚 (Footer) --- */
 .site-footer {
-    background: #fff;
-    padding: 30px 0 20px;
-    text-align: center;
-    margin-top: 30px;
+    background: #fff; padding: 30px 0 20px; text-align: center; margin-top: 30px;
 }
 .footer-links { margin-bottom: 15px; }
 .footer-links a { margin: 0 10px; font-size: 14px; color: #666; }
 .copyright { color: #999; font-size: 12px; }
 
+/* --- 2.8 交互组件与按钮 --- */
 
-/*
-========================================
-=== 新增：移动端专属样式 (Taobao Style) ===
-========================================
+/* 返回顶部按钮 */
+.back-to-top-btn {
+    position: fixed; bottom: 120px; right: 40px;
+    width: 45px; height: 45px;
+    background-color: rgb(86 84 84 / 44%); color: #f9f9f9;
+    border-radius: 50%; text-align: center; line-height: 45px;
+    font-size: 20px; cursor: pointer; z-index: 9990;
+    opacity: 0; visibility: hidden; transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.back-to-top-btn:hover {
+    background-color: var(--tb-orange); transform: translateY(-3px);
+}
+.back-to-top-btn.show { opacity: 1; visibility: visible; }
+
+/* 购买按钮 */
+.btn-buy-split-left {
+    height: 43px; padding: 0 12px 0 16px;
+    border-radius: 22px 0 0 22px;
+    background: linear-gradient(90deg, #ffbf00, #ffa502);
+    color: #fff; font-weight: bold; border: none; font-size: 15px;
+    cursor: pointer; transition: opacity 0.2s;
+}
+.btn-buy-split-right {
+    height: 43px; padding: 0 16px 0 12px;
+    border-radius: 0 22px 22px 0;
+    background: linear-gradient(90deg, #ff8400, #ff5000);
+    color: #fff; font-weight: bold; border: none; font-size: 15px;
+    cursor: pointer; transition: opacity 0.2s;
+}
+.btn-buy-split-left:hover, .btn-buy-split-right:hover { opacity: 0.9; }
+
+/* 规格/发卡相关 */
+.spec-pagination-container {
+    margin-top: 12px; text-align: left; display: none;
+    padding-top: 8px; border-top: 1px dashed #eee;
+}
+.spec-pagination-btn {
+    display: inline-block; padding: 4px 10px; margin: 0 4px;
+    border: 1px solid #ddd; background-color: #f8f9fa; color: #333;
+    cursor: pointer; border-radius: 4px; font-size: 12px;
+    user-select: none; transition: all 0.2s;
+}
+.spec-pagination-btn:hover { background-color: #e2e6ea; border-color: #ccc; }
+.spec-pagination-btn.active {
+    background-color: var(--tb-orange); color: #fff; border-color: var(--tb-orange);
+}
+.spec-pagination-btn.disabled {
+    opacity: 0.5; cursor: not-allowed; background-color: #f1f1f1;
+}
+#sku-btn-list { align-content: flex-start; }
+
+/* 支付方式图标 */
+.payment-option {
+    position: relative; display: inline-flex;
+    align-items: center; justify-content: center;
+    padding: 1px 6px; height: 38px; min-width: 38px;
+    font-size: 25px; border: 1px solid #ddd; border-radius: 4px;
+    margin-right: 12px; cursor: pointer; background: #fff; transition: all 0.2s;
+}
+.payment-option:hover { border-color: #bbb; }
+.payment-option.active { border-color: #dc3545; }
+.payment-option img { height: 20px; width: auto; object-fit: contain; }
+.payment-check-mark {
+    position: absolute; top: -7px; right: -7px;
+    width: 16px; height: 16px; background-color: #dc3545; color: #fff;
+    border-radius: 50%; font-size: 10px; display: flex;
+    align-items: center; justify-content: center;
+    opacity: 0; transform: scale(0); transition: all 0.2s; z-index: 1;
+}
+.payment-option.active .payment-check-mark { opacity: 1; transform: scale(1); }
+
+/* 缺货样式 */
+.sku-btn.no-stock {
+    background-color: #f5f5f5 !important; border-color: #e9ecef !important;
+    color: #6c757d !important; position: relative; cursor: not-allowed;
+    opacity: 1 !important; overflow: visible;
+}
+.sku-oos-badge {
+    position: absolute; top: -7px; right: -6px;
+    background-color: #dc3545; color: #fff; font-size: 9px;
+    padding: 0px 3px; border-radius: 3px; z-index: 10;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* 自动发卡选号弹窗 */
+.stock-sales-row {
+    font-size: 13px; color: #888; margin-bottom: 10px; display: flex; align-items: center;
+}
+.number-selector-overlay {
+    position: absolute; top: 60px; left: 0; width: 100%; bottom: 160px;
+    background: rgba(255, 255, 255, 0.98); z-index: 100;
+    border: 1px solid #eee; border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(20px); opacity: 0; visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex; flex-direction: column;
+}
+.number-selector-overlay.active { transform: translateY(0); opacity: 1; visibility: visible; }
+.ns-header {
+    padding: 10px 15px; border-bottom: 1px solid #f0f0f0;
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f9f9f9; font-weight: bold; font-size: 14px;
+    border-top-left-radius: 8px; border-top-right-radius: 8px;
+}
+.ns-close { cursor: pointer; padding: 0 5px; font-size: 18px; color: #999; line-height: 1; }
+.ns-close:hover { color: #333; }
+.ns-body { flex: 1; overflow-y: auto; padding: 10px; }
+.ns-footer {
+    text-align: center; padding: 10px 0; border-top: 1px solid #eee;
+    cursor: pointer; color: #999; font-size: 13px; background: #fff;
+}
+.ns-footer:hover { background-color: #f8f9fa; color: #333; }
+
+/* 选号网格 (修复 gap) */
+.ns-grid {
+    display: flex; flex-wrap: wrap; 
+    margin-right: -8px; margin-bottom: -8px; /* 抵消 gap */
+}
+.ns-item {
+    padding: 6px 12px; background: #fff;
+    border: 1px solid #ddd; border-radius: 4px; font-size: 12px;
+    cursor: pointer; transition: all 0.2s; user-select: none;
+    margin-right: 8px; margin-bottom: 8px; /* 替代 gap */
+}
+.ns-item:hover { border-color: #aaa; background-color: #f5f5f5; }
+.ns-item.selected {
+    background-color: #dc3545; border-color: #dc3545; color: #fff; font-weight: normal;
+}
+.price-bar { position: relative; }
+
+
+/* ===================================================================
+=== 3. 移动端样式 (Mobile Styles - Max Width 992px) ===
+=================================================================== 
 */
-
-/* 移动端头部 */
-.mobile-header {
-    height: 50px;
-    background: #fff;
-    position: fixed; 
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1001;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.mh-left, .mh-right {
-    flex: 0 0 20px;
-    text-align: center;
-    font-size: 20px;
-    color: #333;
-    cursor: pointer;
-}
-.mh-center {
-    flex: 1;
-    text-align: center;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-#mobile-logo-img {
-    height: 40px;
-    width: auto;
-    object-fit: contain;
-}
-#mobile-site-name-wrap {
-    font-size: 18px;
-    font-weight: bold;
-    color: var(--tb-orange);
-}
-#mobile-site-name-wrap i {
-    font-size: 20px; margin-right: 6px;
-}
-
-
-/* 移动端下滑搜索框 */
-.mobile-search-dropdown {
-    position: fixed;
-    top: 50px; /* 头部高度 */
-    left: 0;
-    width: 100%;
-    background: #fff;
-    padding: 15px;
-    z-index: 1000;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-    transform: translateY(-150%);
-    transition: transform 0.3s ease-in-out;
-    display: block; 
-}
-.mobile-search-dropdown.show {
-    transform: translateY(0);
-}
-.mobile-search-dropdown .tb-search-group {
-    width: 100%;
-    margin: 0;
-    height: 40px; 
-    align-items: center;
-}
-.mobile-search-dropdown .tb-search-input {
-    height: 100%; 
-    flex: 1;
-    padding: 0 15px;
-}
-.mobile-search-dropdown .tb-search-btn {
-    height: 33px; 
-    margin: 2px;
-}
-
-.mobile-search-overlay {
-    position: fixed;
-    top: 50px;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 999;
-    display: none;
-}
-.mobile-search-overlay.show {
-    display: block;
-}
-
-/* 移动端侧滑菜单 */
-.mobile-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 1002;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease;
-}
-.mobile-overlay.show {
-    opacity: 1;
-    visibility: visible;
-}
-.mobile-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 240px; 
-    height: calc(100% - 50px); 
-    background: var(--tb-grad); /* 淘宝渐变背景 */
-    color: #fff; 
-    z-index: 1003;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
-    display: flex;
-    flex-direction: column;
-}
-.mobile-sidebar.show {
-    transform: translateX(0);
-}
-.mobile-sidebar-header {
-    padding: 15px;
-    border-bottom: 1px solid rgba(255,255,255,0.2); 
-    text-align: center;
-    position: relative; 
-}
-.mobile-sidebar-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: #fff; 
-    margin: 0;
-}
-.mobile-sidebar-close {
-    position: absolute;
-    top: 50%;
-    right: 15px;
-    transform: translateY(-50%);
-    font-size: 22px;
-    color: #fff;
-    cursor: pointer;
-    opacity: 0.7;
-}
-.mobile-sidebar-close:hover {
-    opacity: 1;
-}
-.mobile-sidebar-content {
-    padding: 15px;
-    flex: 1; 
-    overflow-y: auto; 
-}
-#mobile-category-list a {
-    display: flex; 
-    align-items: center; 
-    padding: 10px 5px;
-    font-size: 14px;
-    color: #fff; 
-    border-bottom: 1px solid rgba(255,255,255,0.15); 
-}
-#mobile-category-list a img {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    margin-right: 10px;
-    object-fit: cover;
-    background: #fff; 
-}
-#mobile-category-list a:hover {
-    color: #fff; 
-    background: rgba(255,255,255,0.1); 
-}
-.mobile-sidebar-footer {
-    padding: 15px;
-    border-top: 1px solid rgba(255,255,255,0.2); 
-    background: rgba(0,0,0,0.1); 
-}
-.mobile-sidebar-login-link {
-    display: block;
-    text-align: center;
-    padding: 8px;
-    font-size: 16px;
-    color: #fff; 
-    border: 1px solid rgba(255,255,255,0.5); 
-    border-radius: 18px; 
-    background: var(--tb-grad); 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-.mobile-sidebar-login-link:hover {
-    background: linear-gradient(135deg, #ffa020, #ff6a1a);
-    color: #fff;
-    border-color: #fff;
-}
-.mobile-sidebar-login-link i {
-    margin-right: 5px;
-}
-
-/* 移动端吸底导航栏 */
-.mobile-bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 50px; 
-    background: #fff;
-    border-top: 1px solid #eee;
-    z-index: 1006; /* 修改：提高 z-index */
-    display: flex;
-    justify-content: space-around;
-    box-shadow: none; /* 修改：移除阴影 */
-}
-.mbn-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-    font-size: 10px;
-    padding: 5px 0;
-}
-.mbn-item i {
-    font-size: 18px; 
-    margin-bottom: 2px;
-    line-height: 1;
-}
-.mbn-item.active, .mbn-item:hover {
-    color: var(--tb-orange);
-}
-
-/* === [新增] 移动端上滑联系方式 === */
-.mobile-contact-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: calc(100% - 50px); /* 修改：高度不包括底部 50px */
-    bottom: 50px; /* 新增：底部在 50px 之上 */
-    background: rgba(0,0,0,0.5);
-    z-index: 1004; /* 高于 sidebar */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease;
-}
-.mobile-contact-overlay.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-.mobile-contact-sheet {
-    position: fixed;
-    bottom: 50px; /* 修改：从 50px 处(即导航栏上方)开始 */
-    left: 0;
-    width: 100%;
-    background: #fff;
-    z-index: 1005;
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    /*box-shadow: 0 -4px 15px rgba(0,0,0,0.1);*/
-    transform: translateY(100%);
-    transition: transform 0.3s ease-in-out;
-    max-height: 60vh;
-    display: flex;
-    flex-direction: column;
-}
-.mobile-contact-sheet.show {
-    transform: translateY(0);
-}
-.mcs-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #f0f0f0;
-    flex-shrink: 0;
-}
-.mcs-title {
-    font-size: 16px;
-    font-weight: bold;
-}
-.mcs-close {
-    font-size: 20px;
-    color: #999;
-    cursor: pointer;
-}
-.mcs-content {
-    padding: 15px;
-    overflow-y: auto;
-    line-height: 1.6;
-    font-size: 13px; /* 修改：设置字体大小 */
-}
-
-/* 移动端媒体查询总开关 */
 @media (max-width: 991.98px) {
     body {
-        padding-top: 50px; /* 为 mobile-header 腾出空间 */
-        padding-bottom: 50px; /* 为 mobile-bottom-nav 腾出空间 */
+        padding-top: 50px; /* Header space */
+        padding-bottom: 50px; /* Footer nav space */
     }
 
-    /* 1. 隐藏PC元素 */
-    .tb-header {
-        display: none !important; 
-    }
-    .col-lg-3 {
-        display: none; 
-    }
-    .col-lg-9 {
-        width: 100%; 
-    }
-    .main-nav {
-        display: none; 
-    }
-    
-    /* 2. 调整布局 */
+    /* --- 3.1 隐藏PC端元素 --- */
+    .tb-header, .col-lg-3, .main-nav { display: none !important; }
+    .col-lg-9 { width: 100%; }
+
+    /* --- 3.2 布局调整 --- */
     .container {
-        margin-top: 10px !important;
-        padding-left: 10px;
-        padding-right: 10px;
+        margin-top: 10px !important; padding-left: 10px; padding-right: 10px;
     }
-    .row {
-        --bs-gutter-x: 10px; 
-    }
-    .module-box {
-        padding: 10px;
-        margin-bottom: 10px;
-        border-radius: 8px;
-    }
-    /* [删除] 移除有问题的 first-child 规则 */
-    /* .module-box:first-child { padding-top: 0; } */
+    .row { --bs-gutter-x: 10px; }
+    .module-box { padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+    .module-title { font-size: 15px; margin-bottom: 10px; }
 
-    .module-title {
-        font-size: 15px;
-        margin-bottom: 10px;
+    /* --- 3.3 移动端头部 (Mobile Header) --- */
+    .mobile-header {
+        height: 50px; background: #fff; position: fixed; 
+        top: 0; left: 0; width: 100%; z-index: 1001;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
+    .mh-left, .mh-right {
+        flex: 0 0 20px; text-align: center; font-size: 20px; color: #333; cursor: pointer;
+    }
+    .mh-center {
+        flex: 1; text-align: center; height: 40px;
+        display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    #mobile-logo-img { height: 40px; width: auto; object-fit: contain; }
+    #mobile-site-name-wrap { font-size: 18px; font-weight: bold; color: var(--tb-orange); }
+    #mobile-site-name-wrap i { font-size: 20px; margin-right: 6px; }
 
-    /* 3. 调整商品卡片 (改为左图右文列表) */
+    /* --- 3.4 移动端搜索 (Mobile Search) --- */
+    .mobile-search-dropdown {
+        position: fixed; top: 50px; left: 0; width: 100%;
+        background: #fff; padding: 15px; z-index: 1000;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        transform: translateY(-150%); transition: transform 0.3s ease-in-out;
+        display: block; 
+    }
+    .mobile-search-dropdown.show { transform: translateY(0); }
+    .mobile-search-dropdown .tb-search-group { width: 100%; margin: 0; height: 40px; }
+    .mobile-search-dropdown .tb-search-input { height: 100%; flex: 1; padding: 0 15px; }
+    .mobile-search-dropdown .tb-search-btn { height: 33px; margin: 2px; }
     
-    /* [修改 1.1] 移除商品间距 */
+    .mobile-search-overlay {
+        position: fixed; top: 50px; left: 0; width: 100%; height: 100%;
+        z-index: 999; display: none;
+    }
+    .mobile-search-overlay.show { display: block; }
+
+    /* --- 3.5 移动端侧边栏 (Sidebar) --- */
+    .mobile-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 1002;
+        opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+    }
+    .mobile-overlay.show { opacity: 1; visibility: visible; }
+    .mobile-sidebar {
+        position: fixed; top: 0; left: 0; width: 240px; 
+        height: calc(100% - 50px); background: var(--tb-grad);
+        color: #fff; z-index: 1003;
+        transform: translateX(-100%); transition: transform 0.3s ease-in-out;
+        display: flex; flex-direction: column;
+    }
+    .mobile-sidebar.show { transform: translateX(0); }
+    
+    .mobile-sidebar-header {
+        padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); 
+        text-align: center; position: relative; 
+    }
+    .mobile-sidebar-title { font-size: 18px; font-weight: bold; color: #fff; margin: 0; }
+    .mobile-sidebar-close {
+        position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+        font-size: 22px; color: #fff; cursor: pointer; opacity: 0.7;
+    }
+    .mobile-sidebar-content { padding: 15px; flex: 1; overflow-y: auto; }
+    
+    #mobile-category-list a {
+        display: flex; align-items: center; padding: 10px 5px;
+        font-size: 14px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.15); 
+    }
+    #mobile-category-list a img {
+        width: 20px; height: 20px; border-radius: 4px; margin-right: 10px;
+        object-fit: cover; background: #fff; 
+    }
+    .mobile-sidebar-footer {
+        padding: 15px; border-top: 1px solid rgba(255,255,255,0.2); 
+        background: rgba(0,0,0,0.1); 
+    }
+    .mobile-sidebar-login-link {
+        display: block; text-align: center; padding: 8px; font-size: 16px;
+        color: #fff; border: 1px solid rgba(255,255,255,0.5); 
+        border-radius: 18px; background: var(--tb-grad); 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* --- 3.6 移动端底栏 (Bottom Nav) --- */
+    .mobile-bottom-nav {
+        position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; 
+        background: #fff; border-top: 1px solid #eee; z-index: 1006;
+        display: flex; justify-content: space-around; box-shadow: none;
+    }
+    .mbn-item {
+        flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; color: #666; font-size: 10px; padding: 5px 0;
+    }
+    .mbn-item i { font-size: 18px; margin-bottom: 2px; line-height: 1; }
+    .mbn-item.active, .mbn-item:hover { color: var(--tb-orange); }
+
+    /* --- 3.7 移动端联系弹窗 (Contact) --- */
+    .mobile-contact-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: calc(100% - 50px);
+        bottom: 50px; background: rgba(0,0,0,0.5); z-index: 1004;
+        opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+    }
+    .mobile-contact-overlay.show { opacity: 1; visibility: visible; }
+    .mobile-contact-sheet {
+        position: fixed; bottom: 50px; left: 0; width: 100%; background: #fff;
+        z-index: 1005; border-top-left-radius: 12px; border-top-right-radius: 12px;
+        transform: translateY(100%); transition: transform 0.3s ease-in-out;
+        max-height: 60vh; display: flex; flex-direction: column;
+    }
+    .mobile-contact-sheet.show { transform: translateY(0); }
+    .mcs-header {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 15px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0;
+    }
+    .mcs-content { padding: 15px; overflow-y: auto; line-height: 1.6; font-size: 13px; }
+
+    /* --- 3.8 移动端商品列表重构 (List Style) --- */
+    
+    /* 重置网格为单列 */
     .taobao-grid {
-        grid-template-columns: 1fr; /* 1. 强制单列 */
-        gap: 0; /* 修改 */
+        flex-direction: column;
+        margin: 0; /* 移除PC端margin补偿 */
     }
 
-    /* [修改 1.2] 移除边框和圆角，添加底部浅灰色线条 */
+    /* 卡片改为水平布局 */
     .tb-card {
-        flex-direction: row; /* 2. 卡片改为水平布局 */
-        align-items: center;
-        min-height: 90px; /* [修改] 改为 min-height 允许内容溢出时撑开 */ /* <-- 修改：从 100px 改为 90px */
-        border-radius: 0; /* 修改：移除圆角 */
-        border: none; /* 添加：移除所有边框 */
-        border-bottom: 1px solid #f0f0f0; /* 添加：浅灰色分割线 */
-    }
-    
-    /* [任务 1] 新增：覆盖PC端的hover效果，防止底线变色和跳动 */
-    .tb-card:hover {
-        transform: none;
-        box-shadow: none;
-        border-color: transparent; /* 确保无边框 */
-        border-bottom-color: #f0f0f0; /* 保持底线颜色不变 */
-    }
-
-    /* [修改 1.3] 移除最后一个商品的分割线 */
-    .tb-card:last-child {
-        border-bottom: none;
-    }
-
-    .tb-img-wrap {
-        flex: 0 0 90px; /* 4. 图片容器固定宽度 */ /* <-- 修改：从 100px 改为 90px */
-        width: 90px; /* <-- 修改：从 100px 改为 90px */
-        height: 90px; /* <-- 修改：从 100px 改为 90px */
-        padding-bottom: 0; /* 5. 移除PC端的padding-hack */
-        border-radius: 5px;
-    }
-
-    .tb-img {
-        width: 100%;
-        height: 100%;
-        top: 0;
-        left: 0;
-        object-fit: contain;
-        border-radius: 5px;
-    }
-
-    .tb-info {
-        padding: 8px 0 8px 10px;
-        flex: 1; 
-        min-width: 0; /* [关键修复] 允许 flex item 缩小 */
-    }
-
-    .tb-title {
-        font-size: 13px; /* [修改] 减小字号 */
-        height: 36px; /* [修改] 减小高度 (2行) */
-        -webkit-line-clamp: 2;
-        line-height: 1.4;
-        margin-bottom: 4px; /* [修改] 减小间距 */
-    }
-    
-    .tb-tags-row {
-        margin-bottom: 4px; /* [修改] 减小间距 */
-    }
-    
-    .tb-price-row {
-        padding-top: 4px; /* [修改] 减小间距 */
-    }
-
-    .tb-price {
-        font-size: 16px; /* [修改] 减小字号 */
-    }
-    .tb-sales {
-        font-size: 11px; /* [修改] 减小字号 */
-    }
-
-
-    /* 4. 调整分类药丸 */
-    .cat-pill {
-        font-size: 12px;
-        padding: 4px 10px 4px 6px;
-        margin-right: 6px;
-        margin-bottom: 6px;
-    }
-    .cat-pill img {
-        width: 16px; height: 16px;
-    }
-
-    /* 5. 调整页脚 */
-    .site-footer {
-        padding: 20px 0 10px;
-        margin-top: 10px;
-    }
-    .footer-links a {
-        margin: 0 5px;
-        font-size: 12px;
-    }
-    .copyright {
-        font-size: 11px;
-    }
-}
-
-/* ============================================= */
-/* === PC端 新增按钮样式 (加入购物车/立即购买) === */
-/* ============================================= */
-
-/* 按钮左半部分：加入购物车 (浅橙色渐变) */
-.btn-buy-split-left {
-    height: 43px;
-    padding: 0 12px 0 16px;
-    border-radius: 22px 0 0 22px; /* 左侧圆角 */
-    background: linear-gradient(90deg, #ffbf00, #ffa502); /* 浅橙色渐变 */
-    color: #fff;
-    font-weight: bold;
-    border: none;
-    font-size: 15px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-/* 按钮右半部分：立即购买 (深橙色渐变) */
-.btn-buy-split-right {
-    height: 43px;
-    padding: 0 16px 0 12px;
-    border-radius: 0 22px 22px 0; /* 右侧圆角 */
-    background: linear-gradient(90deg, #ff8400, #ff5000); /* 深橙色渐变 */
-    color: #fff;
-    font-weight: bold;
-    border: none;
-    font-size: 15px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-/* 悬停效果 */
-.btn-buy-split-left:hover, .btn-buy-split-right:hover {
-    opacity: 0.9;
-}
-/* ============================================= */
-/* === [新增] 返回顶部按钮样式 (PC & Mobile) === */
-/* ============================================= */
-
-.back-to-top-btn {
-    position: fixed;
-    bottom: 120px;       /* PC端默认距离底部 40px */
-    right: 40px;        /* PC端默认距离右侧 40px */
-    width: 45px;
-    height: 45px;
-    background-color: rgb(86 84 84 / 44%); /* 半透明黑色背景 */
-    color: #f9f9f9;;
-    border-radius: 50%; /* 圆形 */
-    text-align: center;
-    line-height: 45px;
-    font-size: 20px;
-    cursor: pointer;
-    z-index: 9990;      /* 层级需要高，但不要遮挡弹窗(通常是9999以上) */
-    opacity: 0;         /* 默认隐藏 */
-    visibility: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-/* 悬停效果 */
-.back-to-top-btn:hover {
-    background-color: var(--tb-orange); /* 悬停变成主题橙色 */
-    transform: translateY(-3px);
-}
-
-/* 显示状态 (由JS控制) */
-.back-to-top-btn.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* --- 移动端适配 --- */
-@media (max-width: 991.98px) {
-    .back-to-top-btn {
-        width: 40px;
-        height: 40px;
-        line-height: 40px;
-        font-size: 16px;
-        right: 15px;       /* 移动端靠右 15px */
-        bottom: 70px;      /* [关键] 避开底部导航栏(50px) + 20px间距 */
-        background-color: rgb(86 84 84 / 44%); /* 移动端建议用白色背景 */
-        color: #f9f9f9;
-        border: 1px solid #eee;
-    }
-    
-    .back-to-top-btn:hover {
-        background-color:  #ff570099;
-        transform: none;     /*移动端移除位移效果 */
-        color: var(--tb-orange);
-        /*border-color: var(--tb-orange);*/
-    }
-}
-
-/* ============================================= */
-/* === [新增] 规格分页控件样式 (New) === */
-/* ============================================= */
-
-.spec-pagination-container {
-    margin-top: 12px;
-    text-align: left; /* 根据布局偏好，可改为 center */
-    display: none; /* 默认隐藏，JS计算后决定是否显示 */
-    padding-top: 8px;
-    border-top: 1px dashed #eee; /* 增加分割线，更清晰 */
-}
-
-.spec-pagination-btn {
-    display: inline-block;
-    padding: 4px 10px;
-    margin: 0 4px;
-    border: 1px solid #ddd;
-    background-color: #f8f9fa;
-    color: #333;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 12px;
-    user-select: none;
-    transition: all 0.2s;
-}
-
-.spec-pagination-btn:hover {
-    background-color: #e2e6ea;
-    border-color: #ccc;
-}
-
-.spec-pagination-btn.active {
-    background-color: var(--tb-orange);
-    color: #fff;
-    border-color: var(--tb-orange);
-}
-
-.spec-pagination-btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background-color: #f1f1f1;
-}
-
-/* 确保规格按钮容器能正确换行，方便JS计算行高 */
-#sku-btn-list {
-    align-content: flex-start; 
-}
-/* ============================================= */
-/* === [新增] 支付方式图标样式 === */
-/* ============================================= */
-
-.payment-option {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1px 6px; /* 内边距，控制图标周围空间 */
-    height: 38px;      /* 固定高度 */
-    min-width: 38px;   /* 最小宽度 */
-    font-size: 25px;
-    border: 1px solid #ddd; /* 默认灰色边框 */
-    border-radius: 4px;
-    margin-right: 12px;
-    /*margin-bottom: 8px;*/
-    cursor: pointer;
-    background: #fff;
-    transition: all 0.2s;
-}
-
-.payment-option:hover {
-    border-color: #bbb;
-}
-
-/* 选中状态：边框变红(可选)，显示对勾 */
-.payment-option.active {
-    border-color: #dc3545; 
-}
-
-/* 支付图标图片或字体大小 */
-/*.payment-option i { font-size: 20px; } */
-.payment-option img { height: 20px; width: auto; object-fit: contain; }
-
-/* 右上角圆底白对勾 */
-.payment-check-mark {
-    position: absolute;
-    top: -7px;    /* 控制垂直位置，负值让它浮出边框 */
-    right: -7px;  /* 控制水平位置 */
-    width: 16px;
-    height: 16px;
-    background-color: #dc3545; /* 红色背景 */
-    color: #fff;  /* 白色对勾 */
-    border-radius: 50%; /* 圆形 */
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    
-    /* 动画效果：默认隐藏 */
-    opacity: 0;
-    transform: scale(0); 
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 1;
-}
-
-/* 选中时显示对勾 */
-.payment-option.active .payment-check-mark {
-    opacity: 1;
-    transform: scale(1);
-}
-
-/* 缺货按钮基础样式 (覆盖默认和选中状态) */
-.sku-btn.no-stock {
-    background-color: #f5f5f5 !important; /* 浅灰色背景 */
-    border-color: #e9ecef !important;      /* 浅灰色边框 */
-    color: #6c757d !important;             /* 灰色文字 */
-    position: relative;                    /* 为角标定位做参照 */
-    cursor: not-allowed;                   /* 鼠标禁止手势 */
-    opacity: 1 !important;                 /* 确保角标清晰可见 */
-    overflow: visible;                     /* 允许角标超出按钮范围 */
-}
-
-/* 右上角“缺货”角标 */
-.sku-oos-badge {
-    position: absolute;
-    top: -7px;    /* 向上偏移，挂在右上角 */
-    right: -6px;  /* 向右偏移 */
-    background-color: #dc3545; /* 红色背景 */
-    color: #fff;  /* 白色文字 */
-    font-size: 9px; /* 小字体 */
-    padding: 0px 3px; /* 内边距 */
-    border-radius: 3px; /* 圆角 */
-    /*line-height: 1;*/
-    z-index: 10; /* 确保在最上层 */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* 轻微阴影增加立体感 */
-    /*transform: scale(0.9); /* 整体微缩更加精致 */
-}
-
-/* =============================================
-   新增样式：自动发卡系统 - 自选号码 & 布局调整
-   ============================================= */
-
-/* 1. 库存销量行样式 (移到标签下方) */
-.stock-sales-row {
-    font-size: 13px;
-    color: #888;
-    margin-bottom: 10px; /* 与下方价格栏的间距 */
-    display: flex;
-    align-items: center;
-}
-
-/* 2. 选择号码弹窗容器 (绝对定位) */
-.number-selector-overlay {
-    position: absolute;
-    /* 初始位置，JS会动态微调 top */
-    top: 60px; 
-    left: 0;
-    width: 100%;
-    /* 限制高度，使其不遮挡底部的“加入购物车/立即购买”按钮 */
-    bottom: 160px; 
-    background: rgba(255, 255, 255, 0.98);
-    z-index: 100;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    
-    /* 动画效果：从下向上滑出 */
-    transform: translateY(20px);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    
-    display: flex;
-    flex-direction: column;
-}
-
-.number-selector-overlay.active {
-    transform: translateY(0);
-    opacity: 1;
-    visibility: visible;
-}
-
-/* 弹窗头部 */
-.ns-header {
-    padding: 10px 15px;
-    border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #f9f9f9;
-    font-weight: bold;
-    font-size: 14px;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-}
-
-.ns-close {
-    cursor: pointer;
-    padding: 0 5px;
-    font-size: 18px;
-    color: #999;
-    line-height: 1;
-}
-.ns-close:hover { color: #333; }
-
-/* 弹窗内容区 */
-.ns-body {
-    flex: 1;
-    overflow-y: auto; /* 内容过多时滚动 */
-    padding: 10px;
-}
-
-/* 号码网格布局 */
-.ns-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-/* 单个号码按钮 */
-.ns-item {
-    padding: 6px 12px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-}
-
-.ns-item:hover {
-    border-color: #aaa;
-    background-color: #f5f5f5;
-}
-
-.ns-item.selected {
-    background-color: #dc3545; /* 红底 */
-    border-color: #dc3545;     /* 红边框 */
-    color: #fff;               /* 白字 */
-    font-weight: normal;       /* 正常字体 */
-}
-
-/* [修改 2] 新增：收起按钮样式 */
-.ns-footer {
-    text-align: center;
-    padding: 10px 0;
-    border-top: 1px solid #eee;
-    cursor: pointer;
-    color: #999;
-    font-size: 13px;
-    background: #fff;
-}
-.ns-footer:hover {
-    background-color: #f8f9fa;
-    color: #333;
-}
-
-/* 调整价格栏，使其作为定位参考（如果需要的话，目前主要靠 col-md-7 的 relative） */
-.price-bar {
-    position: relative;
-}
-
-/* ========================================= */
-/* === 页脚吸底功能 (Sticky Footer)      === */
-/* ========================================= */
-
-/* 1. 让 body 变成 flex 容器，高度至少撑满一屏 */
-body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-/* 2. 让页脚自动把上面的内容顶上去 */
-#global-footer {
-    margin-top: auto;
-    width: 100%;
-}
-
-/* 3. 兼容性微调：确保页头 header 不会被压缩 */
-header, .tb-header, .mobile-header {
-    flex-shrink: 0;
-}
-
-/* 4. 兼容性微调：确保中间的主体内容区域能正常伸缩 */
-.container, .main-content {
-    flex-shrink: 0; 
-}
-#main-content-row {
-    margin-bottom: 30px; /* 强制给主体内容区域底部增加 50px 留白 */
-}
-
-/* 针对 Sticky Sidebar 极端情况的额外保护 */
-@media (min-width: 992px) {
-    .sidebar-inner {
-        padding-bottom: 1px; /* 防止内部高度计算塌陷 */
-    }
-}
-
-/* =================================================================
-   [最终修正] 移动端列表：标题高度自适应 + 价格栏强制底部对齐
-   ================================================================= */
-@media (max-width: 991.98px) {
-    
-    /* 1. 卡片布局：关键是 align-items: stretch，让左右两边等高 */
-    .tb-card {
+        width: 100%; /* 占满一行 */
+        margin: 0;   /* 移除PC端margin */
         display: flex !important;
         flex-direction: row !important;
         align-items: stretch !important; /* [关键] 必须拉伸，右侧才有空间让价格沉底 */
-        padding-top: 10px;
-        padding-bottom: 10px;
-        min-height: 120px; /* 给一个最小高度，确保视觉上看起来像个卡片 */
+        padding: 10px 0; /* 上下内边距 */
+        min-height: 120px; 
+        border-radius: 0; 
+        border: none; 
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .tb-card:last-child { border-bottom: none; }
+    
+    /* 移除PC端悬停效果 */
+    .tb-card:hover {
+        transform: none; box-shadow: none; border-color: transparent; border-bottom-color: #f0f0f0;
     }
 
-    /* 2. 图片容器：固定大小，防止被挤压 */
+    /* 图片固定宽度 */
     .tb-img-wrap {
-        flex-shrink: 0;
-        margin-right: 10px;
-        height: auto !important; /* 让图片容器跟随卡片高度 */
+        flex: 0 0 90px; width: 90px; height: auto !important;
+        margin-right: 10px; padding-bottom: 0; border-radius: 5px;
+    }
+    .tb-img {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        object-fit: contain; border-radius: 5px;
+    }
+
+    /* 信息区域 */
+    .tb-info {
+        flex: 1; 
+        display: flex !important; flex-direction: column !important;
+        justify-content: flex-start !important; padding: 2px 0 0 0 !important;
+        height: auto !important; min-width: 0; position: relative;
+    }
+
+    /* 标题自适应 */
+    .tb-title {
+        font-size: 13px; height: auto !important; min-height: 0 !important;
+        line-height: 1.4 !important; margin-bottom: 4px !important;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; white-space: normal !important;
     }
     
-    /* 3. 图片本身：保持比例 */
-    .tb-img {
-        position: absolute;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        object-fit: contain; 
-        border-radius: 4px;
-    }
-
-    /* 4. 右侧信息区：垂直Flex，且必须撑满 */
-    .tb-info {
-        flex: 1; /* 占满剩余宽度 */
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: flex-start !important;
-        padding: 2px 0 0 0 !important;
-        height: auto !important; /* 配合 stretch，高度会自动填满 */
-        position: relative;
-    }
-
-    /* 5. 标题：取消固定高度，单行时变矮 */
-    .tb-title {
-        height: auto !important;       /* [核心] 取消固定高度 */
-        min-height: 0 !important;
-        line-height: 1.4 !important;
-        margin-bottom: 4px !important; /* 标题和标签的小间距 */
-        display: -webkit-box;
-        -webkit-line-clamp: 2;         /* 限制2行 */
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        white-space: normal !important;
-    }
-
-    /* 6. 标签栏：紧跟标题下方 */
-    .tb-tags-row {
-        margin-bottom: 0 !important;
-        min-height: 0 !important;
-        flex-shrink: 0; /* 防止被压缩 */
-    }
-
-    /* 7. 价格栏：利用 margin-top: auto 强制沉底 */
+    /* 价格栏强制底部对齐 */
     .tb-price-row {
-        margin-top: auto !important; /* [核心] 自动占据中间剩余空间，推到底部 */
-        padding-top: 4px;
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
+        margin-top: auto !important; /* [核心] 自动占据剩余空间 */
+        padding-top: 4px; width: 100%;
+    }
+    
+    /* 标签与销量微调 */
+    .tb-tags-row { margin-bottom: 0 !important; min-height: 0 !important; flex-shrink: 0; }
+    .tb-price { font-size: 16px; }
+    .tb-sales { font-size: 11px; }
+
+    /* --- 3.9 其他移动端组件微调 --- */
+    .cat-pill {
+        font-size: 12px; padding: 4px 10px 4px 6px; margin-right: 6px;
+    }
+    .cat-pill img { width: 16px; height: 16px; }
+    
+    .site-footer { padding: 20px 0 10px; margin-top: 10px; }
+    .footer-links a { margin: 0 5px; font-size: 12px; }
+    .copyright { font-size: 11px; }
+
+    .back-to-top-btn {
+        width: 40px; height: 40px; line-height: 40px; font-size: 16px;
+        right: 15px; bottom: 70px; /* 避开底部导航 */
+        background-color: rgba(255,255,255,0.9); color: #333;
+        border: 1px solid #eee;
+    }
+    .back-to-top-btn:hover {
+        background-color: rgba(255,255,255,1); transform: none; color: var(--tb-orange);
     }
 }
-
-/* 1. 针对热门教程列表中的文章链接进行样式覆盖 */
-#hot-articles-list a {
-    font-size: 14px !important;       /* [修改] 强制将字号改为 14px */
-    transition: all 0.2s ease;        /* [新增] 添加平滑过渡动画 */
-    text-decoration: none;            /* 去掉下划线 */
-}
-
-/* 2. 鼠标悬停 (Hover) 效果 */
-#hot-articles-list a:hover {
-    color: var(--tb-orange) !important; /* [新增] 悬停时变更为主题橙色 */
-    padding-left: 0px;                  /* [新增] 悬停时向右轻微移动 5px */
-}
-
-/* 3. 序号徽章样式 (保持之前的不变) */
-.hot-rank-badge {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    line-height: 20px;
-    text-align: center;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 12px;
-    font-weight: bold;
-    margin-right: 8px;
-    flex-shrink: 0;
-}
-
-/* 序号背景色 */
-.rank-1 { background-color: #ff0036; } /* 红色 */
-.rank-2 { background-color: #ff5000; } /* 橙色 */
-.rank-3 { background-color: #ff9000; } /* 金色 */
-.rank-4 { background-color: #19be6b; } /* 绿色 */
-.rank-5 { background-color: #409eff; } /* 蓝色 */
