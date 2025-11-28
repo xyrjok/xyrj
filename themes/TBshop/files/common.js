@@ -93,7 +93,16 @@ const TB_LAYOUT = {
             <span>客服</span>
         </a>
     `,
-
+    // [新增] 移动端搜索下拉框模板
+    mobileSearch: `
+        <div class="mobile-search-dropdown d-lg-none">
+            <div class="tb-search-group">
+                <input type="text" id="mobile-search-input" class="tb-search-input" placeholder="搜索商品...">
+                <button class="tb-search-btn" onclick="doSearch('mobile')">搜索</button>
+            </div>
+        </div>
+        <div class="mobile-search-overlay d-lg-none" id="mobile-search-overlay" onclick="toggleMobileSearch()"></div>
+    `,
     // 页脚
     footer: `
         <div class="container">
@@ -162,7 +171,10 @@ function renderCommonLayout(activePage) {
         const el = document.getElementById(id);
         if (el) el.innerHTML = html;
     }
-
+    // 只要页面上找不到 .mobile-search-dropdown，我就加进去
+    if (!document.querySelector('.mobile-search-dropdown') && TB_LAYOUT.mobileSearch) {
+         document.body.insertAdjacentHTML('afterbegin', TB_LAYOUT.mobileSearch);
+    }
     // 2. 右侧栏特殊处理 (显示隐藏的模块)
     if (document.getElementById('global-sidebar-right')) {
         const extras = ['top-sales-box-container', 'tag-cloud-box-container', 'article-cat-box-container'];
