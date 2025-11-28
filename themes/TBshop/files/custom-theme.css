@@ -1230,6 +1230,7 @@ header, .tb-header, .mobile-header {
         align-items: flex-end;
     }
 }
+
 /* 1. 针对热门教程列表中的文章链接进行样式覆盖 */
 #hot-articles-list a {
     font-size: 14px !important;       /* [修改] 强制将字号改为 14px */
@@ -1242,3 +1243,25 @@ header, .tb-header, .mobile-header {
     color: var(--tb-orange) !important; /* [新增] 悬停时变更为主题橙色 */
     padding-left: 0px;                  /* [新增] 悬停时向右轻微移动 5px */
 }
+
+/* 3. 序号徽章样式 (保持之前的不变) */
+.hot-rank-badge {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+/* 序号背景色 */
+.rank-1 { background-color: #ff0036; } /* 红色 */
+.rank-2 { background-color: #ff5000; } /* 橙色 */
+.rank-3 { background-color: #ff9000; } /* 金色 */
+.rank-4 { background-color: #19be6b; } /* 绿色 */
+.rank-5 { background-color: #409eff; } /* 蓝色 */
