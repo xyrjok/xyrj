@@ -484,28 +484,62 @@
     document.querySelectorAll('.admin-sidebar a').forEach(link => { link.addEventListener('click', () => { if (window.innerWidth <= 800) toggleMenu(); }); });
 
     // --- 初始化 TinyMCE ---
-    document.addEventListener("DOMContentLoaded", function() {
-        tinymce.init({
-            selector: '#p-desc',
-            language: 'zh_CN',
-            base_url: '/assets/tinymce',
-            suffix: '.min', 
-            height: 300,
-            menubar: true, // 开启菜单栏
-            // 增加 textcolor 插件
-            plugins: 'lists link image charmap preview code searchreplace wordcount textcolor',
-            // 增加字体、字号、行高、颜色工具栏
-            toolbar: 'undo redo | blocks fontselect fontsizeselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist | lineheight | forecolor backcolor | link image | code removeformat',
-            toolbar_mode: 'wrap', // 设置工具栏模式为换行（配合 CSS 实现）
-            branding: false,
-            promotion: false,
-            setup: function (editor) {
-                editor.on('change', function () {
-                    editor.save();
-                });
-            }
-        });
+    document.addEventListener("DOMContentLoaded", function () {
+    tinymce.init({
+        selector: '#a-content',
+        language: 'zh_CN',
+        base_url: '/assets/tinymce',
+        suffix: '.min',
+        height: 500,
+        menubar: true,
+        plugins: 'lists link image charmap preview code searchreplace wordcount',
+        toolbar: 'undo redo blocks fontselect fontsizeselect bold italic underline strikethrough alignleft aligncenter alignright alignjustify bullist numlist lineheight forecolor backcolor link image code removeformat toggle-vertical-bar',
+        toolbar_mode: 'wrap',
+        mobile: {
+            theme: 'silver',
+            toolbar_mode: 'wrap'
+        },
+        branding: false,
+        promotion: false,
+
+        setup: function (editor) {
+
+            editor.on('change', function () {
+                editor.save();
+            });
+
+            // ⭐ 自定义竖条标题按钮
+            editor.ui.registry.addButton('toggle-vertical-bar', {
+                text: '竖条标题',
+                tooltip: '插入/移除左侧竖条样式（跟随文字颜色）',
+                onAction: function () {
+                    var selectedText = editor.selection.getContent();
+
+                    // ⭐ 检查是否有我们插入的 span
+                    var hasBar = selectedText.includes('data-vertical-bar="1"');
+
+                    if (hasBar) {
+                        // ⭐ 删除我们插入的竖条 span，不影响其他 span
+                        var cleaned = selectedText
+                            .replace(/<span[^>]*data-vertical-bar="1"[^>]*>/g, '')
+                            .replace(/<\/span>/g, '');
+
+                        editor.insertContent(cleaned);
+                    } else {
+                        // ⭐ 插入新的竖条 span
+                        var wrapped =
+                            '<span data-vertical-bar="1" ' +
+                            'style="border-left: 4px solid; padding-left: 8px; display: inline-block; line-height: 1.05; border-radius: 3px;">' +
+                            selectedText +
+                            '</span>';
+
+                        editor.insertContent(wrapped);
+                    }
+                }
+            });
+        }
     });
+});
 </script>
 </body>
 </html>
