@@ -138,7 +138,7 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
 /* 商品卡片基础 */
 .tb-card {
     background: #fff;
-    border-radius: 8px;
+    border-radius: 4px;
     transition: all 0.2s;
     border: 1px solid #eee;
     overflow: hidden;
