@@ -501,12 +501,14 @@ function renderSkuButtons(variants, selectedIdx = -1) {
         const isOOS = v.stock <= 0;
         const isSelected = (selectedIdx !== -1) && (index === selectedIdx);
         let btnClass = isSelected ? 'btn-danger' : 'btn-outline-secondary';
-        if (isOOS) btnClass += ' no-stock';
-        
+        if (isOOS) btnClass += ' no-stock';    
+        // 1. [新增] 格式化价格
+        const priceStr = parseFloat(v.price).toFixed(2);
+
         const name = v.name || v.specs || `规格${index+1}`;
-        const badgeHtml = isOOS ? '<span class="sku-oos-badge">缺货</span>' : '';
-        
-        return `<button class="btn btn-sm ${btnClass} me-2 mb-2 sku-btn" data-idx="${index}" onclick="${isOOS ? '' : `selectSku(${index}, this)`}" ${isOOS ? 'disabled' : ''}>${name}${badgeHtml}</button>`;
+        const badgeHtml = isOOS ? '<span class="sku-oos-badge">缺货</span>' : '';    
+        // 2. [修改] 在名称后面显示价格 (￥...)
+        return `<button class="btn btn-sm ${btnClass} me-2 mb-2 sku-btn" data-idx="${index}" onclick="${isOOS ? '' : `selectSku(${index}, this)`}" ${isOOS ? 'disabled' : ''}>${name} (￥${priceStr})${badgeHtml}</button>`;
     }).join('');
 }
 
