@@ -641,7 +641,9 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
 
 /* 弹窗容器通用样式 */
 .qr-popup, .share-popup {
-    display: none; /* 默认隐藏 */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
     position: absolute;
     top: 100%;
     left: 50%;
@@ -657,9 +659,10 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
 /* 鼠标悬停时显示 */
 .action-icon-wrap:hover .qr-popup,
 .action-icon-wrap:hover .share-popup {
-    display: block;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.1s ease, visibility 0.1s ease;
 }
-
 /* 分享图标样式 */
 .share-icon-link {
     display: inline-block;
@@ -670,13 +673,11 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
     font-size: 16px; text-decoration: none !important;
 }
 .share-icon-link:hover { transform: translateY(-2px); color: #fff; }
-
 /* 各平台颜色 */
 .share-wx:hover { background: #07c160; }
 .share-qq:hover { background: #12b7f5; }
 .share-tg:hover { background: #2aabee; }
 .share-fb:hover { background: #1877f2; }
-
 /* 二维码容器 */
 #page-qrcode img {
     display: block;
