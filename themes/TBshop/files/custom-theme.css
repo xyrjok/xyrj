@@ -624,6 +624,61 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
     }
 }
 
+/* ==============================================
+   PC端详情页：边框颜色、二维码与分享样式
+============================================== */
 .sku-btn.btn-outline-secondary:not(.no-stock):not(:hover) {
     border-color: #6c757d80 !important; 
+}
+.action-icon-wrap {
+    cursor: pointer;
+    position: relative;
+    padding: 5px 0;
+    margin-right: 25px;
+    transition: color 0.2s;
+}
+.action-icon-wrap:hover { color: var(--tb-orange); }
+
+/* 弹窗容器通用样式 */
+.qr-popup, .share-popup {
+    display: none; /* 默认隐藏 */
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    border: 1px solid #eee;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 4px;
+    padding: 10px;
+    z-index: 100;
+    margin-top: 5px;
+}
+/* 鼠标悬停时显示 */
+.action-icon-wrap:hover .qr-popup,
+.action-icon-wrap:hover .share-popup {
+    display: block;
+}
+
+/* 分享图标样式 */
+.share-icon-link {
+    display: inline-block;
+    width: 32px; height: 32px; line-height: 32px;
+    text-align: center; margin: 0 5px;
+    border-radius: 50%; background: #f5f5f5;
+    color: #666; transition: all 0.2s;
+    font-size: 16px; text-decoration: none !important;
+}
+.share-icon-link:hover { transform: translateY(-2px); color: #fff; }
+
+/* 各平台颜色 */
+.share-wx:hover { background: #07c160; }
+.share-qq:hover { background: #12b7f5; }
+.share-tg:hover { background: #2aabee; }
+.share-fb:hover { background: #1877f2; }
+
+/* 二维码容器 */
+#page-qrcode img {
+    display: block;
+    margin: 0 auto;
 }
