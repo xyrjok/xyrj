@@ -1,12 +1,11 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版 - 含文章系统升级 & 防乱单机制 & 卡密管理增强 & SEO优化)
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
+ * [新增] 全站社交分享优化(OG标签)：支持首页(后台配置)、商品页、文章页、文章中心自动生成卡片
  * [新增] 限制未支付订单数量、删除未支付订单接口
  * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
- * [新增] 针对 Telegram/Facebook 分享的 OG 标签动态注入
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
- * [修改] 店铺公告只显示后台设置的默认公告，不再调用置顶文章
  */
 
 // === 工具函数 ===
@@ -132,81 +131,121 @@ export default {
              return env.ASSETS.fetch(request);
         }
 
-        // 规则 B: 根路径处理 -> 请求主题目录
+        // ============================================================
+        // === SEO 注入核心逻辑 (包含首页、商品、文章) ===
+        // ============================================================
+        
+        // 规则 B: 根路径处理 (首页)
         if (path === '/' || path === '/index.html') {
              const newUrl = new URL(`/themes/${theme}/`, url.origin);
-             return env.ASSETS.fetch(new Request(newUrl, request));
+             const newRequest = new Request(newUrl, request);
+             
+             let response = await env.ASSETS.fetch(newRequest);
+             
+             // 首页 SEO 注入
+             if (response.status === 200) {
+                 try {
+                     const db = env.MY_XYRJ;
+                     const configRes = await db.prepare("SELECT * FROM site_config").all();
+                     const config = {}; 
+                     if (configRes && configRes.results) {
+                         configRes.results.forEach(r => config[r.key] = r.value);
+                     }
+
+                     const siteName = (config.site_name || '夏雨店铺').replace(/"/g, '&quot;');
+                     const siteDesc = (config.site_description || '自动发货，安全快捷').replace(/"/g, '&quot;');
+                     let siteImage = config.site_logo || '/assets/noimage.jpg';
+                     if (siteImage.startsWith('/')) siteImage = `${url.origin}${siteImage}`;
+
+                     response = await injectMetaTags(response, {
+                         url: request.url,
+                         title: siteName,
+                         desc: siteDesc,
+                         image: siteImage
+                     });
+                 } catch (e) { console.error('Home SEO Error:', e); }
+             }
+             return response;
         }
         
-        // 规则 C: 普通 HTML 页面 -> 请求无后缀路径
+        // 规则 C: 普通 HTML 页面 (商品详情、文章详情等)
         if (path.endsWith('.html')) {
-            const newPath = path.replace(/\.html$/, ''); // 去掉 .html 后缀
+            const newPath = path.replace(/\.html$/, ''); 
             const newUrl = new URL(`/themes/${theme}${newPath}`, url.origin);
             const newRequest = new Request(newUrl, request);
             
-            // 1. 尝试抓取 (注意这里改用 let，因为后面可能要重新赋值)
             let response = await env.ASSETS.fetch(newRequest);
-            
-            // 2. 如果找不到(404)，回退去请求原始路径
+            // 如果找不到文件，回退去请求原始路径
             if (response.status === 404) {
                  response = await env.ASSETS.fetch(request);
             }
 
-            // ============================================================
-            // [新增] 针对 Telegram/社交分享的 SEO 优化 (动态注入 OG 标签)
-            // ============================================================
-            // 只有当访问的是 product.html 且页面存在时才处理
-            if (path === '/product.html' && response.status === 200) {
-                const db = env.MY_XYRJ; // 获取数据库引用
-                const productId = url.searchParams.get('id');
-                if (productId) {
-                    try {
-                        // A. 从数据库查询商品信息
-                        const product = await db.prepare("SELECT name, description, image_url FROM products WHERE id = ?").bind(productId).first();
-                        
-                        if (product) {
-                            // B. 准备要注入的 Meta 标签 (防止双引号破坏 HTML)
-                            const title = (product.name || '').replace(/"/g, '&quot;');
-                            // 提取纯文本描述（去掉HTML标签），限制长度
-                            let desc = (product.description || '').replace(/<[^>]+>/g, '').substring(0, 150).replace(/"/g, '&quot;') + '...';
-                            if(!desc || desc === '...') desc = '自动发货，安全快捷';
-                            // 图片地址：如果是相对路径，补全为绝对路径
-                            let image = product.image_url || '/assets/noimage.jpg';
-                            if (image.startsWith('/')) image = `${url.origin}${image}`;
+            // SEO 注入
+            if (response.status === 200) {
+                const db = env.MY_XYRJ;
 
-                            const pageUrl = request.url;
-
-                            const ogTags = `
-                                <meta property="og:type" content="website">
-                                <meta property="og:url" content="${pageUrl}">
-                                <meta property="og:title" content="${title}">
-                                <meta property="og:description" content="${desc}">
-                                <meta property="og:image" content="${image}">
-                                <meta property="twitter:card" content="summary_large_image">
-                                <meta property="twitter:title" content="${title}">
-                                <meta property="twitter:description" content="${desc}">
-                                <meta property="twitter:image" content="${image}">
-                            `;
-
-                            // C. 读取 HTML 内容并注入标签
-                            let html = await response.text();
-                            // 将标签插入到 <head> 标签之后
-                            html = html.replace('<head>', `<head>${ogTags}`);
-                            
-                            // D. 返回修改后的 HTML
-                            return new Response(html, {
-                                headers: response.headers,
-                                status: response.status,
-                                statusText: response.statusText
-                            });
-                        }
-                    } catch (e) {
-                        console.error('SEO Injection Error:', e);
-                        // 出错则不做任何处理，直接返回原始页面
+                // --- 情况1：商品详情页 (product.html) ---
+                if (path === '/product.html') {
+                    const id = url.searchParams.get('id');
+                    if (id) {
+                        try {
+                            const item = await db.prepare("SELECT name, description, image_url FROM products WHERE id = ?").bind(id).first();
+                            if (item) {
+                                let desc = (item.description || '').replace(/<[^>]+>/g, '').substring(0, 150) + '...';
+                                if(!desc || desc === '...') desc = '自动发货，安全快捷';
+                                let image = item.image_url || '/assets/noimage.jpg';
+                                if (image.startsWith('/')) image = `${url.origin}${image}`;
+                                
+                                response = await injectMetaTags(response, {
+                                    url: request.url,
+                                    title: item.name,
+                                    desc: desc,
+                                    image: image
+                                });
+                            }
+                        } catch(e) {}
                     }
                 }
+                
+                // --- 情况2：文章详情页 (article.html) ---
+                else if (path === '/article.html') {
+                    const id = url.searchParams.get('id');
+                    if (id) {
+                        try {
+                            const item = await db.prepare("SELECT title, content, cover_image FROM articles WHERE id = ?").bind(id).first();
+                            if (item) {
+                                // 提取纯文本摘要
+                                let desc = (item.content || '').replace(/<[^>]+>/g, '').substring(0, 150) + '...';
+                                // 优先用封面图，没有则尝试提取文章内第一张图
+                                let image = item.cover_image;
+                                if (!image && item.content) {
+                                    const imgMatch = item.content.match(/<img[^>]+src="([^">]+)"/);
+                                    if (imgMatch) image = imgMatch[1];
+                                }
+                                if (!image) image = '/assets/noimage.jpg';
+                                if (image.startsWith('/')) image = `${url.origin}${image}`;
+
+                                response = await injectMetaTags(response, {
+                                    url: request.url,
+                                    title: item.title,
+                                    desc: desc,
+                                    image: image
+                                });
+                            }
+                        } catch(e) {}
+                    }
+                }
+
+                // --- 情况3：文章中心 (articles.html) ---
+                else if (path === '/articles.html') {
+                    response = await injectMetaTags(response, {
+                        url: request.url,
+                        title: '资讯中心 - 教程与公告',
+                        desc: '查看最新的店铺公告、使用教程和行业资讯。',
+                        image: `${url.origin}/assets/noimage.jpg`
+                    });
+                }
             }
-            // ============================================================
 
             return response;
         }
@@ -216,7 +255,41 @@ export default {
     }
 };
 
+// =============================================
+// === 辅助函数：注入 Meta 标签 (用于SEO) ===
+// =============================================
+async function injectMetaTags(originalResponse, data) {
+    const title = (data.title || '').replace(/"/g, '&quot;');
+    const desc = (data.desc || '').replace(/"/g, '&quot;');
+    
+    // 构造 Open Graph 和 Twitter Card 标签
+    const tags = `
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="${data.url}">
+        <meta property="og:title" content="${title}">
+        <meta property="og:description" content="${desc}">
+        <meta property="og:image" content="${data.image}">
+        <meta property="twitter:card" content="summary_large_image">
+        <meta property="twitter:title" content="${title}">
+        <meta property="twitter:description" content="${desc}">
+        <meta property="twitter:image" content="${data.image}">
+    `;
+    
+    // 读取 HTML 内容并注入到 <head> 之后
+    let html = await originalResponse.text();
+    html = html.replace('<head>', `<head>${tags}`);
+    
+    // 返回新的 Response 对象
+    return new Response(html, {
+        headers: originalResponse.headers,
+        status: originalResponse.status,
+        statusText: originalResponse.statusText
+    });
+}
+
+// =============================================
 // === 完整的 API 处理逻辑 ===
+// =============================================
 async function handleApi(request, env, url) {
     const method = request.method;
     const path = url.pathname;
@@ -640,12 +713,6 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/config') {
             const res = await db.prepare("SELECT * FROM site_config").all();
             const config = {}; res.results.forEach(r => config[r.key] = r.value);
-            
-            // [修改] 移除调用置顶文章作为公告的逻辑，直接返回 site_config (含 announce)
-            // 原代码：
-            // const notice = await db.prepare("SELECT content FROM articles WHERE is_notice=1 ORDER BY created_at DESC LIMIT 1").first();
-            // if(notice) config.notice_content = notice.content;
-            
             return jsonRes(config);
         }
 
