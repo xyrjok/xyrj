@@ -623,3 +623,7 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
         background-color: rgba(255,255,255,1); transform: none; color: var(--tb-orange);
     }
 }
+
+.sku-btn.btn-outline-secondary:not(.no-stock):not(:hover) {
+    border-color: #6c757d80 !important; 
+}
