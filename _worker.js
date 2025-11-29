@@ -261,24 +261,25 @@ export default {
 async function injectMetaTags(originalResponse, data) {
     const title = (data.title || '').replace(/"/g, '&quot;');
     const desc = (data.desc || '').replace(/"/g, '&quot;');
-    
-    // 构造 Open Graph 和 Twitter Card 标签
+    // 这里决定图片显示模式：
+    // 'summary_large_image' = 大图 (适合宽屏图)
+    // 'summary'             = 小图 (适合正方形图，图片在文字旁)
+    const cardType = 'summary'; 
+     // 构造 Open Graph 和 Twitter Card 标签
     const tags = `
         <meta property="og:type" content="website">
         <meta property="og:url" content="${data.url}">
         <meta property="og:title" content="${title}">
         <meta property="og:description" content="${desc}">
         <meta property="og:image" content="${data.image}">
-        <meta property="twitter:card" content="summary_large_image">
+        <meta property="twitter:card" content="${cardType}">
         <meta property="twitter:title" content="${title}">
         <meta property="twitter:description" content="${desc}">
         <meta property="twitter:image" content="${data.image}">
     `;
-    
     // 读取 HTML 内容并注入到 <head> 之后
     let html = await originalResponse.text();
     html = html.replace('<head>', `<head>${tags}`);
-    
     // 返回新的 Response 对象
     return new Response(html, {
         headers: originalResponse.headers,
