@@ -1,8 +1,9 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版 - 含文章系统升级 & 防乱单机制 & 卡密管理增强)
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 含文章系统升级 & 防乱单机制 & 卡密管理增强 & SEO优化)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
  * [新增] 限制未支付订单数量、删除未支付订单接口
  * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
+ * [新增] 针对 Telegram/Facebook 分享的 OG 标签动态注入
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [修改] 店铺公告只显示后台设置的默认公告，不再调用置顶文章
@@ -143,15 +144,71 @@ export default {
             const newUrl = new URL(`/themes/${theme}${newPath}`, url.origin);
             const newRequest = new Request(newUrl, request);
             
-            // 尝试抓取
-            const response = await env.ASSETS.fetch(newRequest);
+            // 1. 尝试抓取 (注意这里改用 let，因为后面可能要重新赋值)
+            let response = await env.ASSETS.fetch(newRequest);
             
-            // 如果找到了(不是404)，就直接返回内容
-            if (response.status !== 404) {
-                 return response;
+            // 2. 如果找不到(404)，回退去请求原始路径
+            if (response.status === 404) {
+                 response = await env.ASSETS.fetch(request);
             }
-            // 如果真的找不到文件，回退去请求原始路径(防止误杀其他文件)
-            return env.ASSETS.fetch(request);
+
+            // ============================================================
+            // [新增] 针对 Telegram/社交分享的 SEO 优化 (动态注入 OG 标签)
+            // ============================================================
+            // 只有当访问的是 product.html 且页面存在时才处理
+            if (path === '/product.html' && response.status === 200) {
+                const db = env.MY_XYRJ; // 获取数据库引用
+                const productId = url.searchParams.get('id');
+                if (productId) {
+                    try {
+                        // A. 从数据库查询商品信息
+                        const product = await db.prepare("SELECT name, description, image_url FROM products WHERE id = ?").bind(productId).first();
+                        
+                        if (product) {
+                            // B. 准备要注入的 Meta 标签 (防止双引号破坏 HTML)
+                            const title = (product.name || '').replace(/"/g, '&quot;');
+                            // 提取纯文本描述（去掉HTML标签），限制长度
+                            let desc = (product.description || '').replace(/<[^>]+>/g, '').substring(0, 150).replace(/"/g, '&quot;') + '...';
+                            if(!desc || desc === '...') desc = '自动发货，安全快捷';
+                            // 图片地址：如果是相对路径，补全为绝对路径
+                            let image = product.image_url || '/assets/noimage.jpg';
+                            if (image.startsWith('/')) image = `${url.origin}${image}`;
+
+                            const pageUrl = request.url;
+
+                            const ogTags = `
+                                <meta property="og:type" content="website">
+                                <meta property="og:url" content="${pageUrl}">
+                                <meta property="og:title" content="${title}">
+                                <meta property="og:description" content="${desc}">
+                                <meta property="og:image" content="${image}">
+                                <meta property="twitter:card" content="summary_large_image">
+                                <meta property="twitter:title" content="${title}">
+                                <meta property="twitter:description" content="${desc}">
+                                <meta property="twitter:image" content="${image}">
+                            `;
+
+                            // C. 读取 HTML 内容并注入标签
+                            let html = await response.text();
+                            // 将标签插入到 <head> 标签之后
+                            html = html.replace('<head>', `<head>${ogTags}`);
+                            
+                            // D. 返回修改后的 HTML
+                            return new Response(html, {
+                                headers: response.headers,
+                                status: response.status,
+                                statusText: response.statusText
+                            });
+                        }
+                    } catch (e) {
+                        console.error('SEO Injection Error:', e);
+                        // 出错则不做任何处理，直接返回原始页面
+                    }
+                }
+            }
+            // ============================================================
+
+            return response;
         }
 
         // === 3. 默认回退 ===
