@@ -145,7 +145,7 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
     display: flex; 
     flex-direction: column;
     /* PC端宽度计算：4列布局，使用 margin 代替 gap */
-    width: calc(25% - 10px); 
+    width: calc(25% - 50px); 
     margin: 0 5px 10px 5px;
 }
 .tb-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
@@ -156,15 +156,13 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
 
 /* PC端图片微调 */
 @media (min-width: 992px) {
-    .tb-img {
-        width: 100%; height: 100%; top: 0; left: 0; object-fit: contain; 
-    }
-    .tb-img-wrap { width: 65%; padding-bottom: 65%; margin: 10% auto; border: 1px solid #eee; border-radius: 5px; }
+    .tb-img {width: 100%; height: 100%; top: 0; left: 0; object-fit: cover;  border-radius: 8px;}
+    .tb-img-wrap { width: 65%; padding-bottom: 65%; margin: 10% auto; border: 1px solid #eee; border-radius: 8px; }
     .sidebar-inner { padding-bottom: 1px; } 
 }
 
 /* 信息区域 */
-.tb-info { padding: 8px; display: flex; flex-direction: column; flex-grow: 1; }
+.tb-info { padding: 10px; display: flex; flex-direction: column; flex-grow: 1; }
 
 .tb-title { 
     font-size: 13px; 
