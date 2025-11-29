@@ -78,6 +78,26 @@ function renderProductDetail(p) {
                         <div class="main-img-wrap border rounded mb-2" style="position:relative; padding-bottom:calc(100% - 2px); overflow:hidden;">
                             <img id="p-main-img" src="${p.image_url}" class="position-absolute w-100 h-100" style="object-fit:contain; top:0; left:0;">
                         </div>
+                        <div class="d-flex align-items-center mt-3 text-secondary" style="font-size: 13px;">
+                        <div class="action-icon-wrap d-flex align-items-center">
+                            <i class="fas fa-qrcode fs-5 me-2"></i> 手机购买
+                            <div class="qr-popup text-center" style="width: 140px;">
+                                <div id="page-qrcode" style="margin-bottom: 5px;"></div>
+                                <div class="small text-muted">微信/手机扫码下单</div>
+                            </div>
+                        </div>
+                        <div class="action-icon-wrap d-flex align-items-center">
+                            <i class="fas fa-share-alt fs-5 me-2"></i> 分享商品
+                            <div class="share-popup" style="width: 200px;">
+                                <div class="d-flex justify-content-center flex-wrap p-1">
+                                    <a href="javascript:void(0)" onclick="shareTo('wechat')" class="share-icon-link share-wx" title="分享到微信"><i class="fab fa-weixin"></i></a>
+                                    <a href="javascript:void(0)" onclick="shareTo('qq')" class="share-icon-link share-qq" title="分享到QQ"><i class="fab fa-qq"></i></a>
+                                    <a href="javascript:void(0)" onclick="shareTo('telegram')" class="share-icon-link share-tg" title="分享到Telegram"><i class="fab fa-telegram-plane"></i></a>
+                                    <a href="javascript:void(0)" onclick="shareTo('facebook')" class="share-icon-link share-fb" title="分享到Facebook"><i class="fab fa-facebook-f"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     </div>
                 </div>
 
@@ -220,7 +240,8 @@ function renderProductDetail(p) {
         const el = document.getElementById('p-password');
         if(el) el.value = cachedPass;
     }
-    
+    // 初始化二维码
+    initPageQrcode();
     // 侧边栏推荐
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
     
@@ -879,5 +900,54 @@ function updatePcDetailCartBadge() {
         }
     } catch(e) {
         console.error('更新角标失败', e);
+    }
+}
+// =============================================
+// === [新增] 二维码与分享功能
+// =============================================
+
+function initPageQrcode() {
+    // 检查 qrcode.js 是否加载，以及容器是否存在
+    const qrContainer = document.getElementById('page-qrcode');
+    if (qrContainer && typeof QRCode !== 'undefined') {
+        qrContainer.innerHTML = ''; // 清空旧的
+        new QRCode(qrContainer, {
+            text: window.location.href,
+            width: 120,
+            height: 120,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    } else {
+        if(qrContainer) qrContainer.innerHTML = '加载失败';
+    }
+}
+
+function shareTo(platform) {
+    const url = encodeURIComponent(window.location.href);
+    const title = encodeURIComponent(document.title);
+    // 尝试获取主图，如果没有则为空
+    const pic = encodeURIComponent(currentProduct ? currentProduct.image_url : '');
+    
+    let shareUrl = '';
+
+    switch(platform) {
+        case 'wechat':
+            alert('请使用微信“扫一扫”功能，扫描左侧的“手机购买”二维码即可分享。');
+            return; 
+        case 'qq':
+            shareUrl = `http://connect.qq.com/widget/shareqq/index.html?url=${url}&title=${title}&pics=${pic}`;
+            break;
+        case 'telegram':
+            shareUrl = `https://t.me/share/url?url=${url}&text=${title}`;
+            break;
+        case 'facebook':
+            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+            break;
+    }
+
+    if (shareUrl) {
+        window.open(shareUrl, '_blank', 'width=600,height=500,top=100,left=100');
     }
 }
