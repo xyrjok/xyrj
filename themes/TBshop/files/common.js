@@ -470,8 +470,9 @@ function renderSidebarTagCloud(products) {
         const clean = t.trim().split('#')[0].split(/\s+/)[0];
         if(clean && !clean.startsWith('b1') && !clean.startsWith('b2')) tags.add(clean);
     }));
+    // === 修改点：统一绑定 onclick="handleTagClick(...)" ===
     el.innerHTML = tags.size ? Array.from(tags).map(t => 
-        `<span class="tag-cloud-item" ${typeof filterByTag === 'function' ? `onclick="filterByTag('${t}')"` : ''}>${t}</span>`
+        `<span class="tag-cloud-item" onclick="handleTagClick('${t}')">${t}</span>`
     ).join('') : '<div class="text-muted small text-center">暂无标签</div>';
 }
 function renderSidebarArticleCats(articles) {
