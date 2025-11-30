@@ -1,11 +1,11 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理)
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理 & 超级跑马灯)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
- * [新增] 全站社交分享优化(OG标签)：支持首页(后台配置)、商品页、文章页、文章中心自动生成卡片
+ * [新增] 超级跑马灯支持：后端自动解析 #[商品名]# 显示规格价格
+ * [新增] 全站社交分享优化(OG标签)
  * [新增] 限制未支付订单数量、删除未支付订单接口
- * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
- * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
- * [修复] 文章管理支持保存封面图、浏览量和显示状态
+ * [新增] 卡密管理支持分页、搜索
+ * [修复] D1 兼容性优化
  */
 
 // === 工具函数 ===
@@ -21,6 +21,54 @@ const formatTime = (ts) => {
     const d = new Date(ts * 1000 + 28800000);
     return d.toISOString().replace('T', ' ').substring(0, 19);
 };
+
+// [新增] 跑马灯内容处理函数
+async function processMarquee(content, db) {
+    const regex = /#\[(.*?)\]#/g;
+    const matches = [...content.matchAll(regex)];
+    
+    if (matches.length === 0) return content;
+    
+    let newContent = content;
+    const replacements = {}; // 缓存替换内容
+
+    for (const match of matches) {
+        const fullTag = match[0]; // 例如 "#[商品A,商品B]#"
+        const innerText = match[1]; // 例如 "商品A,商品B"
+        
+        // 如果已经处理过这个标签，跳过
+        if (replacements[fullTag] !== undefined) continue;
+
+        // 支持中文逗号和英文逗号分隔
+        const titles = innerText.split(/[,，]/).map(t => t.trim()).filter(t => t);
+        let resultParts = [];
+
+        for (const title of titles) {
+            // 查找商品 (精确匹配名称)
+            const product = await db.prepare("SELECT id FROM products WHERE name = ?").bind(title).first();
+            if (product) {
+                // 查找规格
+                const variants = await db.prepare("SELECT name, price FROM variants WHERE product_id = ? ORDER BY price ASC").bind(product.id).all();
+                if (variants.results.length > 0) {
+                    // 格式化为: 规格名 ¥价格
+                    const vStr = variants.results.map(v => `${v.name} ¥${v.price}`).join('，');
+                    resultParts.push(vStr);
+                }
+            }
+        }
+        
+        // 用找到的商品信息替换，如果没找到则为空字符串
+        replacements[fullTag] = resultParts.join('，');
+    }
+
+    // 执行替换
+    for (const [tag, text] of Object.entries(replacements)) {
+        // 使用 split-join 替换所有出现的该标签
+        newContent = newContent.split(tag).join(text);
+    }
+    
+    return newContent;
+}
 
 // === 支付宝签名与验签核心 (Web Crypto API) ===
 
@@ -714,6 +762,16 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/config') {
             const res = await db.prepare("SELECT * FROM site_config").all();
             const config = {}; res.results.forEach(r => config[r.key] = r.value);
+            
+            // [新增] 跑马灯后端渲染逻辑
+            if (config.marquee_enabled === '1' && config.marquee_content && config.marquee_content.includes('#[')) {
+                 try {
+                     config.marquee_content = await processMarquee(config.marquee_content, db);
+                 } catch (e) {
+                     console.error('Marquee process error:', e);
+                 }
+            }
+            
             return jsonRes(config);
         }
 
