@@ -12,7 +12,7 @@
 body { 
     background-color: #f4f4f4; 
     background-color: var(--bg-gray); 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+    font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; 
     /* 页脚吸底功能：Flex布局 */
     display: flex;
     flex-direction: column;
