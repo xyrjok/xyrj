@@ -179,7 +179,42 @@
                         <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> 保存设置</button>
                     </div>
                 </div>
-            </div>
+
+                <div class="card mt-4">
+                    <div class="card-header bg-light border-bottom">
+                        <i class="fas fa-bullhorn text-danger me-2"></i>超级跑马灯设置
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="marquee_enabled">
+                                    <label class="form-check-label fw-bold" for="marquee_enabled">开启跑马灯</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">滚动速度</span>
+                                    <input type="number" class="form-control" id="marquee_speed" placeholder="15" value="15">
+                                    <span class="input-group-text">秒</span>
+                                </div>
+                                <div class="form-text" style="font-size: 12px;">数值越小滚动越快（建议 10-20）。</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">显示内容 (支持 HTML)</label>
+                            <textarea class="form-control" id="marquee_content" rows="3" placeholder="欢迎光临本店..."></textarea>
+                            <div class="alert alert-info mt-2 mb-0 py-2" style="font-size: 13px;">
+                                <i class="fas fa-magic me-1"></i> <strong>智能商品插入：</strong><br>
+                                输入 <code>#[商品标题]#</code> 可自动显示该商品的规格和价格。<br>
+                                多个商品请用逗号隔开，例如：<code>#[奈飞月卡],[奈飞年卡]#</code>。<br>
+                                <span class="text-muted">（系统会自动匹配商品标题，如果匹配失败则不显示）</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
 
             <div class="col-lg-4">
                 <div class="card db-card">
@@ -238,6 +273,11 @@
             document.getElementById('announce').value = config.announce || '';
             document.getElementById('contact_info').value = config.contact_info || '';
 
+            // [新增] 跑马灯配置加载
+            document.getElementById('marquee_enabled').checked = (config.marquee_enabled === '1');
+            document.getElementById('marquee_speed').value = config.marquee_speed || '15';
+            document.getElementById('marquee_content').value = config.marquee_content || '';
+
         } catch (e) {
             console.warn("Initial load failed (likely empty DB):", e);
         }
@@ -252,7 +292,12 @@
             show_site_logo: document.getElementById('show_site_logo').checked ? '1' : '0',
             theme: document.getElementById('theme_select').value,
             announce: document.getElementById('announce').value,
-            contact_info: document.getElementById('contact_info').value
+            contact_info: document.getElementById('contact_info').value,
+            
+            // [新增] 跑马灯配置保存
+            marquee_enabled: document.getElementById('marquee_enabled').checked ? '1' : '0',
+            marquee_speed: document.getElementById('marquee_speed').value,
+            marquee_content: document.getElementById('marquee_content').value
         };
         const res = await api('settings/save', { method: 'POST', body: JSON.stringify(data) });
         if (res.success) {
