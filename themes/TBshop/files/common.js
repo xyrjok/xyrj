@@ -376,7 +376,10 @@ function doSearch(source = 'pc') {
     if (typeof renderSingleGrid === 'function' && typeof allProducts !== 'undefined') {
         if (!val) renderCategorizedView('all');
         else {
-            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(val.toLowerCase()));
+            const filtered = allProducts.filter(p => 
+                p.name.toLowerCase().includes(val.toLowerCase()) || 
+                (p.tags && p.tags.toLowerCase().includes(val.toLowerCase()))
+            );
             renderSingleGrid(filtered, `"${val}" 的搜索结果`);
         }
         if (source === 'mobile') toggleMobileSearch(false);
