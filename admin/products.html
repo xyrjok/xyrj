@@ -482,7 +482,11 @@
     mobileBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
     overlay.addEventListener('click', toggleMenu);
     document.querySelectorAll('.admin-sidebar a').forEach(link => { link.addEventListener('click', () => { if (window.innerWidth <= 800) toggleMenu(); }); });
-
+    document.addEventListener('focusin', (e) => {
+        if (e.target.closest(".tox-tinymce-aux, .moxman-window, .tam-assetmanager-root") !== null) {
+            e.stopImmediatePropagation();
+        }
+    });
     // --- 初始化 TinyMCE ---
     document.addEventListener("DOMContentLoaded", function () {
     tinymce.init({
