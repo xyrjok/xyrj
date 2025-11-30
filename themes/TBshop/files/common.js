@@ -500,3 +500,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.onclick = () => window.scrollTo({top:0, behavior:'smooth'});
     window.onscroll = () => btn.classList.toggle('show', window.scrollY > 300);
 });
+
+/* 处理标签点击 */
+function handleTagClick(tag) {
+    if (typeof filterByTag === 'function') {
+        // 首页：直接筛选
+        filterByTag(tag);
+    } else {
+        // 非首页：跳转搜索
+        window.location.href = '/?q=' + encodeURIComponent(tag);
+    }
+}
