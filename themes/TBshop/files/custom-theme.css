@@ -319,6 +319,11 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
 }
 #sku-btn-list { align-content: flex-start; }
 
+/* 规格按钮通用样式 - [新增] 修改字体为 Arial Narrow */
+.sku-btn {
+    font-family: "Arial Narrow", Arial, sans-serif;
+}
+
 /* 支付方式图标 */
 .payment-option {
     position: relative; display: inline-flex;
@@ -391,6 +396,8 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
     border: 1px solid #ddd; border-radius: 4px; font-size: 12px;
     cursor: pointer; transition: all 0.2s; user-select: none;
     margin-right: 8px; margin-bottom: 8px; /* 替代 gap */
+    /* [新增] 修改预设字体为 Arial Narrow */
+    font-family: "Arial Narrow", Arial, sans-serif;
 }
 .ns-item:hover { border-color: #aaa; background-color: #f5f5f5; }
 .ns-item.selected {
