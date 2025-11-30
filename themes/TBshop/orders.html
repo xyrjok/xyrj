@@ -27,7 +27,7 @@
         }
 
         /* 查单页面专用样式 */
-        .query-tabs .nav-link { color: #666; border: none; border-bottom: 2px solid transparent; padding: 12px 20px; font-weight: 500; }
+        .query-tabs .nav-link { color: #666; border: none; border-bottom: 2px solid transparent; padding: 12px 20px; font-weight: 500; font-size: 14px; }
         .query-tabs .nav-link:hover { color: var(--tb-orange); }
         .query-tabs .nav-link.active { color: var(--tb-orange); background: transparent; border-bottom: 2px solid var(--tb-orange); font-weight: bold; }
         
@@ -80,8 +80,7 @@
             <div class="col-lg-9">
                 
                 <div class="bg-white rounded shadow-sm p-4 mb-4" style="min-height: 600px;">
-                    <h5 class="mb-3 fw-bold"><i class="fa fa-file-alt text-danger me-2"></i>订单查询</h5>
-                    
+                    <h6 class="mb-3 fw-bold text-dark"><i class="fa fa-file-alt me-2" style="color: var(--tb-orange);"></i>订单查询</h6>  
                     <ul class="nav nav-tabs query-tabs mb-4" id="queryTabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="contact-tab" data-bs-toggle="tab" data-bs-target="#by-contact" type="button">
