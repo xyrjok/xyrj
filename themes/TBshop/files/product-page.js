@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (修复版：拦截未支付订单跳转 + 推特分享 + 复制链接功能 + 移动端主图遮罩优化)
+// === (修复版：拦截未支付订单跳转 + 推特分享 + 复制链接功能 + 移动端主图遮罩优化 + PC端保持原样)
 // =============================================
 
 // 全局变量
@@ -70,6 +70,8 @@ function renderProductDetail(p) {
     }
 
     // 2. 构建 HTML 结构
+    // 移动端使用 d-lg-none (小于992px显示)
+    // PC端使用 d-none d-lg-flex (大于等于992px显示)
     const html = `
         <div class="module-box product-showcase">
             <div class="row g-0">
@@ -78,13 +80,13 @@ function renderProductDetail(p) {
                         <div class="main-img-wrap border rounded mb-2" style="position:relative; padding-bottom:calc(100% - 2px); overflow:hidden;">
                             <img id="p-main-img" src="${p.image_url}" class="position-absolute w-100 h-100" style="object-fit:contain; top:0; left:0; z-index: 1;">
                             
-                            <div class="d-flex align-items-center justify-content-center position-absolute w-100" 
+                            <div class="d-flex d-lg-none align-items-center justify-content-center position-absolute w-100" 
                                  style="bottom:0; left:0; background:rgba(255,255,255,0.9); backdrop-filter:blur(3px); padding:8px 0; z-index: 10; border-top:1px solid rgba(0,0,0,0.05);">
                                 
                                 <div class="action-icon-wrap d-flex align-items-center me-4" style="margin-right: 25px; color:#555; font-size:13px;">
                                     <i class="fas fa-qrcode fs-5 me-2"></i> 手机购买
                                     <div class="qr-popup text-center" style="width: 140px; top:auto; bottom:100%; margin-bottom:12px; margin-top:0;">
-                                        <div id="page-qrcode" style="margin-bottom: 5px;"></div>
+                                        <div id="page-qrcode-mobile" style="margin-bottom: 5px;"></div>
                                         <div class="small text-muted">微信/手机扫码下单</div>
                                     </div>
                                 </div>
@@ -103,6 +105,29 @@ function renderProductDetail(p) {
                                 </div>
                             </div>
                         </div>
+
+                        <div class="d-none d-lg-flex align-items-center mt-3 text-secondary" style="font-size: 13px;">
+                            <div class="action-icon-wrap d-flex align-items-center">
+                                <i class="fas fa-qrcode fs-5 me-2"></i> 手机购买
+                                <div class="qr-popup text-center" style="width: 140px;">
+                                    <div id="page-qrcode-pc" style="margin-bottom: 5px;"></div>
+                                    <div class="small text-muted">微信/手机扫码下单</div>
+                                </div>
+                            </div>
+                            <div class="action-icon-wrap d-flex align-items-center">
+                                <i class="fas fa-share-alt fs-5 me-2"></i> 分享商品
+                                <div class="share-popup" style="width: 240px;"> 
+                                    <div class="d-flex justify-content-center flex-wrap p-1">
+                                        <a href="javascript:void(0)" onclick="shareTo('wechat')" class="share-icon-link share-wx" title="分享到微信"><i class="fab fa-weixin"></i></a>
+                                        <a href="javascript:void(0)" onclick="shareTo('qq')" class="share-icon-link share-qq" title="分享到QQ"><i class="fab fa-qq"></i></a>
+                                        <a href="javascript:void(0)" onclick="shareTo('telegram')" class="share-icon-link share-tg" title="分享到Telegram"><i class="fab fa-telegram-plane"></i></a>
+                                        <a href="javascript:void(0)" onclick="shareTo('facebook')" class="share-icon-link share-fb" title="分享到Facebook"><i class="fab fa-facebook-f"></i></a>
+                                        <a href="javascript:void(0)" onclick="shareTo('twitter')" class="share-icon-link share-tw" title="分享到Twitter"><i class="fab fa-twitter"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -912,21 +937,25 @@ function updatePcDetailCartBadge() {
 // =============================================
 
 function initPageQrcode() {
-    // 检查 qrcode.js 是否加载，以及容器是否存在
-    const qrContainer = document.getElementById('page-qrcode');
-    if (qrContainer && typeof QRCode !== 'undefined') {
-        qrContainer.innerHTML = ''; // 清空旧的
-        new QRCode(qrContainer, {
-            text: window.location.href,
-            width: 120,
-            height: 120,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
-    } else {
-        if(qrContainer) qrContainer.innerHTML = '加载失败';
-    }
+    // 封装通用初始化函数
+    const init = (id) => {
+        const el = document.getElementById(id);
+        if (el && typeof QRCode !== 'undefined') {
+            el.innerHTML = ''; // 清空旧的
+            new QRCode(el, {
+                text: window.location.href,
+                width: 120,
+                height: 120,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+    };
+
+    // 初始化两个ID（一个用于移动端，一个用于PC端）
+    init('page-qrcode-mobile');
+    init('page-qrcode-pc');
 }
 
 // 修改后的 shareTo 函数：点击任意图标均复制链接
