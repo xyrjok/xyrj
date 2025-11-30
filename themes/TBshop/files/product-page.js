@@ -81,7 +81,7 @@ function renderProductDetail(p) {
                             <img id="p-main-img" src="${p.image_url}" class="position-absolute w-100 h-100" style="object-fit:contain; top:0; left:0; z-index: 1;">
                             
                             <div class="d-flex d-lg-none align-items-center justify-content-center position-absolute w-100" 
-                                 style="bottom:0; left:0; background:rgba(255,255,255,0.9); backdrop-filter:blur(3px); padding:8px 0; z-index: 10; border-top:1px solid rgba(0,0,0,0.05);">
+                                 style="bottom:0; left:0; background: rgb(255 255 255 / 55%); backdrop-filter:blur(3px); padding:2px 0; z-index: 10; border-top:1px solid rgba(0,0,0,0.05);">
                                 
                                 <div class="action-icon-wrap d-flex align-items-center me-4" style="margin-right: 25px; color:#555; font-size:13px;">
                                     <i class="fas fa-qrcode fs-5 me-2"></i> 手机购买
