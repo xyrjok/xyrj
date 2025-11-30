@@ -1,6 +1,6 @@
 // =============================================
 // === themes/TBshop/files/product-page.js
-// === (修复版：拦截未支付订单跳转)
+// === (修复版：拦截未支付订单跳转 + 推特分享 + 复制链接功能)
 // =============================================
 
 // 全局变量
@@ -88,12 +88,12 @@ function renderProductDetail(p) {
                         </div>
                         <div class="action-icon-wrap d-flex align-items-center">
                             <i class="fas fa-share-alt fs-5 me-2"></i> 分享商品
-                            <div class="share-popup" style="width: 200px;">
-                                <div class="d-flex justify-content-center flex-wrap p-1">
+                            <div class="share-popup" style="width: 240px;"> <div class="d-flex justify-content-center flex-wrap p-1">
                                     <a href="javascript:void(0)" onclick="shareTo('wechat')" class="share-icon-link share-wx" title="分享到微信"><i class="fab fa-weixin"></i></a>
                                     <a href="javascript:void(0)" onclick="shareTo('qq')" class="share-icon-link share-qq" title="分享到QQ"><i class="fab fa-qq"></i></a>
                                     <a href="javascript:void(0)" onclick="shareTo('telegram')" class="share-icon-link share-tg" title="分享到Telegram"><i class="fab fa-telegram-plane"></i></a>
                                     <a href="javascript:void(0)" onclick="shareTo('facebook')" class="share-icon-link share-fb" title="分享到Facebook"><i class="fab fa-facebook-f"></i></a>
+                                    <a href="javascript:void(0)" onclick="shareTo('twitter')" class="share-icon-link share-tw" title="分享到Twitter"><i class="fab fa-twitter"></i></a>
                                 </div>
                             </div>
                         </div>
@@ -924,30 +924,49 @@ function initPageQrcode() {
     }
 }
 
+// 修改后的 shareTo 函数：点击任意图标均复制链接
 function shareTo(platform) {
-    const url = encodeURIComponent(window.location.href);
-    const title = encodeURIComponent(document.title);
-    // 尝试获取主图，如果没有则为空
-    const pic = encodeURIComponent(currentProduct ? currentProduct.image_url : '');
+    // 无论点击哪个图标，逻辑都是复制当前链接
+    const url = window.location.href;
+
+    // 使用 Clipboard API (现代浏览器)
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(() => {
+            alert('分享链接已经复制成功了，赶快发给好友吧！');
+        }).catch(err => {
+            // 如果 API 失败，尝试降级方案
+            fallbackCopy(url);
+        });
+    } else {
+        // 降级方案 (兼容旧浏览器或非HTTPS环境)
+        fallbackCopy(url);
+    }
+}
+
+// 辅助函数：兼容性复制
+function fallbackCopy(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
     
-    let shareUrl = '';
-
-    switch(platform) {
-        case 'wechat':
-            alert('请使用微信“扫一扫”功能，扫描左侧的“手机购买”二维码即可分享。');
-            return; 
-        case 'qq':
-            shareUrl = `http://connect.qq.com/widget/shareqq/index.html?url=${url}&title=${title}&pics=${pic}`;
-            break;
-        case 'telegram':
-            shareUrl = `https://t.me/share/url?url=${url}&text=${title}`;
-            break;
-        case 'facebook':
-            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-            break;
+    // 设置样式防止元素出现在可视区域干扰用户
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            alert('分享链接已经复制成功了，赶快发给好友吧！');
+        } else {
+            alert('复制失败，请手动复制浏览器地址栏。');
+        }
+    } catch (err) {
+        alert('复制失败，请手动复制浏览器地址栏。');
     }
-
-    if (shareUrl) {
-        window.open(shareUrl, '_blank', 'width=600,height=500,top=100,left=100');
-    }
+    
+    document.body.removeChild(textArea);
 }
