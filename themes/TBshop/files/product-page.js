@@ -102,7 +102,7 @@ function renderProductDetail(p) {
                 </div>
 
                 <div class="col-md-7" style="position:relative;">
-                    <div class="p-3">
+                    <div class="p-2">
                         <h5 class="fw-bold mb-2" style="line-height:1.4;" id="product-title-el">${p.name}</h5>
                         
                         <div class="tb-tags-row mb-2" id="p-tags-container">
