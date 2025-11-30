@@ -13,33 +13,36 @@
     <link href="/themes/TBshop/files/custom-theme.css" rel="stylesheet">
 
     <style>
-        /* ================== 商品描述富文本适配 ================== */
+        /* ================== 商品描述富文本适配 (与文章详情同步) ================== */
         /* 作用于 product-page.js 中生成的 .product-desc 容器内 */
         
         .product-desc {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #333;
-            line-height: 1.6;
-            word-wrap: break-word; /* 强制长单词换行 */
-            font-size: 15px; /* 稍微调大字体提升阅读体验 */
+            /* 统一行高和字号，匹配后台编辑器感觉 */
+            line-height: 1.5;
+            word-wrap: break-word;
+            font-size: 15px; 
         }
         
-        /* 1. 图片自适应：防止大图撑破手机屏幕 */
+        /* 1. 图片自适应 & 美化 */
         .product-desc img {
             max-width: 100% !important;
             height: auto !important;
-            display: block; /* 消除图片底部的空隙 */
-            margin: 0.5em 0;
-            border-radius: 4px;
+            display: block;
+            margin: 1em 0;
+            border-radius: 8px; /* 圆角加大 */
+            box-shadow: 0 2px 10px rgb(0 0 0 / 15%); /* 增加阴影，提升质感 */
         }
 
-        /* 2. 列表样式恢复：Bootstrap 可能默认去掉了列表样式 */
+        /* 2. 列表样式恢复 */
         .product-desc ul, .product-desc ol {
             padding-left: 2em;
             margin-bottom: 1em;
         }
         .product-desc ul { list-style-type: disc; }
         .product-desc ol { list-style-type: decimal; }
+        .product-desc li { margin-bottom: 0.5em; }
 
         /* 3. 表格样式适配 */
         .product-desc table {
@@ -50,30 +53,56 @@
             border: 1px solid #dee2e6;
         }
         .product-desc table td, .product-desc table th {
-            padding: 0.5rem;
+            padding: 0.75rem;
             border: 1px solid #dee2e6;
             vertical-align: top;
         }
+        .product-desc table th {
+            background-color: #f8f9fa; /* 增加表头背景色 */
+            font-weight: 600;
+        }
 
-        /* 4. 引用块样式 */
+        /* 4. 引用块样式 (改为蓝色系) */
         .product-desc blockquote {
-            border-left: 4px solid #ddd;
-            padding-left: 1rem;
-            color: #666;
-            margin: 1rem 0;
-            background-color: #f9f9f9;
-            padding: 0.5rem 1rem;
+            border-left: 5px solid #0d6efd;
+            padding: 1rem 1.5rem;
+            color: #555;
+            margin: 1.5rem 0;
+            background-color: #f8f9fa;
+            border-radius: 0 4px 4px 0;
         }
         
-        /* 5. TinyMCE 对齐类支持 */
-        .product-desc .alignleft { float: left; margin: 0 10px 10px 0; }
-        .product-desc .alignright { float: right; margin: 0 0 10px 10px; }
-        .product-desc .aligncenter { display: block; margin-left: auto; margin-right: auto; }
+        /* 5. 标题增强 - [新增] 强制按比例重置 H1-H6 大小 */
+        .product-desc h1, .product-desc h2, .product-desc h3, 
+        .product-desc h4, .product-desc h5, .product-desc h6 {
+            margin-top: 1.2em;
+            margin-bottom: 0.6em;
+            font-weight: bold;
+            color: #2c3e50;
+            line-height: 1.4;
+        }
+
+        .product-desc h1 { font-size: 2em; }     
+        .product-desc h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 10px; } 
+        .product-desc h3 { font-size: 1.3em; }  
+        .product-desc h4 { font-size: 1em; }     
+        .product-desc h5 { font-size: 0.83em; }  
+        .product-desc h6 { font-size: 0.67em; }  
         
-        /* 6. 超链接样式 */
+        /* 6. TinyMCE 对齐类支持 */
+        .product-desc .alignleft { float: left; margin: 0 15px 15px 0; }
+        .product-desc .alignright { float: right; margin: 0 0 15px 15px; }
+        .product-desc .aligncenter { display: block; margin-left: auto; margin-right: auto; text-align: center; }
+        
+        /* 7. 超链接样式 (下划线改为悬停显示) */
         .product-desc a {
             color: #0d6efd;
-            text-decoration: underline;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .product-desc a:hover {
+            border-bottom-color: #0d6efd;
         }
     </style>
     <script src="/assets/qrcode.min.js"></script>
