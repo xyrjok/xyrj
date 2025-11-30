@@ -47,7 +47,10 @@ async function initHomePage() {
             // 2. 执行筛选并显示
             // 确保 allProducts 已经加载
             if (allProducts && allProducts.length > 0) {
-                const filtered = allProducts.filter(p => p.name.toLowerCase().includes(val.toLowerCase()));
+                const filtered = allProducts.filter(p => 
+                    p.name.toLowerCase().includes(val.toLowerCase()) || 
+                    (p.tags && p.tags.toLowerCase().includes(val.toLowerCase()))
+                );
                 renderSingleGrid(filtered, `"${val}" 的搜索结果`);
             } else {
                 renderCategorizedView('all');
