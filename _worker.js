@@ -844,7 +844,7 @@ async function handleApi(request, env, url) {
             if (!product) return errRes('商品不存在或已下架', 404);
 
             // 2. 获取规格信息
-            const variants = (await db.prepare("SELECT * FROM variants WHERE product_id = ?").bind(id).all()).results;
+            const variants = (await db.prepare("SELECT * FROM variants WHERE product_id = ? AND active = 1 ORDER BY sort DESC, id ASC").bind(id).all()).results;
             
             // 3. 解析批发配置和数字类型
             variants.forEach(v => {
