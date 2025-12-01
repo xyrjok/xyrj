@@ -405,10 +405,13 @@
 
         row.innerHTML = `
             <input type="hidden" class="v-id" value="${v.id || ''}">
+            ${v.id ? `<button type="button" class="btn btn-sm btn-outline-info position-absolute top-0 end-0 m-2" style="margin-right: 5rem !important; z-index: 10;" title="快速加卡" onclick="quickAddCard(${v.id}, '${v.name}')"><i class="fas fa-plus-circle"></i></button>` : ''}
             <button type="button" class="btn btn-sm btn-outline-success position-absolute top-0 end-0 m-2" style="margin-right: 2.5rem !important; z-index: 10;" title="保存所有更改" onclick="saveProduct()"><i class="fas fa-save"></i></button>
             <button type="button" class="btn-close position-absolute top-0 end-0 m-2" aria-label="删除此规格" onclick="this.closest('.variant-row').remove()"></button>
             <div class="variant-fields-container">
                 <div class="variant-field v-name"><label class="form-label-sm">规格名称</label><input type="text" class="form-control form-control-sm v-name" value="${v.name || ''}" placeholder="月卡"></div>
+                <div class="variant-field" style="width: 60px;"><label class="form-label-sm">排序</label><input type="number" class="form-control form-control-sm v-sort" value="${v.sort || 0}" placeholder="0"></div>
+                <div class="variant-field" style="width: 60px; text-align:center;"><label class="form-label-sm">状态</label><div class="form-check form-switch d-flex justify-content-center"><input class="form-check-input v-active" type="checkbox" ${v.active !== 0 ? 'checked' : ''}></div></div>
                 <div class="variant-field v-color-wrap"><label class="form-label-sm">颜色</label><input type="text" class="form-control form-control-sm v-color" value="${v.color || ''}" placeholder="#FFF"></div>
                 <div class="variant-field v-mode-wrap"><label class="form-label-sm">发货模式</label><select class="form-select form-select-sm v-auto_delivery" onchange="toggleStockInput(this)"><option value="1" ${isAuto ? 'selected' : ''}>自动</option><option value="0" ${!isAuto ? 'selected' : ''}>手动</option></select></div>
                 <div class="variant-field v-image_url"><label class="form-label-sm">图片链接</label><input type="url" class="form-control form-control-sm v-image_url" value="${v.image_url || ''}" placeholder="http://..."></div>
@@ -420,6 +423,12 @@
                 <div class="variant-field v-sales-wrap"><label class="form-label-sm">销量</label><input type="text" class="form-control form-control-sm" value="${v.sales_count || 0}" disabled readonly></div>
             </div>`;
         vList.appendChild(row);
+    }
+    async function quickAddCard(id, name) {
+        const content = prompt(`正在为规格【${name}】添加卡密\n请输入卡密内容 (一行一个):`);
+        if (!content) return;
+        const res = await api('cards/import', { method: 'POST', body: JSON.stringify({ variant_id: id, content: content }) });
+        if (res.imported) { alert(`成功添加 ${res.imported} 张卡密`); loadData(); } else { alert('添加失败'); }
     }
     function toggleStockInput(selectEl) {
         const row = selectEl.closest('.variant-row'); const stockInput = row.querySelector('.v-stock');
@@ -459,7 +468,7 @@
                 const nameVal = row.querySelector('input.v-name').value || '默认规格';
                 if (isNaN(price) || price < 0) throw new Error(`规格 "${nameVal}" 售价错误`);
                 data.variants.push({
-                    id: row.querySelector('.v-id').value || null, name: nameVal, price: price, color: row.querySelector('.v-color').value || null, image_url: row.querySelector('input.v-image_url').value || null, selection_label: row.querySelector('[name="v_selection_label"]').value.trim() || null, custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0, wholesale_config: wholesale_config, auto_delivery: parseInt(row.querySelector('.v-auto_delivery').value), stock: parseInt(row.querySelector('.v-stock').value) || 0
+                    id: row.querySelector('.v-id').value || null, name: nameVal, price: price, sort: parseInt(row.querySelector('.v-sort').value) || 0, active: row.querySelector('.v-active').checked ? 1 : 0, color: row.querySelector('.v-color').value || null, image_url: row.querySelector('input.v-image_url').value || null, selection_label: row.querySelector('[name="v_selection_label"]').value.trim() || null, custom_markup: parseFloat(row.querySelector('.v-custom_markup').value) || 0, wholesale_config: wholesale_config, auto_delivery: parseInt(row.querySelector('.v-auto_delivery').value), stock: parseInt(row.querySelector('.v-stock').value) || 0
                 });
             });
             if (data.variants.length === 0) throw new Error('至少添加一个规格');
