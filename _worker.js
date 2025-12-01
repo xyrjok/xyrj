@@ -24,6 +24,7 @@ const formatTime = (ts) => {
 
 // [新增] 跑马灯内容处理函数
 async function processMarquee(content, db) {
+    // 匹配 #[...] # 标签
     const regex = /#\[(.*?)\]#/g;
     const matches = [...content.matchAll(regex)];
     
@@ -47,26 +48,40 @@ async function processMarquee(content, db) {
             // 查找商品 (精确匹配名称)
             const product = await db.prepare("SELECT id FROM products WHERE name = ?").bind(title).first();
             if (product) {
-                // 查找规格
-                const variants = await db.prepare("SELECT name, price FROM variants WHERE product_id = ? ORDER BY price ASC").bind(product.id).all();
-                if (variants.results.length > 0) {
-                    // 格式化为: 规格名 ¥价格
-                    const vStr = variants.results.map(v => `${v.name} ¥${v.price}`).join('，');
-                    resultParts.push(vStr);
+                // 查找规格 (获取库存相关字段)
+                const variants = await db.prepare("SELECT id, name, price, stock, auto_delivery FROM variants WHERE product_id = ? ORDER BY price ASC").bind(product.id).all();
+                
+                for (const v of variants.results) {
+                    let hasStock = false;
+                    
+                    // === 库存判断逻辑 ===
+                    if (v.auto_delivery === 1) {
+                        // 自动发货：查询卡密表是否有未售出的卡密
+                        const cardCount = await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(v.id).first();
+                        if (cardCount && cardCount.c > 0) hasStock = true;
+                    } else {
+                        // 手动发货：检查 stock 字段
+                        if (v.stock > 0) hasStock = true;
+                    }
+
+                    // 只有有库存才显示
+                    if (hasStock) {
+                        // 格式化为: 规格名 ¥价格
+                        resultParts.push(`${v.name} ¥${v.price}`);
+                    }
                 }
             }
-        }
-        
-        // 用找到的商品信息替换，如果没找到则为空字符串
+        }   
+        // 用找到的有货规格替换
+        // 如果没找到商品，或者所有规格都缺货，resultParts 为空数组，join 后为空字符串
+        // 这符合“不匹配或缺货就不显示”的要求
         replacements[fullTag] = resultParts.join('，');
     }
-
     // 执行替换
     for (const [tag, text] of Object.entries(replacements)) {
         // 使用 split-join 替换所有出现的该标签
         newContent = newContent.split(tag).join(text);
     }
-    
     return newContent;
 }
 
