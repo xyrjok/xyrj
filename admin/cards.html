@@ -87,19 +87,41 @@
             word-break: break-all;
         }
 
-        /* [新增] 搜索时让 Select 浮在内容上方，避免推挤布局 */
-        .select-expanded-wrapper {
-            position: relative;
+        /* [新增] 模拟 Bootstrap Select 的外观 */
+        .searchable-select-input {
+            /* 添加原生 Select 的下拉箭头图标 */
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 16px 12px;
+            cursor: text; /* 允许输入 */
+            padding-right: 2.25rem; /* 为箭头留出空间 */
         }
-        .select-expanded {
+
+        /* [新增] 自定义下拉列表样式 */
+        .custom-dropdown-list {
             position: absolute;
-            z-index: 1050;
+            top: 100%;
+            left: 0;
             width: 100%;
-            height: auto !important; /* 强制自动高度以显示列表 */
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            z-index: 1050;
+            display: none; /* 默认隐藏 */
+            margin-top: 4px;
         }
+        .custom-dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .custom-dropdown-item:last-child { border-bottom: none; }
+        .custom-dropdown-item:hover { background-color: #e9ecef; color: #409EFF; }
+        .custom-dropdown-item small { color: #888; display: block; font-size: 12px; }
 
         /* ================== 响应式适配 ================== */
         @media (max-width: 800px) {
@@ -235,16 +257,16 @@
                     </select>
                 </div>
 
-                <div class="mb-3 position-relative">
-                    <label class="form-label">选择规格</label>
-                    <input type="text" class="form-control form-control-sm mb-2" id="import-variant-search" placeholder="输入关键词自动搜索..." oninput="filterImportVariants(this.value)">
-                    
-                    <div class="select-expanded-wrapper">
-                        <select class="form-select" id="import-variant-select" onclick="collapseSelect()">
-                            <option value="">请先选择商品...</option>
-                        </select>
+                <div class="mb-3">
+                    <label class="form-label">选择规格 (可输入搜索)</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control searchable-select-input" id="import-variant-input" placeholder="请选择或输入搜索..." autocomplete="off">
+                        <input type="hidden" id="import-variant-id">
+                        <div id="import-variant-list" class="custom-dropdown-list">
+                            </div>
                     </div>
                 </div>
+
                 <div class="mb-3">
                     <label class="form-label">卡密内容 (一行一个)</label>
                     <textarea class="form-control" id="import-content" rows="8" placeholder="例如：
@@ -348,6 +370,7 @@ CardABCDEF #[推荐号码]"></textarea>
         const vSelect = document.getElementById('filter-variant');
         vSelect.innerHTML = '<option value="">所有规格</option>';
         if (!productId) {
+            // 如果清空了商品选择，重新加载所有卡密
             currentPage = 1; loadCards();
             return;
         }
@@ -383,6 +406,7 @@ CardABCDEF #[推荐号码]"></textarea>
         document.getElementById('select-all').checked = false; 
         updateBatchBtn();
 
+        // 构建查询参数
         const params = new URLSearchParams({
             page: currentPage,
             limit: pageSize
@@ -391,17 +415,22 @@ CardABCDEF #[推荐号码]"></textarea>
         if(kw) params.append('kw', kw);
 
         const res = await api(`cards/list?${params.toString()}`);
+        
+        // 兼容处理：检查返回格式是新版对象还是旧版数组（防止后端未更新导致报错）
         let list = [];
         let total = 0;
 
         if (Array.isArray(res)) {
+            // 旧版API回退
             list = res; 
             total = res.length;
         } else if (res.data) {
+            // 新版API
             list = res.data;
             total = res.total;
         }
 
+        // 更新分页UI
         document.getElementById('total-count').innerText = total;
         document.getElementById('page-num').innerText = currentPage;
         totalPages = Math.ceil(total / pageSize) || 1;
@@ -419,6 +448,7 @@ CardABCDEF #[推荐号码]"></textarea>
             const createTime = c.created_at ? new Date(c.created_at * 1000).toLocaleString() : '-';
             const deleteDisabled = isSold ? 'disabled title="已售出卡密不可删除"' : '';
             
+            // 组装商品信息 (如果API返回了联表数据)
             let productInfo = '-';
             if (c.product_name || c.variant_name) {
                 productInfo = `<small class="text-muted d-block">${c.product_name || ''}</small>
@@ -458,128 +488,116 @@ CardABCDEF #[推荐号码]"></textarea>
             productSelect.appendChild(option);
         });
 
-        // 加载数据
+        // 加载规格数据到内存
         loadImportVariants(productSelect.value);
+
+        // 重置输入框
         document.getElementById('import-content').value = '';
         importModal.show();
     }
 
-    // 缓存当前可选的规格列表
-    let currentVariantList = [];
+    // [新增] 存储当前可用的规格列表
+    let importVariantsData = [];
 
-    // [修改] 联动加载规格
+    // [修改] 准备规格数据（不直接填充Select，而是更新内存数据）
     function loadImportVariants(productId) {
-        currentVariantList = []; // 清空缓存
-        document.getElementById('import-variant-search').value = ''; // 清空搜索框
+        importVariantsData = [];
+        const input = document.getElementById('import-variant-input');
+        const hiddenId = document.getElementById('import-variant-id');
         
-        // 重置 select 样式为单行
-        const select = document.getElementById('import-variant-select');
-        select.size = 1; 
-        select.classList.remove('select-expanded');
-
+        // 重置
+        input.value = '';
+        hiddenId.value = '';
+        
         if (productId) {
-            // 选了商品
+            // 选了商品，只加载该商品的规格
             const product = allProducts.find(p => p.id == productId);
             if (product && product.variants) {
-                currentVariantList = product.variants.map(v => ({ id: v.id, name: v.name }));
+                importVariantsData = product.variants.map(v => ({
+                    id: v.id,
+                    name: v.name,
+                    displayName: v.name // 列表中显示的名字
+                }));
             }
         } else {
-            // 没选商品，加载所有商品的所有规格
+            // 没选商品，加载所有规格，格式 "商品 - 规格"
             allProducts.forEach(p => {
                 if(p.variants) {
                     p.variants.forEach(v => {
-                        currentVariantList.push({ id: v.id, name: `${p.name} - ${v.name}` });
+                        importVariantsData.push({
+                            id: v.id,
+                            name: v.name, // 搜索匹配用
+                            productName: p.name,
+                            displayName: `${p.name} - ${v.name}` // 列表中显示的名字
+                        });
                     });
                 }
             });
         }
-        
-        // 渲染下拉框
-        renderImportVariantSelect(currentVariantList);
     }
 
-    // 渲染规格下拉框函数
-    function renderImportVariantSelect(variants) {
-        const variantSelect = document.getElementById('import-variant-select');
-        const searchInput = document.getElementById('import-variant-search');
+    // [新增] 渲染下拉列表
+    function renderImportVariantList(filterText = '') {
+        const listContainer = document.getElementById('import-variant-list');
+        listContainer.innerHTML = '';
         
-        // 保存当前选中的值（如果还在列表里）
-        const oldVal = variantSelect.value;
-        variantSelect.innerHTML = ''; 
-
-        // 如果没有搜索词，添加默认提示
-        if (!searchInput.value) {
-            const opt = document.createElement('option');
-            opt.value = "";
-            opt.text = "请选择规格...";
-            variantSelect.appendChild(opt);
-        }
-
-        if (variants.length === 0) {
-            if (searchInput.value) {
-                const opt = document.createElement('option');
-                opt.text = "无匹配规格";
-                variantSelect.appendChild(opt);
-            }
-            return;
-        }
-
-        variants.forEach(v => {
-            const option = document.createElement('option');
-            option.value = v.id;
-            option.text = v.name;
-            variantSelect.appendChild(option);
+        const filtered = importVariantsData.filter(v => {
+            if (!filterText) return true;
+            return v.displayName.toLowerCase().includes(filterText.toLowerCase()) || 
+                   (v.productName && v.productName.toLowerCase().includes(filterText.toLowerCase()));
         });
-        
-        // 尝试恢复选中
-        if (oldVal) variantSelect.value = oldVal;
-    }
 
-    // [核心修改] 搜索过滤 + 自动展开逻辑
-    function filterImportVariants(keyword) {
-        const select = document.getElementById('import-variant-select');
-        
-        if (!keyword) {
-            // 无关键词：显示所有，收起下拉框
-            renderImportVariantSelect(currentVariantList);
-            select.size = 1; 
-            select.classList.remove('select-expanded');
-            return;
-        }
-        
-        const lowerKw = keyword.toLowerCase();
-        const filtered = currentVariantList.filter(v => v.name.toLowerCase().includes(lowerKw));
-        renderImportVariantSelect(filtered);
-        
-        // 有关键词：自动展开显示所有匹配项
-        if (filtered.length > 0) {
-            // 展开高度：最多显示 10 行，或者实际行数
-            select.size = Math.min(filtered.length + 1, 10); // +1 是为了稍微多留点余地
-            select.classList.add('select-expanded');
+        if (filtered.length === 0) {
+            listContainer.innerHTML = '<div class="custom-dropdown-item text-muted text-center">无匹配规格</div>';
         } else {
-            select.size = 2; // 无匹配时也稍微展开显示“无匹配”
+            filtered.forEach(v => {
+                const div = document.createElement('div');
+                div.className = 'custom-dropdown-item';
+                div.innerHTML = v.displayName;
+                div.onclick = () => {
+                    document.getElementById('import-variant-input').value = v.displayName;
+                    document.getElementById('import-variant-id').value = v.id;
+                    listContainer.style.display = 'none';
+                };
+                listContainer.appendChild(div);
+            });
         }
+        
+        listContainer.style.display = 'block';
     }
 
-    // [新增] 选中后收起逻辑
-    function collapseSelect() {
-        const select = document.getElementById('import-variant-select');
-        // 延时一下，让值先改变
-        setTimeout(() => {
-            if (select.value) {
-                select.size = 1;
-                select.classList.remove('select-expanded');
-                // 可选：选中后清空搜索框？或者保留？这里保留
-            }
-        }, 50);
-    }
+    // [新增] 输入框事件监听
+    const variantInput = document.getElementById('import-variant-input');
+    const variantList = document.getElementById('import-variant-list');
+
+    variantInput.addEventListener('click', () => { // 点击时也显示
+        renderImportVariantList(variantInput.value);
+    });
+    
+    variantInput.addEventListener('focus', () => {
+        renderImportVariantList(variantInput.value);
+    });
+
+    variantInput.addEventListener('input', () => {
+        // 输入时清空已选ID，因为内容变了
+        document.getElementById('import-variant-id').value = '';
+        renderImportVariantList(variantInput.value);
+    });
+
+    // 点击外部关闭下拉列表
+    document.addEventListener('click', (e) => {
+        if (!variantInput.contains(e.target) && !variantList.contains(e.target)) {
+            variantList.style.display = 'none';
+        }
+    });
+
 
     async function importCards() {
-        const variantId = document.getElementById('import-variant-select').value;
+        const variantId = document.getElementById('import-variant-id').value;
         let content = document.getElementById('import-content').value;
         const removeDup = document.getElementById('import-remove-dup').checked;
 
-        if (!variantId) return alert('请选择要导入的规格');
+        if (!variantId) return alert('请选择有效的规格（请点击输入框选择列表中的一项）');
         if (!content.trim()) return alert('请输入卡密内容');
 
         const btn = document.querySelector('#importModal .btn-primary');
@@ -606,9 +624,11 @@ CardABCDEF #[推荐号码]"></textarea>
         btn.disabled = false; btn.innerText = '开始导入';
     }
 
-    // 导出功能逻辑保持不变...
+    // [新增] 导出功能相关逻辑
     function openExportModal() {
         const productSelect = document.getElementById('export-product-select');
+        
+        // 1. 初始化商品列表
         productSelect.innerHTML = '<option value="">所有商品 (全部)</option>';
         allProducts.forEach(p => {
             const option = document.createElement('option');
@@ -616,16 +636,22 @@ CardABCDEF #[推荐号码]"></textarea>
             option.text = p.name;
             productSelect.appendChild(option);
         });
+
+        // 2. 重置规格和状态
         document.getElementById('export-variant-select').innerHTML = '<option value="">所有规格 (全部)</option>';
         document.getElementById('export-status-unsold').checked = true;
         document.getElementById('export-status-sold').checked = false;
+
         exportModal.show();
     }
 
+    // 导出弹窗的规格联动
     function loadExportVariants(productId) {
         const variantSelect = document.getElementById('export-variant-select');
         variantSelect.innerHTML = '<option value="">所有规格 (全部)</option>';
+
         if (!productId) return;
+
         const product = allProducts.find(p => p.id == productId);
         if (product && product.variants) {
             product.variants.forEach(v => {
@@ -650,9 +676,11 @@ CardABCDEF #[推荐号码]"></textarea>
 
         const btn = document.querySelector('#exportModal .btn-primary');
         const originalText = btn.innerText;
-        btn.disabled = true; btn.innerText = '生成中...';
+        btn.disabled = true; 
+        btn.innerText = '生成中...';
 
         try {
+            // 使用 fetch 请求文件流
             const res = await fetch('/api/admin/cards/export', {
                 method: 'POST',
                 headers: {
@@ -672,15 +700,18 @@ CardABCDEF #[推荐号码]"></textarea>
                 throw new Error(json.error || '导出失败');
             }
 
+            // 处理文件下载
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
+            // 从响应头获取文件名，或使用默认名
             a.download = `cards_export_${new Date().toISOString().slice(0,10)}.txt`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
+
             exportModal.hide();
         } catch (e) {
             alert(e.message);
@@ -719,6 +750,7 @@ CardABCDEF #[推荐号码]"></textarea>
 
         try {
             const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            // 并发删除，实际生产环境建议后端增加批量删除接口
             await Promise.all(ids.map(id => api('card/delete', { method: 'POST', body: JSON.stringify({ id }) })));
             alert('批量删除完成'); loadCards();
         } catch (e) { alert('部分删除失败'); loadCards(); } finally { btn.disabled = false; }
@@ -726,6 +758,7 @@ CardABCDEF #[推荐号码]"></textarea>
 
     initData();
 
+    // Mobile menu handlers
     const mobileBtn = document.getElementById('mobile-menu-toggle');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.querySelector('.admin-overlay');
