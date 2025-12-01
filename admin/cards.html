@@ -87,6 +87,20 @@
             word-break: break-all;
         }
 
+        /* [新增] 搜索时让 Select 浮在内容上方，避免推挤布局 */
+        .select-expanded-wrapper {
+            position: relative;
+        }
+        .select-expanded {
+            position: absolute;
+            z-index: 1050;
+            width: 100%;
+            height: auto !important; /* 强制自动高度以显示列表 */
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
         /* ================== 响应式适配 ================== */
         @media (max-width: 800px) {
             .admin-mobile-header { display: flex; }
@@ -221,12 +235,15 @@
                     </select>
                 </div>
 
-                <div class="mb-3">
+                <div class="mb-3 position-relative">
                     <label class="form-label">选择规格</label>
-                    <input type="text" class="form-control form-control-sm mb-2" id="import-variant-search" placeholder="输入关键词搜索规格..." oninput="filterImportVariants(this.value)">
-                    <select class="form-select" id="import-variant-select">
-                        <option value="">请先选择商品或输入搜索...</option>
-                    </select>
+                    <input type="text" class="form-control form-control-sm mb-2" id="import-variant-search" placeholder="输入关键词自动搜索..." oninput="filterImportVariants(this.value)">
+                    
+                    <div class="select-expanded-wrapper">
+                        <select class="form-select" id="import-variant-select" onclick="collapseSelect()">
+                            <option value="">请先选择商品...</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">卡密内容 (一行一个)</label>
@@ -447,13 +464,18 @@ CardABCDEF #[推荐号码]"></textarea>
         importModal.show();
     }
 
-    // [新增] 缓存当前可选的规格列表，供筛选用
+    // 缓存当前可选的规格列表
     let currentVariantList = [];
 
-    // [修改] 联动加载规格 (改为把数据存到内存，然后渲染)
+    // [修改] 联动加载规格
     function loadImportVariants(productId) {
         currentVariantList = []; // 清空缓存
         document.getElementById('import-variant-search').value = ''; // 清空搜索框
+        
+        // 重置 select 样式为单行
+        const select = document.getElementById('import-variant-select');
+        select.size = 1; 
+        select.classList.remove('select-expanded');
 
         if (productId) {
             // 选了商品
@@ -476,16 +498,29 @@ CardABCDEF #[推荐号码]"></textarea>
         renderImportVariantSelect(currentVariantList);
     }
 
-    // [新增] 渲染规格下拉框函数
+    // 渲染规格下拉框函数
     function renderImportVariantSelect(variants) {
         const variantSelect = document.getElementById('import-variant-select');
-        variantSelect.innerHTML = ''; // 清空现有选项
+        const searchInput = document.getElementById('import-variant-search');
+        
+        // 保存当前选中的值（如果还在列表里）
+        const oldVal = variantSelect.value;
+        variantSelect.innerHTML = ''; 
 
-        if (variants.length === 0) {
+        // 如果没有搜索词，添加默认提示
+        if (!searchInput.value) {
             const opt = document.createElement('option');
             opt.value = "";
-            opt.text = "无匹配规格";
+            opt.text = "请选择规格...";
             variantSelect.appendChild(opt);
+        }
+
+        if (variants.length === 0) {
+            if (searchInput.value) {
+                const opt = document.createElement('option');
+                opt.text = "无匹配规格";
+                variantSelect.appendChild(opt);
+            }
             return;
         }
 
@@ -495,20 +530,48 @@ CardABCDEF #[推荐号码]"></textarea>
             option.text = v.name;
             variantSelect.appendChild(option);
         });
+        
+        // 尝试恢复选中
+        if (oldVal) variantSelect.value = oldVal;
     }
 
-    // [新增] 搜索过滤函数
+    // [核心修改] 搜索过滤 + 自动展开逻辑
     function filterImportVariants(keyword) {
+        const select = document.getElementById('import-variant-select');
+        
         if (!keyword) {
-            // 没有关键词，显示当前已加载的所有列表
+            // 无关键词：显示所有，收起下拉框
             renderImportVariantSelect(currentVariantList);
+            select.size = 1; 
+            select.classList.remove('select-expanded');
             return;
         }
         
         const lowerKw = keyword.toLowerCase();
-        // 简单的模糊匹配
         const filtered = currentVariantList.filter(v => v.name.toLowerCase().includes(lowerKw));
         renderImportVariantSelect(filtered);
+        
+        // 有关键词：自动展开显示所有匹配项
+        if (filtered.length > 0) {
+            // 展开高度：最多显示 10 行，或者实际行数
+            select.size = Math.min(filtered.length + 1, 10); // +1 是为了稍微多留点余地
+            select.classList.add('select-expanded');
+        } else {
+            select.size = 2; // 无匹配时也稍微展开显示“无匹配”
+        }
+    }
+
+    // [新增] 选中后收起逻辑
+    function collapseSelect() {
+        const select = document.getElementById('import-variant-select');
+        // 延时一下，让值先改变
+        setTimeout(() => {
+            if (select.value) {
+                select.size = 1;
+                select.classList.remove('select-expanded');
+                // 可选：选中后清空搜索框？或者保留？这里保留
+            }
+        }, 50);
     }
 
     async function importCards() {
@@ -543,11 +606,9 @@ CardABCDEF #[推荐号码]"></textarea>
         btn.disabled = false; btn.innerText = '开始导入';
     }
 
-    // [新增] 导出功能相关逻辑
+    // 导出功能逻辑保持不变...
     function openExportModal() {
         const productSelect = document.getElementById('export-product-select');
-        
-        // 1. 初始化商品列表
         productSelect.innerHTML = '<option value="">所有商品 (全部)</option>';
         allProducts.forEach(p => {
             const option = document.createElement('option');
@@ -555,22 +616,16 @@ CardABCDEF #[推荐号码]"></textarea>
             option.text = p.name;
             productSelect.appendChild(option);
         });
-
-        // 2. 重置规格和状态
         document.getElementById('export-variant-select').innerHTML = '<option value="">所有规格 (全部)</option>';
         document.getElementById('export-status-unsold').checked = true;
         document.getElementById('export-status-sold').checked = false;
-
         exportModal.show();
     }
 
-    // 导出弹窗的规格联动
     function loadExportVariants(productId) {
         const variantSelect = document.getElementById('export-variant-select');
         variantSelect.innerHTML = '<option value="">所有规格 (全部)</option>';
-
         if (!productId) return;
-
         const product = allProducts.find(p => p.id == productId);
         if (product && product.variants) {
             product.variants.forEach(v => {
@@ -595,11 +650,9 @@ CardABCDEF #[推荐号码]"></textarea>
 
         const btn = document.querySelector('#exportModal .btn-primary');
         const originalText = btn.innerText;
-        btn.disabled = true; 
-        btn.innerText = '生成中...';
+        btn.disabled = true; btn.innerText = '生成中...';
 
         try {
-            // 使用 fetch 请求文件流
             const res = await fetch('/api/admin/cards/export', {
                 method: 'POST',
                 headers: {
@@ -619,18 +672,15 @@ CardABCDEF #[推荐号码]"></textarea>
                 throw new Error(json.error || '导出失败');
             }
 
-            // 处理文件下载
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            // 从响应头获取文件名，或使用默认名
             a.download = `cards_export_${new Date().toISOString().slice(0,10)}.txt`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-
             exportModal.hide();
         } catch (e) {
             alert(e.message);
@@ -669,7 +719,6 @@ CardABCDEF #[推荐号码]"></textarea>
 
         try {
             const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
-            // 并发删除，实际生产环境建议后端增加批量删除接口
             await Promise.all(ids.map(id => api('card/delete', { method: 'POST', body: JSON.stringify({ id }) })));
             alert('批量删除完成'); loadCards();
         } catch (e) { alert('部分删除失败'); loadCards(); } finally { btn.disabled = false; }
@@ -677,7 +726,6 @@ CardABCDEF #[推荐号码]"></textarea>
 
     initData();
 
-    // Mobile menu handlers
     const mobileBtn = document.getElementById('mobile-menu-toggle');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.querySelector('.admin-overlay');
