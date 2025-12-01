@@ -1,11 +1,11 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理 & 超级跑马灯 & 性能优化版)
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
- * [新增] 超级跑马灯独立接口：分离耗时逻辑，实现首页秒开
- * [新增] 全站社交分享优化(OG标签)
+ * [新增] 全站社交分享优化(OG标签)：支持首页(后台配置)、商品页、文章页、文章中心自动生成卡片
  * [新增] 限制未支付订单数量、删除未支付订单接口
- * [新增] 卡密管理支持分页、搜索
- * [修复] D1 兼容性优化
+ * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
+ * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
+ * [修复] 文章管理支持保存封面图、浏览量和显示状态
  */
 
 // === 工具函数 ===
@@ -21,69 +21,6 @@ const formatTime = (ts) => {
     const d = new Date(ts * 1000 + 28800000);
     return d.toISOString().replace('T', ' ').substring(0, 19);
 };
-
-// [新增] 跑马灯内容处理函数
-async function processMarquee(content, db) {
-    // 匹配 #[...] # 标签
-    const regex = /#\[(.*?)\]#/g;
-    const matches = [...content.matchAll(regex)];
-    
-    if (matches.length === 0) return content;
-    
-    let newContent = content;
-    const replacements = {}; // 缓存替换内容
-
-    for (const match of matches) {
-        const fullTag = match[0]; // 例如 "#[商品A,商品B]#"
-        const innerText = match[1]; // 例如 "商品A,商品B"
-        
-        // 如果已经处理过这个标签，跳过
-        if (replacements[fullTag] !== undefined) continue;
-
-        // 支持中文逗号和英文逗号分隔
-        const titles = innerText.split(/[,，]/).map(t => t.trim()).filter(t => t);
-        let resultParts = [];
-
-        for (const title of titles) {
-            // 查找商品 (精确匹配名称)
-            const product = await db.prepare("SELECT id FROM products WHERE name = ?").bind(title).first();
-            if (product) {
-                // 查找规格 (获取库存相关字段)
-                const variants = await db.prepare("SELECT id, name, price, stock, auto_delivery FROM variants WHERE product_id = ? ORDER BY price ASC").bind(product.id).all();
-                
-                for (const v of variants.results) {
-                    let hasStock = false;
-                    
-                    // === 库存判断逻辑 ===
-                    if (v.auto_delivery === 1) {
-                        // 自动发货：查询卡密表是否有未售出的卡密
-                        const cardCount = await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(v.id).first();
-                        if (cardCount && cardCount.c > 0) hasStock = true;
-                    } else {
-                        // 手动发货：检查 stock 字段
-                        if (v.stock > 0) hasStock = true;
-                    }
-
-                    // 只有有库存才显示
-                    if (hasStock) {
-                        // 格式化为: 规格名 ¥价格
-                        resultParts.push(`${v.name} ¥${v.price}`);
-                    }
-                }
-            }
-        }   
-        // 用找到的有货规格替换
-        // 如果没找到商品，或者所有规格都缺货，resultParts 为空数组，join 后为空字符串
-        // 这符合“不匹配或缺货就不显示”的要求
-        replacements[fullTag] = resultParts.join('，');
-    }
-    // 执行替换
-    for (const [tag, text] of Object.entries(replacements)) {
-        // 使用 split-join 替换所有出现的该标签
-        newContent = newContent.split(tag).join(text);
-    }
-    return newContent;
-}
 
 // === 支付宝签名与验签核心 (Web Crypto API) ===
 
@@ -777,31 +714,7 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/config') {
             const res = await db.prepare("SELECT * FROM site_config").all();
             const config = {}; res.results.forEach(r => config[r.key] = r.value);
-            // 原跑马灯耗时逻辑已移除，转由独立接口 /api/shop/marquee 处理
             return jsonRes(config);
-        }
-
-        // [新增] 独立跑马灯接口 (专门处理耗时逻辑)
-        if (path === '/api/shop/marquee') {
-            const res = await db.prepare("SELECT * FROM site_config").all();
-            const config = {}; res.results.forEach(r => config[r.key] = r.value);
-            
-            let content = config.marquee_content || '';
-            
-            // 执行耗时的库存查询
-            if (config.marquee_enabled === '1' && content.includes('#[')) {
-                 try {
-                     content = await processMarquee(content, db);
-                 } catch (e) {
-                     console.error('Marquee process error:', e);
-                 }
-            }
-            
-            return jsonRes({ 
-                enabled: config.marquee_enabled,
-                speed: config.marquee_speed,
-                content: content 
-            });
         }
 
         // [新增] 获取所有分类 (公开)
