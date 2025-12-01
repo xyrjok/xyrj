@@ -217,19 +217,17 @@
                 <div class="mb-3">
                     <label class="form-label">选择商品</label>
                     <select class="form-select" id="import-product-select" onchange="loadImportVariants(this.value)">
-                        <option value="">所有商品</option>
+                        <option value="">请选择商品...</option>
                     </select>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">选择规格</label>
-                    <input type="text" class="form-control form-control-sm mb-1" id="import-variant-search" placeholder="输入关键词快速筛选..." oninput="filterImportVariants(this.value)">
-                    <select class="form-select" id="import-variant-select" size="5">
+                    <input type="text" class="form-control form-control-sm mb-2" id="import-variant-search" placeholder="输入关键词搜索规格..." oninput="filterImportVariants(this.value)">
+                    <select class="form-select" id="import-variant-select">
                         <option value="">请先选择商品...</option>
                     </select>
-                    <div class="form-text text-muted small">在上方输入关键词可筛选下方规格</div>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">卡密内容 (一行一个)</label>
                     <textarea class="form-control" id="import-content" rows="8" placeholder="例如：
@@ -450,43 +448,35 @@ CardABCDEF #[推荐号码]"></textarea>
     }
 
     // [新增] 缓存当前可选的规格列表，供筛选用
-    let currentImportVariants = [];
+    let currentVariantList = [];
 
     // [修改] 联动加载规格 (改为把数据存到内存，然后渲染)
     function loadImportVariants(productId) {
-        currentImportVariants = []; // 清空缓存
+        currentVariantList = []; // 清空缓存
         document.getElementById('import-variant-search').value = ''; // 清空搜索框
 
         if (productId) {
             // 选了商品
             const product = allProducts.find(p => p.id == productId);
             if (product && product.variants) {
-                currentImportVariants = product.variants.map(v => ({ id: v.id, name: v.name }));
+                currentVariantList = product.variants.map(v => ({ id: v.id, name: v.name }));
             }
         } else {
-            // 没选商品，显示所有
-            allProducts.forEach(p => {
-                if(p.variants) {
-                    p.variants.forEach(v => {
-                        currentImportVariants.push({ id: v.id, name: `${p.name} - ${v.name}` });
-                    });
-                }
-            });
+            // 没选商品，不可选规格
+            document.getElementById('import-variant-select').innerHTML = '<option value="">请先选择商品...</option>';
+            return;
         }
         
         // 渲染下拉框
-        renderImportVariantSelect(currentImportVariants);
+        renderImportVariantSelect(currentVariantList);
     }
 
     // [新增] 渲染规格下拉框函数
     function renderImportVariantSelect(variants) {
         const variantSelect = document.getElementById('import-variant-select');
-        variantSelect.innerHTML = ''; // 清空现有选项
+        variantSelect.innerHTML = '<option value="">请选择规格...</option>'; // 重置选项
 
         if (variants.length === 0) {
-            const opt = document.createElement('option');
-            opt.text = "无匹配规格";
-            variantSelect.appendChild(opt);
             return;
         }
 
@@ -502,12 +492,12 @@ CardABCDEF #[推荐号码]"></textarea>
     function filterImportVariants(keyword) {
         if (!keyword) {
             // 没有关键词，显示所有
-            renderImportVariantSelect(currentImportVariants);
+            renderImportVariantSelect(currentVariantList);
             return;
         }
         
         const lowerKw = keyword.toLowerCase();
-        const filtered = currentImportVariants.filter(v => v.name.toLowerCase().includes(lowerKw));
+        const filtered = currentVariantList.filter(v => v.name.toLowerCase().includes(lowerKw));
         renderImportVariantSelect(filtered);
     }
 
