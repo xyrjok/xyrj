@@ -1385,5 +1385,3 @@ async function handleApi(request, env, url) {
 
     return errRes('API Not Found', 404);
 }
-
-}
