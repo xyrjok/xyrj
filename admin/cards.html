@@ -211,9 +211,16 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">导入到哪个规格？</label>
+                    <label class="form-label">选择商品</label>
+                    <select class="form-select" id="import-product-select" onchange="loadImportVariants(this.value)">
+                        <option value="">请选择商品...</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">选择规格</label>
                     <select class="form-select" id="import-variant-select">
-                        <option value="">请选择规格...</option>
+                        <option value="">请先选择商品...</option>
                     </select>
                 </div>
                 <div class="mb-3">
@@ -377,24 +384,52 @@ CardABCDEF #[推荐号码]"></textarea>
         }).join('');
     }
 
+    // [修改] 打开导入弹窗，初始化商品列表
     function openImportModal() {
-        const currentVariantId = document.getElementById('filter-variant').value;
-        const importSelect = document.getElementById('import-variant-select');
+        const currentProductId = document.getElementById('filter-product').value; // 获取当前筛选的商品
+        const currentVariantId = document.getElementById('filter-variant').value; // 获取当前筛选的规格
+
+        const productSelect = document.getElementById('import-product-select');
         
-        importSelect.innerHTML = '<option value="">请选择规格...</option>';
+        // 1. 填充商品下拉框
+        productSelect.innerHTML = '<option value="">请选择商品...</option>';
         allProducts.forEach(p => {
-            if(p.variants && p.variants.length > 0) {
-                p.variants.forEach(v => {
-                    const option = document.createElement('option');
-                    option.value = v.id;
-                    option.text = `${p.name} - ${v.name}`;
-                    if (v.id == currentVariantId) option.selected = true;
-                    importSelect.appendChild(option);
-                });
-            }
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.text = p.name;
+            // 如果列表页已经筛选了商品，弹窗里默认选中
+            if (p.id == currentProductId) option.selected = true;
+            productSelect.appendChild(option);
         });
+
+        // 2. 根据选中的商品加载规格 (如果已选)
+        loadImportVariants(productSelect.value, currentVariantId);
+
         document.getElementById('import-content').value = '';
         importModal.show();
+    }
+
+    // [新增] 联动加载规格函数
+    function loadImportVariants(productId, preSelectVariantId = null) {
+        const variantSelect = document.getElementById('import-variant-select');
+        variantSelect.innerHTML = '<option value="">请选择规格...</option>';
+
+        if (!productId) {
+            variantSelect.innerHTML = '<option value="">请先选择商品...</option>';
+            return;
+        }
+
+        const product = allProducts.find(p => p.id == productId);
+        if (product && product.variants) {
+            product.variants.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v.id;
+                option.text = v.name;
+                // 回显选中的规格
+                if (preSelectVariantId && v.id == preSelectVariantId) option.selected = true;
+                variantSelect.appendChild(option);
+            });
+        }
     }
 
     async function importCards() {
