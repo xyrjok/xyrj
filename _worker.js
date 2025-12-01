@@ -392,11 +392,11 @@ async function handleApi(request, env, url) {
                 
                 // 增加 selection_label 字段
                 const insertStmt = db.prepare(`
-                    INSERT INTO variants (product_id, name, price, stock, color, image_url, wholesale_config, custom_markup, auto_delivery, sales_count, created_at, selection_label) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO variants (product_id, name, price, stock, color, image_url, wholesale_config, custom_markup, auto_delivery, sales_count, created_at, selection_label, sort, active) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `);
                 const updateStmt = db.prepare(`
-                    UPDATE variants SET name=?, price=?, stock=?, color=?, image_url=?, wholesale_config=?, custom_markup=?, auto_delivery=?, sales_count=?, selection_label=?
+                    UPDATE variants SET name=?, price=?, stock=?, color=?, image_url=?, wholesale_config=?, custom_markup=?, auto_delivery=?, sales_count=?, selection_label=?, sort=?, active=?
                     WHERE id=? AND product_id=?
                 `);
 
@@ -413,6 +413,7 @@ async function handleApi(request, env, url) {
                                 v.name, v.price, stock, v.color, v.image_url, wholesale_config_json, 
                                 v.custom_markup || 0, auto_delivery, v.sales_count || 0,
                                 v.selection_label || null,
+                                v.sort || 0, v.active,
                                 variantId, productId
                             )
                         );
@@ -422,6 +423,7 @@ async function handleApi(request, env, url) {
                                 productId, v.name, v.price, stock, v.color, v.image_url, wholesale_config_json,
                                 v.custom_markup || 0, auto_delivery, v.sales_count || 0, now,
                                 v.selection_label || null
+                                v.sort || 0, v.active
                             )
                         );
                     }
@@ -972,7 +974,7 @@ async function handleApi(request, env, url) {
 
             const variant = await db.prepare("SELECT * FROM variants WHERE id=?").bind(variant_id).first();
             if (!variant) return errRes('规格不存在');
-
+            if (variant.active === 0) return errRes('该规格已暂停销售');
             // [修改] 验证查单密码 (1位)
             if (!query_password || query_password.length < 1) {
                 return errRes('请设置1位以上的查单密码');
