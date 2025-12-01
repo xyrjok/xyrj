@@ -217,17 +217,16 @@
                 <div class="mb-3">
                     <label class="form-label">选择商品</label>
                     <select class="form-select" id="import-product-select" onchange="loadImportVariants(this.value)">
-                        <option value="">所有商品</option>
+                        <option value="">请选择商品...</option>
                     </select>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">选择规格</label>
-                    <input class="form-control" list="import-variant-datalist" id="import-variant-input" placeholder="输入名称搜索或点击选择..." onchange="resolveImportVariantId()">
-                    <datalist id="import-variant-datalist"></datalist>
-                    <input type="hidden" id="import-variant-id">
+                    <select class="form-select" id="import-variant-select">
+                        <option value="">请先选择商品...</option>
+                    </select>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">卡密内容 (一行一个)</label>
                     <textarea class="form-control" id="import-content" rows="8" placeholder="例如：
@@ -309,6 +308,7 @@ CardABCDEF #[推荐号码]"></textarea>
     let currentPage = 1;
     let totalPages = 1;
     const importModal = new bootstrap.Modal(document.getElementById('importModal'));
+    // [新增] 导出弹窗实例
     const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
 
     async function initData() {
@@ -435,122 +435,60 @@ CardABCDEF #[推荐号码]"></textarea>
         }).join('');
     }
 
-    // [修改] 打开导入弹窗，初始化
+    // [修改] 打开导入弹窗，初始化商品列表
     function openImportModal() {
-        const currentProductId = document.getElementById('filter-product').value; 
-        const currentVariantId = document.getElementById('filter-variant').value; 
+        const currentProductId = document.getElementById('filter-product').value; // 获取当前筛选的商品
+        const currentVariantId = document.getElementById('filter-variant').value; // 获取当前筛选的规格
 
         const productSelect = document.getElementById('import-product-select');
         
-        productSelect.innerHTML = '<option value="">所有商品</option>';
+        // 1. 填充商品下拉框
+        productSelect.innerHTML = '<option value="">请选择商品...</option>';
         allProducts.forEach(p => {
             const option = document.createElement('option');
             option.value = p.id;
             option.text = p.name;
+            // 如果列表页已经筛选了商品，弹窗里默认选中
             if (p.id == currentProductId) option.selected = true;
             productSelect.appendChild(option);
         });
 
-        // 加载规格 (如果选了商品就加载部分，没选就加载全部)
+        // 2. 根据选中的商品加载规格 (如果已选)
         loadImportVariants(productSelect.value, currentVariantId);
 
         document.getElementById('import-content').value = '';
         importModal.show();
     }
 
-    // [修改] 联动加载规格 (支持 Datalist)
+    // [新增] 联动加载规格函数
     function loadImportVariants(productId, preSelectVariantId = null) {
-        const dataList = document.getElementById('import-variant-datalist');
-        const input = document.getElementById('import-variant-input');
-        const hiddenId = document.getElementById('import-variant-id');
+        const variantSelect = document.getElementById('import-variant-select');
+        variantSelect.innerHTML = '<option value="">请选择规格...</option>';
 
-        dataList.innerHTML = '';
-        input.value = '';
-        hiddenId.value = '';
+        if (!productId) {
+            variantSelect.innerHTML = '<option value="">请先选择商品...</option>';
+            return;
+        }
 
-        let variants = [];
-
-        if (productId) {
-            // 选了商品，只显示该商品的规格
-            const product = allProducts.find(p => p.id == productId);
-            if (product && product.variants) {
-                variants = product.variants.map(v => ({
-                    id: v.id,
-                    name: v.name
-                }));
-            }
-        } else {
-            // 没选商品，显示所有商品的规格，格式为 "商品名 - 规格名"
-            allProducts.forEach(p => {
-                if(p.variants) {
-                    p.variants.forEach(v => {
-                        variants.push({
-                            id: v.id,
-                            name: `${p.name} - ${v.name}`
-                        });
-                    });
-                }
+        const product = allProducts.find(p => p.id == productId);
+        if (product && product.variants) {
+            product.variants.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v.id;
+                option.text = v.name;
+                // 回显选中的规格
+                if (preSelectVariantId && v.id == preSelectVariantId) option.selected = true;
+                variantSelect.appendChild(option);
             });
-        }
-
-        // 填充 Datalist
-        variants.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v.name;
-            dataList.appendChild(opt);
-        });
-
-        // 处理预选 (需要根据 ID 反查名称来填充 input)
-        if (preSelectVariantId) {
-             const match = variants.find(v => v.id == preSelectVariantId);
-            if (match) {
-                input.value = match.name;
-                hiddenId.value = match.id;
-            }
-        }
-    }
-
-    // [新增] 解析输入框内容为 Variant ID
-    function resolveImportVariantId() {
-        const inputVal = document.getElementById('import-variant-input').value;
-        const productId = document.getElementById('import-product-select').value;
-        const hiddenId = document.getElementById('import-variant-id');
-        
-        hiddenId.value = ''; // 先重置
-        if (!inputVal) return;
-
-        // 匹配逻辑需与 loadImportVariants 生成逻辑一致
-        if (productId) {
-            const product = allProducts.find(p => p.id == productId);
-            if (product && product.variants) {
-                const v = product.variants.find(v => v.name === inputVal);
-                if (v) hiddenId.value = v.id;
-            }
-        } else {
-             // 全局搜索匹配
-             for (const p of allProducts) {
-                 if (p.variants) {
-                     for (const v of p.variants) {
-                         const name = `${p.name} - ${v.name}`;
-                         if (name === inputVal) {
-                             hiddenId.value = v.id;
-                             return;
-                         }
-                     }
-                 }
-             }
         }
     }
 
     async function importCards() {
-        // 尝试解析一次 ID (防止用户输入后直接点击按钮没触发 onchange)
-        resolveImportVariantId();
-        
-        const variantId = document.getElementById('import-variant-id').value;
+        const variantId = document.getElementById('import-variant-select').value;
         let content = document.getElementById('import-content').value;
         const removeDup = document.getElementById('import-remove-dup').checked;
 
-        if (!variantId) return alert('请选择有效的规格（请从下拉提示中点击选择，或确保输入完全匹配）');
+        if (!variantId) return alert('请选择要导入的规格');
         if (!content.trim()) return alert('请输入卡密内容');
 
         const btn = document.querySelector('#importModal .btn-primary');
