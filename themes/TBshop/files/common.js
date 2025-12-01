@@ -1,7 +1,7 @@
 // =============================================
 // === themes/TBshop/files/common.js
-// === (全局共享JS + 公共布局渲染 - 完整修复版)
-// === 包含：页头样式修复 + 移动端分类侧边栏 + 所有PC端功能
+// === (全局共享JS + 公共布局渲染 - 性能优化版)
+// === 包含：页头样式修复 + 移动端分类侧边栏 + 独立跑马灯加载 + 缓存秒开
 // =============================================
 
 // ============================================================
@@ -212,7 +212,7 @@ function renderCommonLayout(activePage) {
     // 4. [修复] 初始化移动端分类侧边栏 (之前丢失的部分)
     initMobileSidebar();
 
-    // 5. 加载配置 & 更新角标
+    // 5. 加载配置 & 更新角标 (包含缓存秒开 + 异步跑马灯)
     loadGlobalConfig();
     loadCartBadge();
 }
@@ -302,17 +302,54 @@ async function loadGlobalSidebarData() {
 }
 
 /**
- * 加载配置
+ * 加载配置 (优化版：分离了跑马灯 + 本地缓存秒开)
  */
 function loadGlobalConfig() {
+    // 1. 缓存策略 (优先显示本地数据)
+    try {
+        const cached = localStorage.getItem('tb_shop_config_cache');
+        if (cached) {
+            const config = JSON.parse(cached);
+            renderGlobalHeaders(config);
+            renderSidebarNoticeContact(config);
+            // 缓存里不渲染跑马灯，或者如果缓存里有旧的跑马灯内容也可以渲染，
+            // 但为了逻辑清晰，跑马灯交由独立接口加载
+        }
+    } catch (e) { console.error('Cache read error', e); }
+
+    // 2. 请求基础配置 (现在这个接口超级快)
     fetch('/api/shop/config')
         .then(res => res.json())
         .then(config => {
+            // 更新缓存
+            localStorage.setItem('tb_shop_config_cache', JSON.stringify(config));
+            
+            // 渲染界面
             renderGlobalHeaders(config);
             renderSidebarNoticeContact(config);
-            renderMarquee(config); // [新增] 渲染跑马灯
+            
+            // 3. 基础配置加载完后，单独去加载跑马灯 (异步)
+            loadMarqueeData();
         })
         .catch(e => console.warn('Config load failed:', e));
+}
+
+/**
+ * [新增] 独立加载跑马灯数据
+ */
+function loadMarqueeData() {
+    fetch('/api/shop/marquee')
+        .then(res => res.json())
+        .then(data => {
+            // 构造兼容 renderMarquee 的配置对象
+            const marqueeConfig = {
+                marquee_enabled: data.enabled,
+                marquee_speed: data.speed,
+                marquee_content: data.content
+            };
+            renderMarquee(marqueeConfig);
+        })
+        .catch(e => console.error('Marquee load failed:', e));
 }
 
 // =============================================
