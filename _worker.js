@@ -422,7 +422,7 @@ async function handleApi(request, env, url) {
                             insertStmt.bind(
                                 productId, v.name, v.price, stock, v.color, v.image_url, wholesale_config_json,
                                 v.custom_markup || 0, auto_delivery, v.sales_count || 0, now,
-                                v.selection_label || null
+                                v.selection_label || null,
                                 v.sort || 0, v.active
                             )
                         );
