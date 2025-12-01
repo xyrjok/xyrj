@@ -266,7 +266,30 @@
         </div>
     </div>
 </div>
-
+<div class="modal fade" id="addCardModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">快速加卡</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-card-form">
+                    <input type="hidden" id="ac-variant-id">
+                    <div class="mb-3">
+                        <label class="form-label">正在为规格：<span id="ac-variant-name" class="fw-bold text-primary"></span> 加卡</label>
+                        <textarea class="form-control" id="ac-content" rows="10" placeholder="请输入卡密内容，一行一个" required></textarea>
+                        <div class="form-text">支持批量添加，请确保每行一条卡密。</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="submitAddCard()">确认添加</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // 权限与配置
@@ -424,11 +447,44 @@
             </div>`;
         vList.appendChild(row);
     }
-    async function quickAddCard(id, name) {
-        const content = prompt(`正在为规格【${name}】添加卡密\n请输入卡密内容 (一行一个):`);
-        if (!content) return;
-        const res = await api('cards/import', { method: 'POST', body: JSON.stringify({ variant_id: id, content: content }) });
-        if (res.imported) { alert(`成功添加 ${res.imported} 张卡密`); loadData(); } else { alert('添加失败'); }
+    // 1. 初始化弹窗对象
+    const addCardModal = new bootstrap.Modal(document.getElementById('addCardModal'));
+    
+    // 2. 点击按钮唤起弹窗
+    function quickAddCard(id, name) {
+        document.getElementById('ac-variant-id').value = id;
+        document.getElementById('ac-variant-name').innerText = name;
+        document.getElementById('ac-content').value = ''; 
+        addCardModal.show();
+    }
+    
+    // 3. 提交添加请求
+    async function submitAddCard() {
+        const id = document.getElementById('ac-variant-id').value;
+        const content = document.getElementById('ac-content').value;
+        const btn = document.querySelector('#addCardModal .btn-primary');
+    
+        if (!content.trim()) return alert('请输入卡密内容');
+    
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = '正在添加...';
+    
+        try {
+            const res = await api('cards/import', { method: 'POST', body: JSON.stringify({ variant_id: id, content: content }) });
+            if (res.imported) {
+                alert(`成功添加 ${res.imported} 张卡密`);
+                addCardModal.hide();
+                loadData(); // 刷新数据以更新库存显示
+            } else {
+                alert('添加失败: ' + (res.error || '未知错误'));
+            }
+        } catch (e) {
+            alert('请求出错: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
     }
     function toggleStockInput(selectEl) {
         const row = selectEl.closest('.variant-row'); const stockInput = row.querySelector('.v-stock');
