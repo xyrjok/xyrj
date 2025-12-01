@@ -147,6 +147,10 @@
                 <button class="btn btn-success btn-sm" onclick="openImportModal()">
                     <i class="fas fa-file-import"></i> 导入
                 </button>
+                <button class="btn btn-info btn-sm text-white ms-1" onclick="openExportModal()">
+                    <i class="fas fa-file-export"></i> 导出
+                </button>
+
                 <button class="btn btn-danger btn-sm" id="batch-delete-btn" onclick="batchDelete()" style="display: none;">
                     <i class="fas fa-trash"></i> 删除 (<span id="selected-count">0</span>)
                 </button>
@@ -243,6 +247,51 @@ CardABCDEF #[推荐号码]"></textarea>
     </div>
 </div>
 
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">导出卡密</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-light border small text-muted">
+                    导出文件将自动按“商品”和“规格”分类整理，不会每行重复标注。
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">选择商品范围</label>
+                    <select class="form-select" id="export-product-select" onchange="loadExportVariants(this.value)">
+                        <option value="">所有商品</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">选择规格范围</label>
+                    <select class="form-select" id="export-variant-select">
+                        <option value="">所有规格</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label d-block">导出状态</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="export-status-unsold" checked>
+                        <label class="form-check-label" for="export-status-unsold">未售出 (库存)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="export-status-sold">
+                        <label class="form-check-label" for="export-status-sold">已售出 (历史)</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="exportCards()">确认导出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const TOKEN = localStorage.getItem('ADMIN_TOKEN');
@@ -259,6 +308,8 @@ CardABCDEF #[推荐号码]"></textarea>
     let currentPage = 1;
     let totalPages = 1;
     const importModal = new bootstrap.Modal(document.getElementById('importModal'));
+    // [新增] 导出弹窗实例
+    const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
 
     async function initData() {
         allProducts = await api('products/list');
@@ -462,6 +513,103 @@ CardABCDEF #[推荐号码]"></textarea>
             alert('导入失败: ' + (res.error || '未知错误'));
         }
         btn.disabled = false; btn.innerText = '开始导入';
+    }
+
+    // [新增] 导出功能相关逻辑
+    function openExportModal() {
+        const productSelect = document.getElementById('export-product-select');
+        
+        // 1. 初始化商品列表
+        productSelect.innerHTML = '<option value="">所有商品 (全部)</option>';
+        allProducts.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.text = p.name;
+            productSelect.appendChild(option);
+        });
+
+        // 2. 重置规格和状态
+        document.getElementById('export-variant-select').innerHTML = '<option value="">所有规格 (全部)</option>';
+        document.getElementById('export-status-unsold').checked = true;
+        document.getElementById('export-status-sold').checked = false;
+
+        exportModal.show();
+    }
+
+    // 导出弹窗的规格联动
+    function loadExportVariants(productId) {
+        const variantSelect = document.getElementById('export-variant-select');
+        variantSelect.innerHTML = '<option value="">所有规格 (全部)</option>';
+
+        if (!productId) return;
+
+        const product = allProducts.find(p => p.id == productId);
+        if (product && product.variants) {
+            product.variants.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v.id;
+                option.text = v.name;
+                variantSelect.appendChild(option);
+            });
+        }
+    }
+
+    async function exportCards() {
+        const productId = document.getElementById('export-product-select').value;
+        const variantId = document.getElementById('export-variant-select').value;
+        const exportUnsold = document.getElementById('export-status-unsold').checked;
+        const exportSold = document.getElementById('export-status-sold').checked;
+
+        if (!exportUnsold && !exportSold) {
+            alert('请至少选择一种状态（未售出或已售出）');
+            return;
+        }
+
+        const btn = document.querySelector('#exportModal .btn-primary');
+        const originalText = btn.innerText;
+        btn.disabled = true; 
+        btn.innerText = '生成中...';
+
+        try {
+            // 使用 fetch 请求文件流
+            const res = await fetch('/api/admin/cards/export', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    variant_id: variantId,
+                    export_unsold: exportUnsold,
+                    export_sold: exportSold
+                })
+            });
+
+            if (res.status !== 200) {
+                const json = await res.json();
+                throw new Error(json.error || '导出失败');
+            }
+
+            // 处理文件下载
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            // 从响应头获取文件名，或使用默认名
+            a.download = `cards_export_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            exportModal.hide();
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
     }
 
     async function deleteCard(id) {
