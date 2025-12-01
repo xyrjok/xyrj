@@ -126,7 +126,7 @@ const TB_LAYOUT = {
     pcSidebarStandard: `
         <div class="sidebar-inner">
             <div class="module-box" id="notice-module-box">
-                <div class="module-title">店铺公告</div>
+                <div class="module-title">店铺公告 <div id="sidebar-marquee-slot" class="marquee-slot"></div></div>
                 <div class="notice-content" id="notice-box">
                     <i class="fa fa-spinner fa-spin"></i> 加载中...
                 </div>
@@ -161,6 +161,7 @@ const TB_LAYOUT = {
  * 核心函数：渲染页面公共布局
  */
 function renderCommonLayout(activePage) {
+    window.TB_ACTIVE_PAGE = activePage; // 记录当前页面，供跑马灯判断使用
     // 1. 注入 HTML
     const els = {
         'global-pc-header': TB_LAYOUT.pcHeader(activePage),
@@ -309,6 +310,7 @@ function loadGlobalConfig() {
         .then(config => {
             renderGlobalHeaders(config);
             renderSidebarNoticeContact(config);
+            renderMarquee(config); // [新增] 渲染跑马灯
         })
         .catch(e => console.warn('Config load failed:', e));
 }
@@ -491,6 +493,41 @@ function updateCartBadge(n) {
         const el = document.getElementById(id);
         if(el) { el.innerText = n > 99 ? '99+' : n; el.style.display = n > 0 ? 'block' : 'none'; }
     });
+}
+/* [新增] 渲染超级跑马灯 */
+function renderMarquee(config) {
+    if (config.marquee_enabled !== '1' || !config.marquee_content) return;
+
+    const speed = parseInt(config.marquee_speed || 15);
+    const contentHtml = `<div class="marquee-inner" style="animation: marquee-scroll ${speed}s linear infinite;">${config.marquee_content}</div>`;
+    
+    const activePage = window.TB_ACTIVE_PAGE;
+
+    // 1. 处理侧边栏跑马灯 (只在首页、文章详情、商品详情、收银台显示)
+    const sidebarPages = ['home', 'article', 'product', 'pay'];
+    if (sidebarPages.includes(activePage)) {
+        const sidebarSlot = document.getElementById('sidebar-marquee-slot');
+        if (sidebarSlot) {
+            sidebarSlot.innerHTML = contentHtml;
+            sidebarSlot.style.display = 'block';
+        }
+    }
+
+    // 2. 处理各页面主标题跑马灯
+    const pageSlots = {
+        'articles': 'articles-marquee-slot', // 文章列表页
+        'orders': 'orders-marquee-slot',     // 订单查询页
+        'cart': 'cart-marquee-slot'          // 购物车页
+    };
+
+    if (pageSlots[activePage]) {
+        const slotId = pageSlots[activePage];
+        const pageSlot = document.getElementById(slotId);
+        if (pageSlot) {
+            pageSlot.innerHTML = contentHtml;
+            pageSlot.style.display = 'block';
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
