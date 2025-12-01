@@ -1,9 +1,10 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理)
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理 & 导出功能)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
  * [新增] 全站社交分享优化(OG标签)：支持首页(后台配置)、商品页、文章页、文章中心自动生成卡片
  * [新增] 限制未支付订单数量、删除未支付订单接口
  * [新增] 卡密管理支持分页、搜索（内容/商品/规格）、全量显示
+ * [新增] 卡密导出功能：支持按商品/规格/状态导出并自动分类整理为TXT
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  */
@@ -548,6 +549,78 @@ async function handleApi(request, env, url) {
                 }
                 return jsonRes({ imported: cards.length });
             }
+
+            // [新增] 导出卡密接口
+            if (path === '/api/admin/cards/export' && method === 'POST') {
+                const { product_id, variant_id, export_unsold, export_sold } = await request.json();
+
+                // 1. 构建查询条件
+                let whereClauses = [];
+                let params = [];
+
+                if (product_id) {
+                    whereClauses.push("p.id = ?");
+                    params.push(product_id);
+                }
+                if (variant_id) {
+                    whereClauses.push("v.id = ?");
+                    params.push(variant_id);
+                }
+
+                // 状态筛选
+                if (export_unsold && !export_sold) {
+                    whereClauses.push("c.status = 0");
+                } else if (!export_unsold && export_sold) {
+                    whereClauses.push("c.status = 1");
+                } else if (!export_unsold && !export_sold) {
+                    return errRes('请至少选择一种导出状态（已售或未售）');
+                }
+                // 如果都选，则不加 status 限制
+
+                const whereSql = whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : "";
+
+                // 2. 联表查询：卡密 -> 规格 -> 商品
+                const sql = `
+                    SELECT c.content, c.status, p.name as p_name, v.name as v_name 
+                    FROM cards c 
+                    JOIN variants v ON c.variant_id = v.id 
+                    JOIN products p ON v.product_id = p.id 
+                    ${whereSql}
+                    ORDER BY p.id ASC, v.id ASC, c.id ASC
+                `;
+
+                const { results } = await db.prepare(sql).bind(...params).all();
+
+                if (!results || results.length === 0) {
+                    return errRes('没有找到符合条件的卡密');
+                }
+
+                // 3. 数据分组处理 (按 商品-规格 分类)
+                const groups = {};
+                for (const row of results) {
+                    const key = `【商品：${row.p_name}】 - 【规格：${row.v_name}】`;
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(row.content);
+                }
+
+                // 4. 生成文本内容
+                let fileContent = "";
+                for (const [groupName, cards] of Object.entries(groups)) {
+                    fileContent += `${groupName}\n`;
+                    fileContent += `--------------------------------------------------\n`;
+                    fileContent += cards.join('\n');
+                    fileContent += `\n\n==================================================\n\n`;
+                }
+
+                // 5. 返回文件下载响应
+                return new Response(fileContent, {
+                    headers: {
+                        'Content-Type': 'text/plain; charset=utf-8',
+                        'Content-Disposition': `attachment; filename="cards_export_${time()}.txt"`
+                    }
+                });
+            }
+
              if (path === '/api/admin/card/delete' && method === 'POST') {
                 const { id } = await request.json();
                 const card = await db.prepare("SELECT variant_id, status FROM cards WHERE id=?").bind(id).first();
