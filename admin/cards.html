@@ -211,7 +211,18 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">导入到哪个规格？</label>
+                    <label class="form-label">筛选商品 (可选)</label>
+                    <select class="form-select" id="import-product-select" onchange="renderImportVariants()">
+                        <option value="">-- 所有商品 --</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">选择规格 <small class="text-muted">(支持搜索)</small></label>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" class="form-control" id="import-variant-search" placeholder="输入规格名快速筛选..." oninput="renderImportVariants()">
+                    </div>
                     <select class="form-select" id="import-variant-select">
                         <option value="">请选择规格...</option>
                     </select>
@@ -377,25 +388,87 @@ CardABCDEF #[推荐号码]"></textarea>
         }).join('');
     }
 
+    // === 修改开始：新的导入弹窗逻辑 ===
     function openImportModal() {
         const currentVariantId = document.getElementById('filter-variant').value;
-        const importSelect = document.getElementById('import-variant-select');
+        const currentProductId = document.getElementById('filter-product').value;
         
-        importSelect.innerHTML = '<option value="">请选择规格...</option>';
+        // 1. 填充商品下拉框
+        const pSelect = document.getElementById('import-product-select');
+        pSelect.innerHTML = '<option value="">-- 所有商品 --</option>';
         allProducts.forEach(p => {
-            if(p.variants && p.variants.length > 0) {
-                p.variants.forEach(v => {
-                    const option = document.createElement('option');
-                    option.value = v.id;
-                    option.text = `${p.name} - ${v.name}`;
-                    if (v.id == currentVariantId) option.selected = true;
-                    importSelect.appendChild(option);
-                });
-            }
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.text = p.name;
+            pSelect.appendChild(option);
         });
+
+        // 2. 根据主界面状态预选商品
+        if (currentProductId) {
+            pSelect.value = currentProductId;
+        } else if (currentVariantId) {
+            // 如果只选了规格，尝试反向查找商品
+            for(let p of allProducts) {
+                if(p.variants && p.variants.find(v => v.id == currentVariantId)) {
+                    pSelect.value = p.id;
+                    break;
+                }
+            }
+        }
+        
+        // 3. 重置搜索框
+        document.getElementById('import-variant-search').value = '';
+
+        // 4. 渲染规格列表
+        renderImportVariants();
+
+        // 5. 如果主界面选了规格，且该规格在当前列表中，则预选
+        if (currentVariantId) {
+            const vSelect = document.getElementById('import-variant-select');
+            if(vSelect.querySelector(`option[value="${currentVariantId}"]`)) {
+                vSelect.value = currentVariantId;
+            }
+        }
+
         document.getElementById('import-content').value = '';
         importModal.show();
     }
+
+    // 动态渲染导入弹窗的规格列表
+    function renderImportVariants() {
+        const pId = document.getElementById('import-product-select').value;
+        const kw = document.getElementById('import-variant-search').value.toLowerCase().trim();
+        const vSelect = document.getElementById('import-variant-select');
+        
+        // 尝试保存当前选中的值，以便刷新后恢复
+        const oldVal = vSelect.value;
+        
+        vSelect.innerHTML = '<option value="">请选择规格...</option>';
+        
+        allProducts.forEach(p => {
+            // 如果选了商品，则过滤其他商品
+            if (pId && p.id != pId) return;
+
+            if(p.variants && p.variants.length > 0) {
+                p.variants.forEach(v => {
+                    const fullName = `${p.name} - ${v.name}`;
+                    // 根据搜索关键词过滤
+                    if (!kw || fullName.toLowerCase().includes(kw)) {
+                        const option = document.createElement('option');
+                        option.value = v.id;
+                        option.text = fullName;
+                        vSelect.appendChild(option);
+                    }
+                });
+            }
+        });
+
+        // 如果旧值在列表中依然存在，则恢复选中
+        if (oldVal && vSelect.querySelector(`option[value="${oldVal}"]`)) {
+            vSelect.value = oldVal;
+        }
+    }
+    // === 修改结束 ===
 
     async function importCards() {
         const variantId = document.getElementById('import-variant-select').value;
@@ -481,3 +554,4 @@ CardABCDEF #[推荐号码]"></textarea>
 </script>
 </body>
 </html>
+}
