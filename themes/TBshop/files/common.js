@@ -1,7 +1,7 @@
 // =============================================
 // === themes/TBshop/files/common.js
-// === (全局共享JS + 公共布局渲染 - 性能优化版)
-// === 包含：页头样式修复 + 移动端分类侧边栏 + 独立跑马灯加载 + 缓存秒开
+// === (全局共享JS + 公共布局渲染 - 完整修复版)
+// === 包含：页头样式修复 + 移动端分类侧边栏 + 所有PC端功能
 // =============================================
 
 // ============================================================
@@ -126,7 +126,7 @@ const TB_LAYOUT = {
     pcSidebarStandard: `
         <div class="sidebar-inner">
             <div class="module-box" id="notice-module-box">
-                <div class="module-title">店铺公告 <div id="sidebar-marquee-slot" class="marquee-slot"></div></div>
+                <div class="module-title">店铺公告</div>
                 <div class="notice-content" id="notice-box">
                     <i class="fa fa-spinner fa-spin"></i> 加载中...
                 </div>
@@ -161,7 +161,6 @@ const TB_LAYOUT = {
  * 核心函数：渲染页面公共布局
  */
 function renderCommonLayout(activePage) {
-    window.TB_ACTIVE_PAGE = activePage; // 记录当前页面，供跑马灯判断使用
     // 1. 注入 HTML
     const els = {
         'global-pc-header': TB_LAYOUT.pcHeader(activePage),
@@ -212,7 +211,7 @@ function renderCommonLayout(activePage) {
     // 4. [修复] 初始化移动端分类侧边栏 (之前丢失的部分)
     initMobileSidebar();
 
-    // 5. 加载配置 & 更新角标 (包含缓存秒开 + 异步跑马灯)
+    // 5. 加载配置 & 更新角标
     loadGlobalConfig();
     loadCartBadge();
 }
@@ -302,54 +301,16 @@ async function loadGlobalSidebarData() {
 }
 
 /**
- * 加载配置 (优化版：分离了跑马灯 + 本地缓存秒开)
+ * 加载配置
  */
 function loadGlobalConfig() {
-    // 1. 缓存策略 (优先显示本地数据)
-    try {
-        const cached = localStorage.getItem('tb_shop_config_cache');
-        if (cached) {
-            const config = JSON.parse(cached);
-            renderGlobalHeaders(config);
-            renderSidebarNoticeContact(config);
-            // 缓存里不渲染跑马灯，或者如果缓存里有旧的跑马灯内容也可以渲染，
-            // 但为了逻辑清晰，跑马灯交由独立接口加载
-        }
-    } catch (e) { console.error('Cache read error', e); }
-
-    // 2. 请求基础配置 (现在这个接口超级快)
     fetch('/api/shop/config')
         .then(res => res.json())
         .then(config => {
-            // 更新缓存
-            localStorage.setItem('tb_shop_config_cache', JSON.stringify(config));
-            
-            // 渲染界面
             renderGlobalHeaders(config);
             renderSidebarNoticeContact(config);
-            
-            // 3. 基础配置加载完后，单独去加载跑马灯 (异步)
-            loadMarqueeData();
         })
         .catch(e => console.warn('Config load failed:', e));
-}
-
-/**
- * [新增] 独立加载跑马灯数据
- */
-function loadMarqueeData() {
-    fetch('/api/shop/marquee')
-        .then(res => res.json())
-        .then(data => {
-            // 构造兼容 renderMarquee 的配置对象
-            const marqueeConfig = {
-                marquee_enabled: data.enabled,
-                marquee_speed: data.speed,
-                marquee_content: data.content
-            };
-            renderMarquee(marqueeConfig);
-        })
-        .catch(e => console.error('Marquee load failed:', e));
 }
 
 // =============================================
@@ -530,41 +491,6 @@ function updateCartBadge(n) {
         const el = document.getElementById(id);
         if(el) { el.innerText = n > 99 ? '99+' : n; el.style.display = n > 0 ? 'block' : 'none'; }
     });
-}
-/* [新增] 渲染超级跑马灯 */
-function renderMarquee(config) {
-    if (config.marquee_enabled !== '1' || !config.marquee_content) return;
-
-    const speed = parseInt(config.marquee_speed || 15);
-    const contentHtml = `<div class="marquee-inner" style="animation: marquee-scroll ${speed}s linear infinite;">${config.marquee_content}</div>`;
-    
-    const activePage = window.TB_ACTIVE_PAGE;
-
-    // 1. 处理侧边栏跑马灯 (只在首页、文章详情、商品详情、收银台显示)
-    const sidebarPages = ['home', 'article', 'product', 'pay'];
-    if (sidebarPages.includes(activePage)) {
-        const sidebarSlot = document.getElementById('sidebar-marquee-slot');
-        if (sidebarSlot) {
-            sidebarSlot.innerHTML = contentHtml;
-            sidebarSlot.style.display = 'block';
-        }
-    }
-
-    // 2. 处理各页面主标题跑马灯
-    const pageSlots = {
-        'articles': 'articles-marquee-slot', // 文章列表页
-        'orders': 'orders-marquee-slot',     // 订单查询页
-        'cart': 'cart-marquee-slot'          // 购物车页
-    };
-
-    if (pageSlots[activePage]) {
-        const slotId = pageSlots[activePage];
-        const pageSlot = document.getElementById(slotId);
-        if (pageSlot) {
-            pageSlot.innerHTML = contentHtml;
-            pageSlot.style.display = 'block';
-        }
-    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
