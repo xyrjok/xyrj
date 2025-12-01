@@ -1,7 +1,7 @@
 /**
- * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理 & 超级跑马灯)
+ * Cloudflare Worker Faka Backend (最终绝对完整版 - 含全站SEO优化 & 文章系统 & 防乱单 & 卡密管理 & 超级跑马灯 & 性能优化版)
  * 包含：文章系统(升级版)、自选号码、主图设置、手动发货、商品标签、数据库备份恢复、分类图片接口
- * [新增] 超级跑马灯支持：后端自动解析 #[商品名]# 显示规格价格
+ * [新增] 超级跑马灯独立接口：分离耗时逻辑，实现首页秒开
  * [新增] 全站社交分享优化(OG标签)
  * [新增] 限制未支付订单数量、删除未支付订单接口
  * [新增] 卡密管理支持分页、搜索
@@ -777,17 +777,31 @@ async function handleApi(request, env, url) {
         if (path === '/api/shop/config') {
             const res = await db.prepare("SELECT * FROM site_config").all();
             const config = {}; res.results.forEach(r => config[r.key] = r.value);
+            // 原跑马灯耗时逻辑已移除，转由独立接口 /api/shop/marquee 处理
+            return jsonRes(config);
+        }
+
+        // [新增] 独立跑马灯接口 (专门处理耗时逻辑)
+        if (path === '/api/shop/marquee') {
+            const res = await db.prepare("SELECT * FROM site_config").all();
+            const config = {}; res.results.forEach(r => config[r.key] = r.value);
             
-            // [新增] 跑马灯后端渲染逻辑
-            if (config.marquee_enabled === '1' && config.marquee_content && config.marquee_content.includes('#[')) {
+            let content = config.marquee_content || '';
+            
+            // 执行耗时的库存查询
+            if (config.marquee_enabled === '1' && content.includes('#[')) {
                  try {
-                     config.marquee_content = await processMarquee(config.marquee_content, db);
+                     content = await processMarquee(content, db);
                  } catch (e) {
                      console.error('Marquee process error:', e);
                  }
             }
             
-            return jsonRes(config);
+            return jsonRes({ 
+                enabled: config.marquee_enabled,
+                speed: config.marquee_speed,
+                content: content 
+            });
         }
 
         // [新增] 获取所有分类 (公开)
@@ -1370,4 +1384,6 @@ async function handleApi(request, env, url) {
     }
 
     return errRes('API Not Found', 404);
+}
+
 }
