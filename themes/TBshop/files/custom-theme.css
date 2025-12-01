@@ -699,37 +699,3 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
     display: block;
     margin: 0 auto;
 }
-/* ================== 超级跑马灯样式 ================== */
-.marquee-slot {
-    flex: 1;
-    margin-left: 15px;
-    height: 24px;
-    overflow: hidden;
-    position: relative;
-    max-width: 60%; /* 限制最大宽度，防止挤压标题 */
-    background: #fff8f0; /* 淡橙色背景 */
-    border-radius: 4px;
-    padding: 0 10px;
-    display: none; /* 默认隐藏，JS检测到开启后显示 */
-}
-
-/* 移动端微调 */
-@media (max-width: 768px) {
-    .marquee-slot { max-width: 45%; margin-left: 10px; font-size: 11px; background: transparent; padding: 0;}
-}
-
-.marquee-inner {
-    display: inline-block;
-    white-space: nowrap;
-    position: absolute;
-    top: 0;
-    line-height: 24px;
-    font-size: 13px;
-    color: #ff5000;
-}
-
-/* 滚动动画关键帧 */
-@keyframes marquee-scroll {
-    0% { transform: translateX(0); left: 100%; }
-    100% { transform: translateX(-100%); left: 0; }
-}
