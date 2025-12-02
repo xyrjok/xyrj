@@ -876,30 +876,29 @@ async function handleApi(request, env, url) {
                     }
                 });
 
-                // 5. 获取数据库已存在的 URL (用于过滤，防止重复插入)
-                const exist = await db.prepare("SELECT url FROM images").all();
-                const existUrls = new Set(exist.results.map(e => e.url));
-
-                const stmt = db.prepare("INSERT INTO images (category_id, url, name, created_at) VALUES (1, ?, ?, ?)");
+            // 5. (优化版) 直接构建插入语句，利用 SQL 判断是否存在，无需将所有 URL 加载到内存
+                // 使用 WHERE NOT EXISTS 避免重复，这是防止内存溢出的最佳方案
+                const stmt = db.prepare(`
+                    INSERT INTO images (category_id, url, name, created_at) 
+                    SELECT 1, ?1, ?2, ?3 
+                    WHERE NOT EXISTS (SELECT 1 FROM images WHERE url = ?1)
+                `);
+                
                 const batch = [];
 
-                // 6. 遍历 Map 生成插入数据
+                // 6. 遍历 Map 生成批量执行队列
                 for (const [url, nameSet] of scanMap) {
-                    // 只有当数据库里完全没有这个 URL 时才插入
-                    if (!existUrls.has(url)) {
-                        // 【核心逻辑】将 Set 里的所有名字用 "/" 拼接起来
-                        // 例如：商品A / 商品B / 文章C
-                        let joinedName = Array.from(nameSet).join('/');
-                        
-                        // 截取长度防止数据库或显示溢出 (保留前97个字符)
-                        if (joinedName.length > 100) {
-                            joinedName = joinedName.substring(0, 97) + '...';
-                        }
-                        // 如果没有名字，给个默认值
-                        if (!joinedName) joinedName = '未命名图片';
-                        
-                        batch.push(stmt.bind(url, joinedName, now));
+                    // 拼接标题
+                    let joinedName = Array.from(nameSet).join('/');
+                    
+                    // 截取长度防止溢出
+                    if (joinedName.length > 100) {
+                        joinedName = joinedName.substring(0, 97) + '...';
                     }
+                    if (!joinedName) joinedName = '未命名图片';
+                    
+                    // 直接加入队列，无需在 JS 层判断是否存在
+                    batch.push(stmt.bind(url, joinedName, now));
                 }
 
                 if (batch.length > 0) await db.batch(batch);
