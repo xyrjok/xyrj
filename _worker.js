@@ -830,53 +830,75 @@ async function handleApi(request, env, url) {
                 return jsonRes({ success: true });
             }
 
-            // 8. [核心功能] 扫描全站图片并入库 (修复版：完美去重 & 支持规格/Logo/Icon)
+            // 8. [核心功能] 扫描全站图片并入库 (升级版：URL唯一 & 标题自动合并)
             if (path === '/api/admin/images/scan' && method === 'POST') {
                 const now = Math.floor(Date.now() / 1000);
                 
-                // 使用 Map 结构：Key为URL，Value为名称。
-                // 作用：如果多个商品使用了同一个URL，Map 会自动覆盖，保证一个URL只保留最后扫描到的那个名称，从而在源头上去重。
+                // 使用 Map<URL, Set<Name>> 结构
+                // Key: 图片URL (唯一)
+                // Value: Set 集合 (存放该图片对应的所有名称，Set会自动去重)
                 const scanMap = new Map();
+
+                const add = (url, name) => {
+                    if (!url) return;
+                    url = url.trim(); // 去除首尾空格
+                    
+                    if (!scanMap.has(url)) {
+                        scanMap.set(url, new Set());
+                    }
+                    
+                    if (name) {
+                        // 简单清洗名称（去掉可能的HTML标签），并添加到集合中
+                        const cleanName = name.replace(/<[^>]+>/g, '').trim();
+                        if(cleanName) scanMap.get(url).add(cleanName);
+                    }
+                };
 
                 // 1. 扫描商品主图
                 const products = await db.prepare("SELECT image_url, name FROM products WHERE image_url IS NOT NULL AND image_url != ''").all();
-                products.results.forEach(p => scanMap.set(p.image_url, p.name));
+                products.results.forEach(p => add(p.image_url, p.name));
 
-                // 2. 扫描商品规格图 (新增)
+                // 2. 扫描商品规格图
                 const variants = await db.prepare("SELECT image_url, name FROM variants WHERE image_url IS NOT NULL AND image_url != ''").all();
-                variants.results.forEach(v => scanMap.set(v.image_url, v.name));
+                variants.results.forEach(v => add(v.image_url, v.name));
 
                 // 3. 扫描文章封面
                 const articles = await db.prepare("SELECT cover_image, title FROM articles WHERE cover_image IS NOT NULL AND cover_image != ''").all();
-                articles.results.forEach(a => scanMap.set(a.cover_image, a.title));
+                articles.results.forEach(a => add(a.cover_image, a.title));
                 
-                // 4. 扫描系统配置 (Logo/Favicon等) - 修复 .ico/.svg 识别
+                // 4. 扫描系统配置 (Logo/Favicon等)
                 const config = await db.prepare("SELECT key, value FROM site_config").all();
                 config.results.forEach(c => {
                     const val = c.value || '';
-                    // 宽松匹配 http/https 开头，且包含常见图片后缀 (新增 ico, svg)
-                    // 只要看起来像个图片链接，就扫进去
+                    // 只要是图片链接就加进去
                     if(val.match(/^https?:\/\/.+\.(jpg|png|jpeg|gif|webp|ico|svg)$/i)) {
-                        scanMap.set(val, c.key + ' (系统配置)');
+                        add(val, c.key);
                     }
                 });
 
-                // 5. 获取数据库已存在的 URL (用于过滤)
+                // 5. 获取数据库已存在的 URL (用于过滤，防止重复插入)
                 const exist = await db.prepare("SELECT url FROM images").all();
                 const existUrls = new Set(exist.results.map(e => e.url));
 
-                // 6. 构建插入语句
                 const stmt = db.prepare("INSERT INTO images (category_id, url, name, created_at) VALUES (1, ?, ?, ?)");
                 const batch = [];
 
-                for (const [url, name] of scanMap) {
-                    // 双重保险：既不在数据库里，也不在当前的插入队列里(Map已保证唯一，这里主要防DB重复)
-                    if (!existUrls.has(url)) { 
-                        // 截取过长的名称，防止报错
-                        let safeName = name || '未命名图片';
-                        if(safeName.length > 50) safeName = safeName.substring(0, 50);
+                // 6. 遍历 Map 生成插入数据
+                for (const [url, nameSet] of scanMap) {
+                    // 只有当数据库里完全没有这个 URL 时才插入
+                    if (!existUrls.has(url)) {
+                        // 【核心逻辑】将 Set 里的所有名字用 "/" 拼接起来
+                        // 例如：商品A / 商品B / 文章C
+                        let joinedName = Array.from(nameSet).join('/');
                         
-                        batch.push(stmt.bind(url, safeName, now));
+                        // 截取长度防止数据库或显示溢出 (保留前97个字符)
+                        if (joinedName.length > 100) {
+                            joinedName = joinedName.substring(0, 97) + '...';
+                        }
+                        // 如果没有名字，给个默认值
+                        if (!joinedName) joinedName = '未命名图片';
+                        
+                        batch.push(stmt.bind(url, joinedName, now));
                     }
                 }
 
