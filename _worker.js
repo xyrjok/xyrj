@@ -1261,25 +1261,83 @@ async function handleApi(request, env, url) {
                 const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status=1").bind(out_trade_no).first();
                 
                 if (order) {
-                    // ================== START: 订单推送通知逻辑 ==================
+                    // ================== START: 订单推送通知逻辑 (完美详细版) ==================
                     try {
-                        // 1. 从数据库一次性读取所有推送配置
+                        // 1. 读取配置
                         const keys = [
                             'tg_active', 'tg_bot_token', 'tg_chat_id', 
                             'wecom_active', 'wecom_key',
                             'wxpusher_active', 'wxpusher_app_token', 'wxpusher_uid'
                         ];
-                        // 构建 SQL IN 查询
                         const placeholders = keys.map(() => '?').join(',');
                         const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...keys).all();
-                        
                         const config = {};
                         if (confRes && confRes.results) {
                             confRes.results.forEach(r => config[r.key] = r.value);
                         }
 
-                        // 2. 准备通知文案
-                        const msgText = `新订单通知！\n商品：${order.product_name}\n金额：${order.total_amount}元\n联系方式：${order.contact}\n订单号：${order.id}`;
+                        // 2. 准备基础数据
+                        const dateDate = new Date((order.paid_at || Date.now()/1000) * 1000 + 28800000); 
+                        const dateStr = `${dateDate.getFullYear()}/${dateDate.getMonth() + 1}/${dateDate.getDate()}`;
+                        
+                        // 3. 构建核心内容块 (Content Body)
+                        let contentBody = '';
+
+                        if (order.variant_id === 0) {
+                            // === 情况A：购物车合并订单 (显示详细清单) ===
+                            contentBody = '【购物车合并订单】\n----------------';
+                            try {
+                                const items = JSON.parse(order.cards_sent || '[]');
+                                for (const item of items) {
+                                    let itemNote = '';
+                                    // 如果该商品是自选模式，去查备注
+                                    if (item.buyMode === 'select' && item.selectedCardId) {
+                                        const card = await db.prepare("SELECT content FROM cards WHERE id=?").bind(item.selectedCardId).first();
+                                        if (card && card.content) {
+                                           const match = card.content.match(/#\[(.*?)\]/);
+                                           if (match) itemNote = ` (自选: ${match[1]})`;
+                                           else itemNote = ' (自选: 指定卡密)';
+                                        }
+                                    } else {
+                                        itemNote = ' (随机)';
+                                    }
+                                    // 拼接单行：商品名 - 规格 [备注] x数量
+                                    contentBody += `\n• ${item.productName} - ${item.variantName}${itemNote} × ${item.quantity}`;
+                                }
+                            } catch(e) { 
+                                contentBody += '\n(购物车详情解析失败)';
+                                console.error('Cart parse error:', e);
+                            }
+                            
+                        } else {
+                            // === 情况B：单个商品直接下单 ===
+                            let modeLine = '类型：默认随机';
+                            try {
+                                const cs = JSON.parse(order.cards_sent || '{}');
+                                if (cs && cs.target_id) {
+                                     const card = await db.prepare("SELECT content FROM cards WHERE id=?").bind(cs.target_id).first();
+                                     let note = '无备注';
+                                     if (card && card.content) {
+                                         const match = card.content.match(/#\[(.*?)\]/);
+                                         if (match) note = match[1];
+                                         else note = '指定卡密';
+                                     }
+                                     modeLine = `类型：自选/加价 (${note})`;
+                                }
+                            } catch(e) {}
+                            
+                            contentBody = `商品：${order.product_name}\n规格：${order.variant_name}\n${modeLine}\n数量：${order.quantity}`;
+                        }
+
+                        // 4. 组合最终消息
+                        const msgText = `新订单通知！
+                        完成订单：${dateStr}
+                        ${contentBody}
+                        ----------------
+                        总金额：${order.total_amount}元
+                        联系方式：${order.contact}
+                        订单号：${order.id}`;
+
                         const notifications = [];
 
                         // --- Telegram 推送 ---
@@ -1291,7 +1349,7 @@ async function handleApi(request, env, url) {
                             }));
                         }
 
-                        // --- 企业微信 (群机器人) 推送 ---
+                        // --- 企业微信 推送 ---
                         if (config.wecom_active === '1' && config.wecom_key) {
                             notifications.push(fetch(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${config.wecom_key}`, {
                                 method: 'POST',
@@ -1300,7 +1358,7 @@ async function handleApi(request, env, url) {
                             }));
                         }
 
-                        // --- WxPusher (个人微信) 推送 ---
+                        // --- WxPusher 推送 ---
                         if (config.wxpusher_active === '1' && config.wxpusher_app_token && config.wxpusher_uid) {
                             notifications.push(fetch('https://wxpusher.zjiecode.com/api/send/message', {
                                 method: 'POST',
@@ -1314,18 +1372,16 @@ async function handleApi(request, env, url) {
                             }));
                         }
 
-                        // 3. 异步发送 (使用 ctx.waitUntil 避免阻塞支付回调)
+                        // 异步发送
                         if (notifications.length > 0 && ctx && ctx.waitUntil) {
                             ctx.waitUntil(Promise.all(notifications));
                         } else if (notifications.length > 0) {
-                            // 兼容没有 ctx 的情况 (虽然 Worker 环境通常都有)
                             Promise.all(notifications).catch(err => console.error('Notification Error:', err));
                         }
                     } catch (notifyErr) {
                         console.error('Notification Logic Error:', notifyErr);
                     }
                     // ================== END: 订单推送通知逻辑 ==================
-                    
                     // --- 合并订单发货逻辑 ---
                     if (order.variant_id === 0 && order.cards_sent) { 
                         let cartItems;
