@@ -7,6 +7,7 @@
  * [新增] 卡密导出功能：支持按商品/规格/状态导出并自动分类整理为TXT
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
+ * [新增] Outlook (Graph API) 原生发信支持
  */
 
 // === 工具函数 ===
@@ -109,7 +110,7 @@ export default {
 
         // === 1. API 路由处理 ===
         if (path.startsWith('/api/')) {
-            return handleApi(request, env, url);
+            return handleApi(request, env, url, ctx);
         }
 
         // === 2. 静态资源路由重写 (Pretty URLs 逻辑) ===
@@ -292,7 +293,7 @@ async function injectMetaTags(originalResponse, data) {
 // =============================================
 // === 完整的 API 处理逻辑 ===
 // =============================================
-async function handleApi(request, env, url) {
+async function handleApi(request, env, url, ctx) {
     const method = request.method;
     const path = url.pathname;
     const db = env.MY_XYRJ; // 数据库绑定
@@ -1466,7 +1467,8 @@ async function handleApi(request, env, url) {
                         const keys = [
                             'tg_active', 'tg_bot_token', 'tg_chat_id', 
                             'brevo_active', 'brevo_key', 'brevo_sender', 'mail_to',
-                            'pa_active', 'pa_url'
+                            'pa_active', 'pa_url',
+                            'outlook_active', 'outlook_client_id', 'outlook_client_secret', 'outlook_refresh_token'
                         ];
                         const placeholders = keys.map(() => '?').join(',');
                         const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...keys).all();
@@ -1596,6 +1598,12 @@ ${contentBody}
                                 })
                             }));
                         }
+
+                        // --- Outlook Graph API 推送 (新增) ---
+                        if (config.outlook_active === '1' && config.outlook_client_id && config.outlook_refresh_token && config.mail_to) {
+                            notifications.push(sendOutlookMail(config, `新订单通知：${order.id}`, msgText));
+                        }
+
                         // 异步发送
                         if (notifications.length > 0 && ctx && ctx.waitUntil) {
                             ctx.waitUntil(Promise.all(notifications));
@@ -1716,4 +1724,54 @@ ${contentBody}
     }
 
     return errRes('API Not Found', 404);
+}
+
+// === 辅助函数：Outlook Graph API 发信 ===
+async function sendOutlookMail(config, subject, content) {
+    try {
+        // 1. 使用 Refresh Token 获取 Access Token
+        const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+        const params = new URLSearchParams();
+        params.append('client_id', config.outlook_client_id);
+        params.append('client_secret', config.outlook_client_secret);
+        params.append('refresh_token', config.outlook_refresh_token);
+        params.append('grant_type', 'refresh_token');
+        params.append('scope', 'Mail.Send offline_access');
+
+        const tokenRes = await fetch(tokenUrl, { method: 'POST', body: params });
+        const tokenData = await tokenRes.json();
+
+        if (!tokenData.access_token) {
+            console.error('Outlook Auth Error:', tokenData);
+            return;
+        }
+
+        // 2. 调用 Graph API 发信
+        const mailUrl = 'https://graph.microsoft.com/v1.0/me/sendMail';
+        const emailData = {
+            message: {
+                subject: subject,
+                body: {
+                    contentType: "Text",
+                    content: content
+                },
+                toRecipients: [
+                    { emailAddress: { address: config.mail_to } }
+                ]
+            },
+            saveToSentItems: "false"
+        };
+
+        await fetch(mailUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(emailData)
+        });
+        
+    } catch (e) {
+        console.error('Outlook Send Error:', e);
+    }
 }
