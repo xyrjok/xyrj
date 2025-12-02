@@ -198,8 +198,8 @@ function renderProductDetail(p) {
                         <div class="mb-3 d-flex align-items-center">
                             <span class="text-secondary small me-3">信息：</span>
                             <div class="d-flex flex-grow-1">
-                                <input type="text" class="form-control form-control-sm me-2" id="p-contact" placeholder="联系方式 (查询订单用)">
-                                <input type="text" class="form-control form-control-sm" id="p-password" placeholder="查单密码 (查询订单用)">
+                                <input type="text" class="form-control form-control-sm me-2 input-light" id="p-contact" placeholder="请输入QQ/手机/邮箱">
+                                <input type="text" class="form-control form-control-sm input-light" id="p-password" placeholder="请设置查单密码">
                             </div>
                         </div>
 
