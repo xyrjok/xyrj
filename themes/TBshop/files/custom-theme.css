@@ -704,4 +704,5 @@ header, .tb-header, .mobile-header, .container, .main-content { flex-shrink: 0; 
 .input-light::-webkit-input-placeholder { color: #ccc !important; font-size: 12px;}
 .input-light::-moz-placeholder { color: #ccc !important; font-size: 12px;}
 .input-light:-ms-input-placeholder { color: #ccc !important; font-size: 12px;}
+.input-light:focus {border-color: #ff5000 !important; box-shadow: none !important; outline: none !important;}
 
