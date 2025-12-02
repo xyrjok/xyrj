@@ -190,7 +190,7 @@ function renderProductDetail(p) {
                             <span class="text-secondary small me-3">数量：</span>
                             <div class="input-group" style="width: 120px;">
                                 <button class="btn btn-outline-secondary btn-sm" type="button" onclick="changeQty(-1)">-</button>
-                                <input type="text" class="form-control form-control-sm text-center input-light" id="buy-qty" value="1" readonly>
+                                <input type="text" class="form-control form-control-sm text-center input-light" id="buy-qty" value="1">
                                 <button class="btn btn-outline-secondary btn-sm" type="button" onclick="changeQty(1)">+</button>
                             </div>
                         </div>
@@ -1003,4 +1003,32 @@ function fallbackCopy(text) {
     }
     
     document.body.removeChild(textArea);
+}
+// =============================================
+// === 新增：处理手动输入数量 ===
+// =============================================
+function manualChangeQty(el) {
+    let val = parseInt(el.value);
+    // 1. 基础验证：必须是正整数
+    if (isNaN(val) || val < 1) {
+        val = 1;
+    }
+    // 2. 自选模式限制：只能买 1 个
+    if (buyMethod === 'select') {
+        if (val > 1) {
+            alert('自选号码/卡密模式下，每次只能购买 1 个');
+        }
+        val = 1;
+    } 
+    // 3. 随机模式限制：不能超过库存
+    else if (currentVariant) {
+        if (val > currentVariant.stock) {
+            alert(`库存不足，当前仅剩 ${currentVariant.stock} 件`);
+            val = currentVariant.stock;
+        }
+    }
+    // 4. 更新数据和界面
+    quantity = val;
+    el.value = val;
+    updateRealTimePrice();
 }
