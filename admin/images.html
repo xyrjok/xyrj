@@ -11,14 +11,51 @@
         /* ================== 全局样式 ================== */
         body { 
             background-color: #f4f7f6; 
+            margin: 0; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
         }
+        
+        /* 布局主容器 */
         .admin-container { 
             display: flex; 
             min-height: 100vh; 
+            width: 100%; 
+        }
+
+        /* ================== 移动端专属顶栏 ================== */
+        .admin-mobile-header {
+            display: none; /* PC端隐藏 */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 50px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #ddd;
+            padding: 0 15px;
+            z-index: 1001;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .admin-mobile-header .mobile-logo a {
+            font-size: 18px; font-weight: bold; color: #333; text-decoration: none;
+        }
+        #mobile-menu-toggle {
+            background: none; border: none; font-size: 20px; color: #555; padding: 5px;
+        }
+
+        /* ================== 遮罩层 ================== */
+        .admin-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .admin-overlay.is-visible {
+            display: block; opacity: 1;
         }
         
-        /* ================== 左侧侧边栏 (完美复刻 Dashboard) ================== */
+        /* ================== 左侧侧边栏 ================== */
         .admin-sidebar {
             width: 240px;
             background-color: #2c3e50;
@@ -47,18 +84,25 @@
         }
         /* 鼠标悬停样式 */
         .admin-sidebar ul li a:hover { background-color: #34495e; color: #ffffff; }
-        /* 选中高亮样式 (红色，与 Dashboard 统一) */
+        /* 选中高亮样式 */
         .admin-sidebar ul li a.active { background-color: #e74c3c; color: #ffffff; border-left-color: #c0392b; }
         .admin-sidebar ul li a i { margin-right: 10px; width: 20px; text-align: center; }
+
+        .sidebar-footer {
+            padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;
+            border-top: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
+        }
 
         /* ================== 内容区域 ================== */
         .admin-content { 
             margin-left: 240px; width: calc(100% - 240px); padding: 20px; 
             font-size: 14px; 
+            transition: margin-left 0.3s;
         }
         .admin-content h3 { 
             font-size: 18px; font-weight: bold; margin-bottom: 20px; 
         }
+        .logout-btn { color: #e74c3c !important; }
 
         /* ================== 图片管理页特有样式 ================== */
         .cat-item { cursor: pointer; padding: 10px; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
@@ -74,12 +118,51 @@
         
         .check-overlay { position: absolute; top: 5px; left: 5px; z-index: 10; transform: scale(1.2); }
         .copy-btn { cursor: pointer; color: #0d6efd; }
+
+        /* ================== 响应式适配 ================== */
+        @media (max-width: 800px) {
+            /* 1. 显示移动端顶栏 */
+            .admin-mobile-header { display: flex; }
+            
+            /* 2. 隐藏 PC 端侧边栏 (移出屏幕) */
+            .admin-sidebar {
+                left: -240px; 
+                z-index: 1002;
+            }
+            
+            /* 3. 滑出状态 */
+            .admin-sidebar.is-visible { left: 0; }
+
+            /* 4. 调整内容区域 */
+            .admin-content {
+                margin-left: 0; 
+                width: 100%;
+                padding-top: 70px; /* 留出顶栏高度 */
+            }
+
+            /* 图片管理页特定响应式调整 */
+            .col-md-2 { margin-bottom: 15px; }
+            .img-thumb { height: 100px; }
+        }
     </style>
 </head>
 <body>
 
+<script src="../config.js"></script>
+
+<div class="admin-mobile-header">
+    <div class="mobile-logo">
+        <a href="#">夏雨店铺系统</a>
+    </div>
+    <button id="mobile-menu-toggle">
+        <i class="fas fa-bars"></i>
+    </button>
+</div>
+
+<div class="admin-overlay"></div>
+
 <div class="admin-container">
-    <div class="admin-sidebar">
+    <div class="admin-sidebar" id="sidebar">
         <div class="sidebar-header"><a href="/admin/dashboard.html">XYRJ Faka</a></div>
         <div class="sidebar-menu-container">
             <ul>
@@ -93,8 +176,11 @@
                 <li><a href="/admin/articles.html"><i class="fas fa-newspaper"></i> 文章管理</a></li>
                 <li><a href="/admin/settings.html"><i class="fas fa-cog"></i> 系统设置</a></li>
                 <li><a href="/admin/images.html" class="active"><i class="fas fa-images"></i> 图片管理</a></li> 
-                <li><a href="javascript:logout()"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+                <li><a href="javascript:logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
             </ul>
+        </div>
+        <div class="sidebar-footer">
+            夏雨店铺系统 Version <span id="app-version">...</span>
         </div>
     </div>
 
@@ -181,13 +267,24 @@
     </div>
 </div>
     
-<script src="../config.js"></script>
 <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
 <script>
     const TOKEN = localStorage.getItem('ADMIN_TOKEN');
     if(!TOKEN) window.location.href = '/admin/index.html';
+    
+    // 版本号显示
+    if (window.SITE_CONFIG && window.SITE_CONFIG.version) {
+        document.getElementById('app-version').innerText = window.SITE_CONFIG.version;
+    } else {
+        document.getElementById('app-version').innerText = '1.0.0';
+    }
 
-    function logout() { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; }
+    function logout() { 
+        if(confirm('确定要退出登录吗？')) {
+            localStorage.removeItem('ADMIN_TOKEN'); 
+            window.location.href = '/admin/index.html'; 
+        }
+    }
 
     async function api(path, method = 'GET', body = null) {
         const opts = { headers: { 'Authorization': `Bearer ${TOKEN}` } };
@@ -198,7 +295,7 @@
         }
         try {
             const res = await fetch('/api/admin/' + path, opts);
-            if(res.status === 401) return logout();
+            if(res.status === 401) { logout(); return null; }
             return res.json();
         } catch(e) { alert('API Error'); return null; }
     }
@@ -356,40 +453,25 @@
 
     function copyUrl(url, el) {
         navigator.clipboard.writeText(url).then(() => {
-            // 1. 视觉反馈：立刻把图标变成绿色的“对勾”
             const originalClass = el.className;
             el.className = 'fas fa-check text-success'; 
     
-            // 2. 创建一个临时的“已复制”小标签
             const tip = document.createElement('span');
             tip.innerText = '已复制';
-            // 设置样式：黑色半透明背景，白色文字，显示在图标上方
             Object.assign(tip.style, {
-                position: 'absolute',
-                backgroundColor: 'rgba(0,0,0,0.8)',
-                color: '#fff',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                bottom: '100%', // 显示在上方
-                left: '50%',
-                transform: 'translateX(-50%)',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-                zIndex: '1000'
+                position: 'absolute', backgroundColor: 'rgba(0,0,0,0.8)', color: '#fff', padding: '2px 6px',
+                borderRadius: '4px', fontSize: '12px', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: '1000'
             });
     
-            // 确保父元素定位正确，以便小标签能相对定位
             if (getComputedStyle(el.parentElement).position === 'static') {
                 el.parentElement.style.position = 'relative';
             }
-    
             el.parentElement.appendChild(tip);
     
-            // 3. 1秒后恢复原状
             setTimeout(() => {
-                el.className = originalClass; // 恢复图标
-                if(tip.parentNode) tip.parentNode.removeChild(tip); // 移除提示
+                el.className = originalClass; 
+                if(tip.parentNode) tip.parentNode.removeChild(tip);
             }, 1000);
         });
     }
@@ -407,14 +489,14 @@
         }
         document.getElementById('pagination').innerHTML = html;
     }
-    // --- 编辑功能新增 ---
+    
+    // --- 编辑功能 ---
     const editModal = new bootstrap.Modal(document.getElementById('editModal'));
 
     function openEditModal(id, name, catId) {
         document.getElementById('edit-id').value = id;
         document.getElementById('edit-name').value = name;
         
-        // 填充分类下拉框（复用现有的 categories 数据）
         const select = document.getElementById('edit-cat-id');
         select.innerHTML = categories.map(c => 
             `<option value="${c.id}" ${c.id == catId ? 'selected' : ''}>${c.name}</option>`
@@ -433,13 +515,51 @@
         const res = await api('image/update', 'POST', { id, name, category_id: catId });
         if(res && res.success) {
             editModal.hide();
-            loadImages(currentPage); // 刷新当前页
+            loadImages(currentPage); 
         }
     }
     
     // 初始化
     loadCategories();
     loadImages();
+
+    // --- 移动端菜单逻辑 (MyBlog风格) ---
+    const mobileBtn = document.getElementById('mobile-menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.admin-overlay');
+    const icon = mobileBtn.querySelector('i');
+
+    function toggleMenu() {
+        sidebar.classList.toggle('is-visible');
+        overlay.classList.toggle('is-visible');
+        
+        if (icon.classList.contains('fa-bars')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+        } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    }
+
+    mobileBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleMenu();
+    });
+
+    overlay.addEventListener('click', function() {
+        toggleMenu();
+    });
+
+    // 点击菜单项后自动关闭
+    const menuLinks = document.querySelectorAll('.admin-sidebar a');
+    menuLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 800 && sidebar.classList.contains('is-visible')) {
+                toggleMenu();
+            }
+        });
+    });
 </script>
 </body>
 </html>
