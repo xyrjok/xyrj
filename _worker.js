@@ -830,38 +830,53 @@ async function handleApi(request, env, url) {
                 return jsonRes({ success: true });
             }
 
-            // 8. [核心功能] 扫描全站图片并入库
+            // 8. [核心功能] 扫描全站图片并入库 (修复版：完美去重 & 支持规格/Logo/Icon)
             if (path === '/api/admin/images/scan' && method === 'POST') {
                 const now = Math.floor(Date.now() / 1000);
-                const newLinks = new Set();
-
-                // 扫描商品主图
-                const products = await db.prepare("SELECT image_url, name FROM products WHERE image_url IS NOT NULL AND image_url != ''").all();
-                products.results.forEach(p => newLinks.add(JSON.stringify({url: p.image_url, name: p.name})));
-
-                // 扫描文章封面
-                const articles = await db.prepare("SELECT cover_image, title FROM articles WHERE cover_image IS NOT NULL AND cover_image != ''").all();
-                articles.results.forEach(a => newLinks.add(JSON.stringify({url: a.cover_image, name: a.title})));
                 
-                // 扫描系统配置 (Logo等)
-                const config = await db.prepare("SELECT value FROM site_config WHERE key LIKE '%logo%' OR value LIKE 'http%'").all();
+                // 使用 Map 结构：Key为URL，Value为名称。
+                // 作用：如果多个商品使用了同一个URL，Map 会自动覆盖，保证一个URL只保留最后扫描到的那个名称，从而在源头上去重。
+                const scanMap = new Map();
+
+                // 1. 扫描商品主图
+                const products = await db.prepare("SELECT image_url, name FROM products WHERE image_url IS NOT NULL AND image_url != ''").all();
+                products.results.forEach(p => scanMap.set(p.image_url, p.name));
+
+                // 2. 扫描商品规格图 (新增)
+                const variants = await db.prepare("SELECT image_url, name FROM variants WHERE image_url IS NOT NULL AND image_url != ''").all();
+                variants.results.forEach(v => scanMap.set(v.image_url, v.name));
+
+                // 3. 扫描文章封面
+                const articles = await db.prepare("SELECT cover_image, title FROM articles WHERE cover_image IS NOT NULL AND cover_image != ''").all();
+                articles.results.forEach(a => scanMap.set(a.cover_image, a.title));
+                
+                // 4. 扫描系统配置 (Logo/Favicon等) - 修复 .ico/.svg 识别
+                const config = await db.prepare("SELECT key, value FROM site_config").all();
                 config.results.forEach(c => {
-                    if(c.value.match(/^https?:\/\/.+\.(jpg|png|jpeg|gif|webp)$/i)) {
-                        newLinks.add(JSON.stringify({url: c.value, name: '系统配置图片'}));
+                    const val = c.value || '';
+                    // 宽松匹配 http/https 开头，且包含常见图片后缀 (新增 ico, svg)
+                    // 只要看起来像个图片链接，就扫进去
+                    if(val.match(/^https?:\/\/.+\.(jpg|png|jpeg|gif|webp|ico|svg)$/i)) {
+                        scanMap.set(val, c.key + ' (系统配置)');
                     }
                 });
 
-                // 过滤已存在的 URL
+                // 5. 获取数据库已存在的 URL (用于过滤)
                 const exist = await db.prepare("SELECT url FROM images").all();
                 const existUrls = new Set(exist.results.map(e => e.url));
 
+                // 6. 构建插入语句
                 const stmt = db.prepare("INSERT INTO images (category_id, url, name, created_at) VALUES (1, ?, ?, ?)");
                 const batch = [];
 
-                for (let itemStr of newLinks) {
-                    const item = JSON.parse(itemStr);
-                    if (!existUrls.has(item.url)) {
-                        batch.push(stmt.bind(item.url, item.name, now));
+                for (const [url, name] of scanMap) {
+                    // 双重保险：既不在数据库里，也不在当前的插入队列里(Map已保证唯一，这里主要防DB重复)
+                    if (!existUrls.has(url)) { 
+                        // 截取过长的名称，防止报错
+                        let safeName = name || '未命名图片';
+                        if(safeName.length > 50) safeName = safeName.substring(0, 50);
+                        
+                        batch.push(stmt.bind(url, safeName, now));
                     }
                 }
 
