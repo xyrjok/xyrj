@@ -123,12 +123,15 @@ CREATE TABLE IF NOT EXISTS image_categories (
 INSERT INTO image_categories (name, sort) SELECT '默认分类', 0 WHERE NOT EXISTS(SELECT 1 FROM image_categories);
 
 -- 2. 图片库表
-CREATE TABLE IF NOT EXISTS images (
+CREATE TABLE images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     category_id INTEGER DEFAULT 1,
     url TEXT NOT NULL,
     name TEXT,
     created_at INTEGER,
-    FOREIGN KEY (category_id) REFERENCES image_categories(id) ON DELETE SET DEFAULT
+    FOREIGN KEY (category_id)
+    REFERENCES image_categories(id)
+    ON DELETE SET DEFAULT
 );
+
 
