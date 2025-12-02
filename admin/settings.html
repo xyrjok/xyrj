@@ -197,34 +197,36 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Chat ID</label>
-                                    <input type="text" class="form-control" id="tg_chat_id" placeholder="用户ID或群组ID">
+                                    <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fas fa-envelope text-info"></i> 邮件通知设置 (通用)</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">接收通知的邮箱</label>
+                                    <input type="email" class="form-control" id="mail_to" placeholder="例如：123456@qq.com">
+                                    <div class="form-text text-muted" style="font-size: 12px;">Power Automate 和 Brevo 都会发送到这个邮箱。</div>
                                 </div>
 
-                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fab fa-weixin text-success"></i> 企业微信 (群机器人)</h6>
+                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fab fa-microsoft text-primary"></i> Microsoft Power Automate</h6>
                                 <div class="mb-3 form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="wecom_active">
-                                    <label class="form-check-label" for="wecom_active">开启企业微信推送</label>
+                                    <input class="form-check-input" type="checkbox" id="pa_active">
+                                    <label class="form-check-label" for="pa_active">开启 Power Automate 推送</label>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Webhook Key</label>
-                                    <input type="text" class="form-control" id="wecom_key" placeholder="Key值">
+                                    <label class="form-label">Webhook URL (HTTP Post URL)</label>
+                                    <input type="text" class="form-control" id="pa_url" placeholder="https://prod-xx.westus.logic.azure.com:443/...">
                                 </div>
 
-                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fas fa-comment text-success"></i> WxPusher (个人微信)</h6>
+                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fas fa-paper-plane text-success"></i> Brevo (原 Sendinblue)</h6>
                                 <div class="mb-3 form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="wxpusher_active">
-                                    <label class="form-check-label" for="wxpusher_active">开启 WxPusher 推送</label>
+                                    <input class="form-check-input" type="checkbox" id="brevo_active">
+                                    <label class="form-check-label" for="brevo_active">开启 Brevo 邮件推送</label>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">App Token</label>
-                                    <input type="text" class="form-control" id="wxpusher_app_token" placeholder="AT_xxx...">
+                                    <label class="form-label">API Key (v3)</label>
+                                    <input type="text" class="form-control" id="brevo_key" placeholder="xkeysib-...">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">UID</label>
-                                    <input type="text" class="form-control" id="wxpusher_uid" placeholder="UID_xxx...">
+                                    <label class="form-label">发件人邮箱 (Sender Email)</label>
+                                    <input type="email" class="form-control" id="brevo_sender" placeholder="需在 Brevo 后台验证过的发件人">
                                 </div>
-                            </div>
-                        </div>
 
                         <div class="mt-4 pt-3 border-top">
                             <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> 保存所有设置</button>
@@ -294,12 +296,14 @@
             document.getElementById('tg_bot_token').value = config.tg_bot_token || '';
             document.getElementById('tg_chat_id').value = config.tg_chat_id || '';
 
-            document.getElementById('wecom_active').checked = (config.wecom_active === '1');
-            document.getElementById('wecom_key').value = config.wecom_key || '';
+			document.getElementById('mail_to').value = config.mail_to || '';
 
-            document.getElementById('wxpusher_active').checked = (config.wxpusher_active === '1');
-            document.getElementById('wxpusher_app_token').value = config.wxpusher_app_token || '';
-            document.getElementById('wxpusher_uid').value = config.wxpusher_uid || '';
+            document.getElementById('pa_active').checked = (config.pa_active === '1');
+            document.getElementById('pa_url').value = config.pa_url || '';
+
+            document.getElementById('brevo_active').checked = (config.brevo_active === '1');
+            document.getElementById('brevo_key').value = config.brevo_key || '';
+            document.getElementById('brevo_sender').value = config.brevo_sender || '';
 
         } catch (e) {
             console.warn("Initial load failed (likely empty DB):", e);
@@ -321,12 +325,14 @@
             tg_bot_token: document.getElementById('tg_bot_token').value,
             tg_chat_id: document.getElementById('tg_chat_id').value,
 
-            wecom_active: document.getElementById('wecom_active').checked ? '1' : '0',
-            wecom_key: document.getElementById('wecom_key').value,
+			mail_to: document.getElementById('mail_to').value,
 
-            wxpusher_active: document.getElementById('wxpusher_active').checked ? '1' : '0',
-            wxpusher_app_token: document.getElementById('wxpusher_app_token').value,
-            wxpusher_uid: document.getElementById('wxpusher_uid').value
+            pa_active: document.getElementById('pa_active').checked ? '1' : '0',
+            pa_url: document.getElementById('pa_url').value,
+
+            brevo_active: document.getElementById('brevo_active').checked ? '1' : '0',
+            brevo_key: document.getElementById('brevo_key').value,
+            brevo_sender: document.getElementById('brevo_sender').value
         };
         const res = await api('settings/save', { method: 'POST', body: JSON.stringify(data) });
         if (res.success) {
