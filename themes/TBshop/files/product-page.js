@@ -671,14 +671,34 @@ function addToCart() {
         btn.classList.remove('btn-success');
     }, 1500);
 }
-
 // =============================================
-// === 2. [重点修改] 立即购买 (含未支付订单拦截)
+// === 2. [重点修改] 立即购买 (修复数量检测 + 拦截未支付)
 // =============================================
 async function buyNow() {
     if (!currentVariant) { alert('请先选择规格'); return; }
     if (buyMethod === null) { alert('请选择购买方式'); return; }
     
+    // === 新增：强制读取输入框的最新数量并检查库存 ===
+    const qtyInput = document.getElementById('buy-qty');
+    if (qtyInput) {
+        let val = parseInt(qtyInput.value);
+        if (isNaN(val) || val < 1) val = 1;
+        
+        // 自选模式强制为1
+        if (buyMethod === 'select') val = 1;
+        
+        // 检查库存
+        if (currentVariant && val > currentVariant.stock) {
+            alert(`库存不足，当前仅剩 ${currentVariant.stock} 件`);
+            qtyInput.value = currentVariant.stock; // 自动修正为最大库存
+            quantity = currentVariant.stock;
+            updateRealTimePrice(); // 刷新一下价格显示
+            return; // 阻止下单
+        }
+        quantity = val; // 更新全局变量
+    }
+    // ===========================================
+
     if (buyMethod === 'select') {
         if (!selectedSpecificCardId) {
             alert('请选择一个号码/卡密');
@@ -761,7 +781,6 @@ async function buyNow() {
         btn.innerHTML = originalContent;
     }
 }
-
 function showError(msg) {
     const container = document.getElementById('product-loading');
     if (container) container.innerHTML = `<div class="text-danger py-5"><i class="fa fa-exclamation-triangle"></i> ${msg}</div>`;
