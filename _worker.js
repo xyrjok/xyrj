@@ -1261,6 +1261,70 @@ async function handleApi(request, env, url) {
                 const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status=1").bind(out_trade_no).first();
                 
                 if (order) {
+                    // ================== START: 订单推送通知逻辑 ==================
+                    try {
+                        // 1. 从数据库一次性读取所有推送配置
+                        const keys = [
+                            'tg_active', 'tg_bot_token', 'tg_chat_id', 
+                            'wecom_active', 'wecom_key',
+                            'wxpusher_active', 'wxpusher_app_token', 'wxpusher_uid'
+                        ];
+                        // 构建 SQL IN 查询
+                        const placeholders = keys.map(() => '?').join(',');
+                        const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...keys).all();
+                        
+                        const config = {};
+                        if (confRes && confRes.results) {
+                            confRes.results.forEach(r => config[r.key] = r.value);
+                        }
+
+                        // 2. 准备通知文案
+                        const msgText = `新订单通知！\n商品：${order.product_name}\n金额：${order.total_amount}元\n联系方式：${order.contact}\n订单号：${order.id}`;
+                        const notifications = [];
+
+                        // --- Telegram 推送 ---
+                        if (config.tg_active === '1' && config.tg_bot_token && config.tg_chat_id) {
+                            notifications.push(fetch(`https://api.telegram.org/bot${config.tg_bot_token}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ chat_id: config.tg_chat_id, text: msgText })
+                            }));
+                        }
+
+                        // --- 企业微信 (群机器人) 推送 ---
+                        if (config.wecom_active === '1' && config.wecom_key) {
+                            notifications.push(fetch(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${config.wecom_key}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ msgtype: "text", text: { content: msgText } })
+                            }));
+                        }
+
+                        // --- WxPusher (个人微信) 推送 ---
+                        if (config.wxpusher_active === '1' && config.wxpusher_app_token && config.wxpusher_uid) {
+                            notifications.push(fetch('https://wxpusher.zjiecode.com/api/send/message', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    appToken: config.wxpusher_app_token,
+                                    content: msgText,
+                                    contentType: 1, 
+                                    uids: [config.wxpusher_uid]
+                                })
+                            }));
+                        }
+
+                        // 3. 异步发送 (使用 ctx.waitUntil 避免阻塞支付回调)
+                        if (notifications.length > 0 && ctx && ctx.waitUntil) {
+                            ctx.waitUntil(Promise.all(notifications));
+                        } else if (notifications.length > 0) {
+                            // 兼容没有 ctx 的情况 (虽然 Worker 环境通常都有)
+                            Promise.all(notifications).catch(err => console.error('Notification Error:', err));
+                        }
+                    } catch (notifyErr) {
+                        console.error('Notification Logic Error:', notifyErr);
+                    }
+                    // ================== END: 订单推送通知逻辑 ==================
                     
                     // --- 合并订单发货逻辑 ---
                     if (order.variant_id === 0 && order.cards_sent) { 
