@@ -130,7 +130,32 @@
         </div>
     </div>
 </div>
-
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑图片信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-id">
+                <div class="mb-3">
+                    <label class="form-label">图片名称</label>
+                    <input type="text" class="form-control" id="edit-name">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">移动到分类</label>
+                    <select class="form-select" id="edit-cat-id"></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitEdit()">保存修改</button>
+            </div>
+        </div>
+    </div>
+</div>
+    
 <script src="../config.js"></script>
 <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -219,6 +244,7 @@
                         <div class="img-name" title="${img.name}">${img.name}</div>
                         <div class="img-actions">
                             <i class="fas fa-copy copy-btn" onclick="copyUrl('${img.url}', this)" title="复制链接"></i>
+                            <i class="fas fa-edit text-primary mx-2" style="cursor:pointer" onclick="openEditModal(${img.id}, '${img.name.replace(/'/g, "\\'")}', ${img.category_id})" title="修改/移动"></i>
                             <i class="fas fa-trash text-danger" style="cursor:pointer" onclick="deleteSingle(${img.id})" title="删除"></i>
                         </div>
                     </div>
@@ -356,7 +382,36 @@
         }
         document.getElementById('pagination').innerHTML = html;
     }
+    // --- 编辑功能新增 ---
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
 
+    function openEditModal(id, name, catId) {
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-name').value = name;
+        
+        // 填充分类下拉框（复用现有的 categories 数据）
+        const select = document.getElementById('edit-cat-id');
+        select.innerHTML = categories.map(c => 
+            `<option value="${c.id}" ${c.id == catId ? 'selected' : ''}>${c.name}</option>`
+        ).join('');
+        
+        editModal.show();
+    }
+
+    async function submitEdit() {
+        const id = document.getElementById('edit-id').value;
+        const name = document.getElementById('edit-name').value;
+        const catId = document.getElementById('edit-cat-id').value;
+        
+        if(!name) return alert('名称不能为空');
+
+        const res = await api('image/update', 'POST', { id, name, category_id: catId });
+        if(res && res.success) {
+            editModal.hide();
+            loadImages(currentPage); // 刷新当前页
+        }
+    }
+    
     // 初始化
     loadCategories();
     loadImages();
