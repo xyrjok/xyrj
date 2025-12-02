@@ -133,50 +133,101 @@
         <div class="row g-4">
             <div class="col-lg-8">
                 <div class="card">
-                    <div class="card-header">基本设置</div>
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" id="settingTabs" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button">基本设置</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" id="notify-tab" data-bs-toggle="tab" data-bs-target="#notify" type="button">订单推送</button>
+                            </li>
+                        </ul>
+                    </div>
                     <div class="card-body p-4">
-                        <div class="mb-3">
-                            <label class="form-label">网站名称</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="site_name" placeholder="请输入网站名称">
-                                <div class="input-group-text bg-light">
-                                    <input class="form-check-input mt-0" type="checkbox" id="show_site_name">
-                                    <span class="ms-2 small">前台显示</span>
+                        <div class="tab-content" id="settingTabsContent">
+                            <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                                <div class="mb-3">
+                                    <label class="form-label">网站名称</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="site_name" placeholder="请输入网站名称">
+                                        <div class="input-group-text bg-light">
+                                            <input class="form-check-input mt-0" type="checkbox" id="show_site_name">
+                                            <span class="ms-2 small">前台显示</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">网站 Logo (图片 URL)</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="site_logo" placeholder="https://example.com/logo.png">
+                                        <div class="input-group-text bg-light">
+                                            <input class="form-check-input mt-0" type="checkbox" id="show_site_logo">
+                                            <span class="ms-2 small">前台显示</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-text text-muted" style="font-size: 12px;">建议使用透明背景的 PNG 图片，推荐高度 50px 左右。</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">前端模板风格</label>
+                                    <select class="form-select" id="theme_select">
+                                        <option value="default">默认主题 (Default)</option>
+                                        <option value="TBshop">仿淘宝 (TBshop)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">默认公告 (将被文章公告覆盖)</label>
+                                    <textarea class="form-control" id="announce" rows="3" placeholder="请输入店铺公告..."></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">联系方式 (支持 HTML)</label>
+                                    <textarea class="form-control" id="contact_info" rows="4" placeholder="例如：<p>客服QQ：123456</p>"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="notify" role="tabpanel">
+                                <h6 class="mb-3 border-bottom pb-2"><i class="fab fa-telegram text-primary"></i> Telegram 通知</h6>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="tg_active">
+                                    <label class="form-check-label" for="tg_active">开启 Telegram 推送</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Bot Token</label>
+                                    <input type="text" class="form-control" id="tg_bot_token" placeholder="123456:ABC-DEF...">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Chat ID</label>
+                                    <input type="text" class="form-control" id="tg_chat_id" placeholder="用户ID或群组ID">
+                                </div>
+
+                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fab fa-weixin text-success"></i> 企业微信 (群机器人)</h6>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="wecom_active">
+                                    <label class="form-check-label" for="wecom_active">开启企业微信推送</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Webhook Key</label>
+                                    <input type="text" class="form-control" id="wecom_key" placeholder="Key值">
+                                </div>
+
+                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fas fa-comment text-success"></i> WxPusher (个人微信)</h6>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="wxpusher_active">
+                                    <label class="form-check-label" for="wxpusher_active">开启 WxPusher 推送</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">App Token</label>
+                                    <input type="text" class="form-control" id="wxpusher_app_token" placeholder="AT_xxx...">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">UID</label>
+                                    <input type="text" class="form-control" id="wxpusher_uid" placeholder="UID_xxx...">
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">网站 Logo (图片 URL)</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="site_logo" placeholder="https://example.com/logo.png">
-                                <div class="input-group-text bg-light">
-                                    <input class="form-check-input mt-0" type="checkbox" id="show_site_logo">
-                                    <span class="ms-2 small">前台显示</span>
-                                </div>
-                            </div>
-                            <div class="form-text text-muted" style="font-size: 12px;">建议使用透明背景的 PNG 图片，推荐高度 50px 左右。</div>
+                        <div class="mt-4 pt-3 border-top">
+                            <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> 保存所有设置</button>
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">前端模板风格</label>
-                            <select class="form-select" id="theme_select">
-                                <option value="default">默认主题 (Default)</option>
-                                <option value="TBshop">仿淘宝 (TBshop)</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">默认公告 (将被文章公告覆盖)</label>
-                            <textarea class="form-control" id="announce" rows="3" placeholder="请输入店铺公告..."></textarea>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">联系方式 (支持 HTML)</label>
-                            <textarea class="form-control" id="contact_info" rows="4" placeholder="例如：<p>客服QQ：123456</p><p>工作时间：9:00-18:00</p>"></textarea>
-                        </div>
-
-                        <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> 保存设置</button>
                     </div>
                 </div>
             </div>
@@ -237,6 +288,17 @@
             document.getElementById('theme_select').value = config.theme || 'default';
             document.getElementById('announce').value = config.announce || '';
             document.getElementById('contact_info').value = config.contact_info || '';
+			// --- 订单推送设置回显 ---
+            document.getElementById('tg_active').checked = (config.tg_active === '1');
+            document.getElementById('tg_bot_token').value = config.tg_bot_token || '';
+            document.getElementById('tg_chat_id').value = config.tg_chat_id || '';
+
+            document.getElementById('wecom_active').checked = (config.wecom_active === '1');
+            document.getElementById('wecom_key').value = config.wecom_key || '';
+
+            document.getElementById('wxpusher_active').checked = (config.wxpusher_active === '1');
+            document.getElementById('wxpusher_app_token').value = config.wxpusher_app_token || '';
+            document.getElementById('wxpusher_uid').value = config.wxpusher_uid || '';
 
         } catch (e) {
             console.warn("Initial load failed (likely empty DB):", e);
@@ -252,7 +314,18 @@
             show_site_logo: document.getElementById('show_site_logo').checked ? '1' : '0',
             theme: document.getElementById('theme_select').value,
             announce: document.getElementById('announce').value,
-            contact_info: document.getElementById('contact_info').value
+            contact_info: document.getElementById('contact_info').value,
+			// --- 订单推送设置保存 ---
+            tg_active: document.getElementById('tg_active').checked ? '1' : '0',
+            tg_bot_token: document.getElementById('tg_bot_token').value,
+            tg_chat_id: document.getElementById('tg_chat_id').value,
+
+            wecom_active: document.getElementById('wecom_active').checked ? '1' : '0',
+            wecom_key: document.getElementById('wecom_key').value,
+
+            wxpusher_active: document.getElementById('wxpusher_active').checked ? '1' : '0',
+            wxpusher_app_token: document.getElementById('wxpusher_app_token').value,
+            wxpusher_uid: document.getElementById('wxpusher_uid').value
         };
         const res = await api('settings/save', { method: 'POST', body: JSON.stringify(data) });
         if (res.success) {
