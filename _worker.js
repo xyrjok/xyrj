@@ -742,6 +742,132 @@ async function handleApi(request, env, url) {
                 await db.prepare("DELETE FROM articles WHERE id=?").bind(id).run();
                 return jsonRes({ success: true });
             }
+
+            // ===========================
+            // --- 图片管理 API (新增) ---
+            // ===========================
+            
+            // 1. 获取图片分类
+            if (path === '/api/admin/image/categories') {
+                const { results } = await db.prepare("SELECT * FROM image_categories ORDER BY sort DESC, id ASC").all();
+                return jsonRes(results);
+            }
+            // 2. 保存分类
+            if (path === '/api/admin/image/category/save' && method === 'POST') {
+                const { id, name, sort } = await request.json();
+                if (id) {
+                    await db.prepare("UPDATE image_categories SET name=?, sort=? WHERE id=?").bind(name, sort, id).run();
+                } else {
+                    await db.prepare("INSERT INTO image_categories (name, sort) VALUES (?, ?)").bind(name, sort).run();
+                }
+                return jsonRes({ success: true });
+            }
+            // 3. 删除分类
+            if (path === '/api/admin/image/category/delete' && method === 'POST') {
+                const { id } = await request.json();
+                if (id == 1) return errRes('默认分类无法删除');
+                // 将该分类下的图片移到默认分类
+                await db.prepare("UPDATE images SET category_id = 1 WHERE category_id = ?").bind(id).run();
+                await db.prepare("DELETE FROM image_categories WHERE id = ?").bind(id).run();
+                return jsonRes({ success: true });
+            }
+
+            // 4. 图片列表
+            if (path === '/api/admin/images/list') {
+                const category_id = url.searchParams.get('category_id');
+                const page = parseInt(url.searchParams.get('page') || 1);
+                const limit = 20; // 每页20张
+                const offset = (page - 1) * limit;
+
+                let where = "1=1";
+                let params = [];
+                if (category_id && category_id !== 'all') {
+                    where += " AND category_id = ?";
+                    params.push(category_id);
+                }
+
+                const total = (await db.prepare(`SELECT COUNT(*) as c FROM images WHERE ${where}`).bind(...params).first()).c;
+                const { results } = await db.prepare(`SELECT * FROM images WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`).bind(...params, limit, offset).all();
+
+                return jsonRes({ data: results, total, page, limit });
+            }
+
+            // 5. 保存图片 (支持批量添加：urls 用换行分隔)
+            if (path === '/api/admin/image/save' && method === 'POST') {
+                const { urls, category_id } = await request.json();
+                if (!urls) return errRes('链接不能为空');
+                
+                const urlList = urls.split('\n').map(u => u.trim()).filter(u => u);
+                const now = Math.floor(Date.now() / 1000);
+                
+                // 批量插入
+                const stmt = db.prepare("INSERT INTO images (category_id, url, name, created_at) VALUES (?, ?, ?, ?)");
+                const batch = urlList.map(u => {
+                    // 尝试从URL提取文件名作为名称
+                    let name = u.substring(u.lastIndexOf('/') + 1);
+                    if(name.length > 50) name = name.substring(0, 50);
+                    return stmt.bind(category_id || 1, u, name, now);
+                });
+                
+                if (batch.length > 0) await db.batch(batch);
+                return jsonRes({ success: true, count: batch.length });
+            }
+
+            // 6. 批量删除图片
+            if (path === '/api/admin/image/delete' && method === 'POST') {
+                const { ids } = await request.json(); // ids 是数组 [1, 2, 3]
+                if (!ids || ids.length === 0) return errRes('未选择图片');
+                
+                const placeholders = ids.map(() => '?').join(',');
+                await db.prepare(`DELETE FROM images WHERE id IN (${placeholders})`).bind(...ids).run();
+                return jsonRes({ success: true });
+            }
+
+            // 7. 修改图片信息（移动分类/重命名）
+            if (path === '/api/admin/image/update' && method === 'POST') {
+                const { id, name, category_id } = await request.json();
+                await db.prepare("UPDATE images SET name=?, category_id=? WHERE id=?").bind(name, category_id, id).run();
+                return jsonRes({ success: true });
+            }
+
+            // 8. [核心功能] 扫描全站图片并入库
+            if (path === '/api/admin/images/scan' && method === 'POST') {
+                const now = Math.floor(Date.now() / 1000);
+                const newLinks = new Set();
+
+                // 扫描商品主图
+                const products = await db.prepare("SELECT image_url, name FROM products WHERE image_url IS NOT NULL AND image_url != ''").all();
+                products.results.forEach(p => newLinks.add(JSON.stringify({url: p.image_url, name: p.name})));
+
+                // 扫描文章封面
+                const articles = await db.prepare("SELECT cover_image, title FROM articles WHERE cover_image IS NOT NULL AND cover_image != ''").all();
+                articles.results.forEach(a => newLinks.add(JSON.stringify({url: a.cover_image, name: a.title})));
+                
+                // 扫描系统配置 (Logo等)
+                const config = await db.prepare("SELECT value FROM site_config WHERE key LIKE '%logo%' OR value LIKE 'http%'").all();
+                config.results.forEach(c => {
+                    if(c.value.match(/^https?:\/\/.+\.(jpg|png|jpeg|gif|webp)$/i)) {
+                        newLinks.add(JSON.stringify({url: c.value, name: '系统配置图片'}));
+                    }
+                });
+
+                // 过滤已存在的 URL
+                const exist = await db.prepare("SELECT url FROM images").all();
+                const existUrls = new Set(exist.results.map(e => e.url));
+
+                const stmt = db.prepare("INSERT INTO images (category_id, url, name, created_at) VALUES (1, ?, ?, ?)");
+                const batch = [];
+
+                for (let itemStr of newLinks) {
+                    const item = JSON.parse(itemStr);
+                    if (!existUrls.has(item.url)) {
+                        batch.push(stmt.bind(item.url, item.name, now));
+                    }
+                }
+
+                if (batch.length > 0) await db.batch(batch);
+                return jsonRes({ success: true, count: batch.length });
+            }
             
             // --- 系统设置 API (已修改: 支持 UPSERT) ---
             if (path === '/api/admin/settings/get') {
