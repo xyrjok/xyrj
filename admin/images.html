@@ -7,41 +7,65 @@
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f7f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-        .admin-container { display: flex; min-height: 100vh; }
+        /* ================== 全局样式 ================== */
+        body { 
+            background-color: #f4f7f6; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+        }
+        .admin-container { 
+            display: flex; 
+            min-height: 100vh; 
+        }
         
-        /* 侧边栏样式 (确保有 font-size: 14px) */
-        .admin-sidebar { width: 240px; background-color: #2c3e50; color: #ecf0f1; position: fixed; height: 100%; left: 0; top: 0; z-index: 100; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 20px; text-align: center; font-size: 20px; font-weight: bold; background-color: #2c3e50; border-bottom: 1px solid #34495e;}
-        .sidebar-header a { color: #fff; text-decoration: none; }
+        /* ================== 左侧侧边栏 (完美复刻 Dashboard) ================== */
+        .admin-sidebar {
+            width: 240px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            position: fixed;
+            height: 100%;
+            left: 0; top: 0;
+            z-index: 100;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar-header {
+            padding: 20px; text-align: center; font-size: 20px; font-weight: bold;
+            border-bottom: 1px solid #34495e; background-color: #2c3e50; flex-shrink: 0;
+        }
+        .sidebar-header a { color: #ecf0f1; text-decoration: none; }
+
         .sidebar-menu-container { flex: 1; overflow-y: auto; }
         .admin-sidebar ul { list-style: none; padding: 0; margin: 0; }
-        .admin-sidebar ul li a { 
-            display: block; color: #bdc3c7; padding: 15px 20px; text-decoration: none; transition: 0.3s; 
-            font-size: 14px; /* <--- 关键点：侧边栏字体 */
+        .admin-sidebar ul li a {
+            display: block; color: #bdc3c7; padding: 15px 20px;
+            text-decoration: none; border-left: 3px solid transparent;
+            transition: all 0.3s; font-size: 14px;
         }
-        .admin-sidebar ul li a:hover, .admin-sidebar ul li a.active { background-color: #34495e; color: #fff; }
+        /* 鼠标悬停样式 */
+        .admin-sidebar ul li a:hover { background-color: #34495e; color: #ffffff; }
+        /* 选中高亮样式 (红色，与 Dashboard 统一) */
+        .admin-sidebar ul li a.active { background-color: #e74c3c; color: #ffffff; border-left-color: #c0392b; }
         .admin-sidebar ul li a i { margin-right: 10px; width: 20px; text-align: center; }
-        
-        /* 内容区域样式 (增加 font-size: 14px 和 h3 限制) */
+
+        /* ================== 内容区域 ================== */
         .admin-content { 
             margin-left: 240px; width: calc(100% - 240px); padding: 20px; 
-            font-size: 14px; /* <--- 关键点：全局内容字体缩小到 14px */
+            font-size: 14px; 
         }
-        
-        /* 标题样式 (强制跟 Dashboard 一致) */
         .admin-content h3 { 
-            font-size: 18px; font-weight: bold; margin-bottom: 20px; /* <--- 关键点：标题缩小到 18px */
+            font-size: 18px; font-weight: bold; margin-bottom: 20px; 
         }
-        
-        /* 图片管理特有样式 */
+
+        /* ================== 图片管理页特有样式 ================== */
         .cat-item { cursor: pointer; padding: 10px; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
         .cat-item:hover { background-color: #e9ecef; }
         .cat-item.active { background-color: #0d6efd; color: white; }
         
         .img-card { position: relative; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; background: #fff; transition: 0.2s; }
         .img-card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); transform: translateY(-2px); }
-        /* 之前你修改过的 contain 样式保持不变 */
         .img-thumb { height: 120px; width: 100%; object-fit: contain; background-color: #eee; }
         .img-info { padding: 8px; font-size: 12px; }
         .img-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; font-weight: bold;}
