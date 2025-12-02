@@ -1261,7 +1261,7 @@ async function handleApi(request, env, url) {
                 const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status=1").bind(out_trade_no).first();
                 
                 if (order) {
-                    // ================== START: 订单推送通知逻辑 (完美详细版) ==================
+                    // ================== START: 订单推送通知逻辑 (含库存显示) ==================
                     try {
                         // 1. 读取配置
                         const keys = [
@@ -1284,13 +1284,13 @@ async function handleApi(request, env, url) {
                         let contentBody = '';
 
                         if (order.variant_id === 0) {
-                            // === 情况A：购物车合并订单 (显示详细清单) ===
+                            // === 情况A：购物车合并订单 ===
                             contentBody = '【购物车合并订单】\n----------------';
                             try {
                                 const items = JSON.parse(order.cards_sent || '[]');
                                 for (const item of items) {
                                     let itemNote = '';
-                                    // 如果该商品是自选模式，去查备注
+                                    // 自选备注查询
                                     if (item.buyMode === 'select' && item.selectedCardId) {
                                         const card = await db.prepare("SELECT content FROM cards WHERE id=?").bind(item.selectedCardId).first();
                                         if (card && card.content) {
@@ -1301,8 +1301,17 @@ async function handleApi(request, env, url) {
                                     } else {
                                         itemNote = ' (随机)';
                                     }
-                                    // 拼接单行：商品名 - 规格 [备注] x数量
-                                    contentBody += `\n• ${item.productName} - ${item.variantName}${itemNote} × ${item.quantity}`;
+                                    
+                                    // [新增] 查询该规格的实时库存
+                                    // 注意：此时库存尚未扣除，显示“剩余”建议减去当前购买量
+                                    let currentStock = 0;
+                                    try {
+                                        const vInfo = await db.prepare("SELECT stock FROM variants WHERE id=?").bind(item.variantId).first();
+                                        if (vInfo) currentStock = Math.max(0, vInfo.stock - item.quantity);
+                                    } catch(e) {}
+
+                                    // 拼接单行：商品名 - 规格 [备注] x数量 (库存: xx)
+                                    contentBody += `\n• ${item.productName} - ${item.variantName}${itemNote} × ${item.quantity} (库存：${currentStock})`;
                                 }
                             } catch(e) { 
                                 contentBody += '\n(购物车详情解析失败)';
@@ -1312,6 +1321,8 @@ async function handleApi(request, env, url) {
                         } else {
                             // === 情况B：单个商品直接下单 ===
                             let modeLine = '类型：默认随机';
+                            
+                            // 自选备注查询
                             try {
                                 const cs = JSON.parse(order.cards_sent || '{}');
                                 if (cs && cs.target_id) {
@@ -1325,18 +1336,25 @@ async function handleApi(request, env, url) {
                                      modeLine = `类型：自选/加价 (${note})`;
                                 }
                             } catch(e) {}
+
+                            // [新增] 查询实时库存
+                            let currentStock = 0;
+                            try {
+                                const vInfo = await db.prepare("SELECT stock FROM variants WHERE id=?").bind(order.variant_id).first();
+                                if (vInfo) currentStock = Math.max(0, vInfo.stock - order.quantity);
+                            } catch(e) {}
                             
-                            contentBody = `商品：${order.product_name}\n规格：${order.variant_name}\n${modeLine}\n数量：${order.quantity}`;
+                            contentBody = `商品：${order.product_name}\n规格：${order.variant_name}\n${modeLine}\n数量：${order.quantity} (库存：${currentStock})`;
                         }
 
                         // 4. 组合最终消息
                         const msgText = `新订单通知！
-                        完成订单：${dateStr}
-                        ${contentBody}
-                        ----------------
-                        总金额：${order.total_amount}元
-                        联系方式：${order.contact}
-                        订单号：${order.id}`;
+完成订单：${dateStr}
+${contentBody}
+----------------
+总金额：${order.total_amount}元
+联系方式：${order.contact}
+订单号：${order.id}`;
 
                         const notifications = [];
 
