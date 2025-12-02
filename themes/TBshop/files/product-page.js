@@ -190,7 +190,7 @@ function renderProductDetail(p) {
                             <span class="text-secondary small me-3">数量：</span>
                             <div class="input-group" style="width: 120px;">
                                 <button class="btn btn-outline-secondary btn-sm" type="button" onclick="changeQty(-1)">-</button>
-                                <input type="text" class="form-control form-control-sm text-center" id="buy-qty" value="1" readonly>
+                                <input type="text" class="form-control form-control-sm text-center input-light" id="buy-qty" value="1" readonly>
                                 <button class="btn btn-outline-secondary btn-sm" type="button" onclick="changeQty(1)">+</button>
                             </div>
                         </div>
