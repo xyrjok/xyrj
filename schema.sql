@@ -5,7 +5,7 @@ CREATE TABLE site_config (
 );
 INSERT OR IGNORE INTO site_config (key, value) 
 VALUES 
-('site_name', 'CF Faka Demo'), 
+('site_name', '夏雨 Faka Demo'), 
 ('announce', '<p>欢迎光临</p>'), 
 ('theme', 'default');
 
