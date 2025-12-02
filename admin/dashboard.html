@@ -293,7 +293,7 @@
         const val = dashboardData.income[type];
         // 格式化金额，保留2位小数
         document.getElementById('s-income').innerText = '￥' + parseFloat(val).toFixed(2);
-    }
+    };
 
     (async function init() {
         const data = await api('dashboard');
