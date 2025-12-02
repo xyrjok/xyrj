@@ -320,18 +320,55 @@ async function handleApi(request, env, url) {
             if (!authHeader || authHeader !== `Bearer ${env.ADMIN_TOKEN}`) {
                 return errRes('Unauthorized', 401);
             }
-
-            // --- 仪表盘 ---
+            
+            // --- 仪表盘 (升级版：支持多时间维度) ---
             if (path === '/api/admin/dashboard') {
+                const now = Math.floor(Date.now() / 1000);
                 const today = new Date().setHours(0,0,0,0) / 1000;
-                const stats = {};
-                stats.orders_today = (await db.prepare("SELECT COUNT(*) as c FROM orders WHERE created_at >= ?").bind(today).first()).c;
-                stats.income_today = (await db.prepare("SELECT SUM(total_amount) as s FROM orders WHERE status >= 1 AND paid_at >= ?").bind(today).first()).s || 0;
-                stats.cards_unsold = (await db.prepare("SELECT COUNT(*) as c FROM cards WHERE status = 0").first()).c;
-                stats.orders_pending = (await db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 0").first()).c;
+                const week = now - 7 * 86400;   // 最近7天
+                const month = now - 30 * 86400; // 最近30天
+                const year = now - 365 * 86400; // 最近一年
+
+                // 使用 Promise.all 并发查询，提高速度
+                const [
+                    r_o_today, r_o_week, r_o_month,
+                    r_i_today, r_i_week, r_i_month, r_i_year,
+                    r_cards, r_pending
+                ] = await Promise.all([
+                    // 订单数统计
+                    db.prepare("SELECT COUNT(*) as c FROM orders WHERE created_at >= ?").bind(today).first(),
+                    db.prepare("SELECT COUNT(*) as c FROM orders WHERE created_at >= ?").bind(week).first(),
+                    db.prepare("SELECT COUNT(*) as c FROM orders WHERE created_at >= ?").bind(month).first(),
+                    
+                    // 收入统计
+                    db.prepare("SELECT SUM(total_amount) as s FROM orders WHERE status >= 1 AND paid_at >= ?").bind(today).first(),
+                    db.prepare("SELECT SUM(total_amount) as s FROM orders WHERE status >= 1 AND paid_at >= ?").bind(week).first(),
+                    db.prepare("SELECT SUM(total_amount) as s FROM orders WHERE status >= 1 AND paid_at >= ?").bind(month).first(),
+                    db.prepare("SELECT SUM(total_amount) as s FROM orders WHERE status >= 1 AND paid_at >= ?").bind(year).first(),
+                    
+                    // 其他
+                    db.prepare("SELECT COUNT(*) as c FROM cards WHERE status = 0").first(),
+                    db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 0").first()
+                ]);
+
+                const stats = {
+                    orders: {
+                        today: r_o_today.c,
+                        week: r_o_week.c,
+                        month: r_o_month.c
+                    },
+                    income: {
+                        today: r_i_today.s || 0,
+                        week: r_i_week.s || 0,
+                        month: r_i_month.s || 0,
+                        year: r_i_year.s || 0
+                    },
+                    cards_unsold: r_cards.c,
+                    orders_pending: r_pending.c
+                };
+                
                 return jsonRes(stats);
             }
-
             // --- 商品分类 API ---
             if (path === '/api/admin/categories/list') {
                 const { results } = await db.prepare("SELECT * FROM categories ORDER BY sort DESC, id DESC").all();
