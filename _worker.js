@@ -1465,8 +1465,8 @@ async function handleApi(request, env, url) {
                         // 1. 读取配置
                         const keys = [
                             'tg_active', 'tg_bot_token', 'tg_chat_id', 
-                            'wecom_active', 'wecom_key',
-                            'wxpusher_active', 'wxpusher_app_token', 'wxpusher_uid'
+                            'brevo_active', 'brevo_key', 'brevo_sender', 'mail_to',
+                            'pa_active', 'pa_url'
                         ];
                         const placeholders = keys.map(() => '?').join(',');
                         const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...keys).all();
@@ -1566,29 +1566,36 @@ ${contentBody}
                             }));
                         }
 
-                        // --- 企业微信 推送 ---
-                        if (config.wecom_active === '1' && config.wecom_key) {
-                            notifications.push(fetch(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${config.wecom_key}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ msgtype: "text", text: { content: msgText } })
-                            }));
-                        }
-
-                        // --- WxPusher 推送 ---
-                        if (config.wxpusher_active === '1' && config.wxpusher_app_token && config.wxpusher_uid) {
-                            notifications.push(fetch('https://wxpusher.zjiecode.com/api/send/message', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                        // --- Brevo (Sendinblue) 邮件推送 (新增) ---
+                        if (config.brevo_active === '1' && config.brevo_key && config.mail_to && config.brevo_sender) {
+                            notifications.push(fetch("https://api.brevo.com/v3/smtp/email", {
+                                method: "POST",
+                                headers: {
+                                    "accept": "application/json",
+                                    "api-key": config.brevo_key,
+                                    "content-type": "application/json"
+                                },
                                 body: JSON.stringify({
-                                    appToken: config.wxpusher_app_token,
-                                    content: msgText,
-                                    contentType: 1, 
-                                    uids: [config.wxpusher_uid]
+                                    "sender": { "email": config.brevo_sender, "name": "夏雨店铺" },
+                                    "to": [{ "email": config.mail_to }],
+                                    "subject": `新订单通知：${order.id}`,
+                                    "htmlContent": msgText.replace(/\n/g, '<br>')
                                 })
                             }));
                         }
 
+                        // --- Microsoft Power Automate 推送 (新增) ---
+                        if (config.pa_active === '1' && config.pa_url) {
+                            notifications.push(fetch(config.pa_url, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    "subject": `新订单通知：${order.id}`,
+                                    "content": msgText,
+                                    "email": config.mail_to || ""
+                                })
+                            }));
+                        }
                         // 异步发送
                         if (notifications.length > 0 && ctx && ctx.waitUntil) {
                             ctx.waitUntil(Promise.all(notifications));
