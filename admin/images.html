@@ -218,7 +218,7 @@
                     <div class="img-info">
                         <div class="img-name" title="${img.name}">${img.name}</div>
                         <div class="img-actions">
-                            <i class="fas fa-copy copy-btn" onclick="copyUrl('${img.url}')" title="复制链接"></i>
+                            <i class="fas fa-copy copy-btn" onclick="copyUrl('${img.url}', this)" title="复制链接"></i>
                             <i class="fas fa-trash text-danger" style="cursor:pointer" onclick="deleteSingle(${img.id})" title="删除"></i>
                         </div>
                     </div>
@@ -303,8 +303,44 @@
         loadImages(currentPage);
     }
 
-    function copyUrl(url) {
-        navigator.clipboard.writeText(url).then(() => alert('链接已复制'));
+    function copyUrl(url, el) {
+        navigator.clipboard.writeText(url).then(() => {
+            // 1. 视觉反馈：立刻把图标变成绿色的“对勾”
+            const originalClass = el.className;
+            el.className = 'fas fa-check text-success'; 
+    
+            // 2. 创建一个临时的“已复制”小标签
+            const tip = document.createElement('span');
+            tip.innerText = '已复制';
+            // 设置样式：黑色半透明背景，白色文字，显示在图标上方
+            Object.assign(tip.style, {
+                position: 'absolute',
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                color: '#fff',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                bottom: '100%', // 显示在上方
+                left: '50%',
+                transform: 'translateX(-50%)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                zIndex: '1000'
+            });
+    
+            // 确保父元素定位正确，以便小标签能相对定位
+            if (getComputedStyle(el.parentElement).position === 'static') {
+                el.parentElement.style.position = 'relative';
+            }
+    
+            el.parentElement.appendChild(tip);
+    
+            // 3. 1秒后恢复原状
+            setTimeout(() => {
+                el.className = originalClass; // 恢复图标
+                if(tip.parentNode) tip.parentNode.removeChild(tip); // 移除提示
+            }, 1000);
+        });
     }
 
     // 分页渲染
