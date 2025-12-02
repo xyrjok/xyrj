@@ -173,26 +173,41 @@
         <div class="row g-3 text-center">
             <div class="col-md-4">
                 <div class="bg-primary text-white card-box">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="card-title">今日订单</span>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <select class="form-select form-select-sm border-0 text-white" 
+                                style="width:auto; background-color: rgba(255,255,255,0.2); cursor:pointer;" 
+                                id="sel-orders" onchange="renderOrders()">
+                            <option value="today" class="text-dark">今日订单</option>
+                            <option value="week" class="text-dark">最近7天</option>
+                            <option value="month" class="text-dark">最近一个月</option>
+                        </select>
                         <i class="fas fa-shopping-bag"></i>
                     </div>
                     <div id="s-orders" class="card-number">-</div>
                 </div>
             </div>
+
             <div class="col-md-4">
                 <div class="bg-success text-white card-box">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="card-title">今日收入</span>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <select class="form-select form-select-sm border-0 text-white" 
+                                style="width:auto; background-color: rgba(255,255,255,0.2); cursor:pointer;" 
+                                id="sel-income" onchange="renderIncome()">
+                            <option value="today" class="text-dark">今日收入</option>
+                            <option value="week" class="text-dark">最近7天</option>
+                            <option value="month" class="text-dark">最近一个月</option>
+                            <option value="year" class="text-dark">最近一年</option>
+                        </select>
                         <i class="fas fa-yen-sign"></i>
                     </div>
                     <div id="s-income" class="card-number">-</div>
                 </div>
             </div>
+
             <div class="col-md-4">
                 <div class="bg-warning text-dark card-box">
-                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="card-title">库存卡密</span>
+                     <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="card-title" style="padding: 5px 0;">库存卡密</span>
                         <i class="fas fa-database"></i>
                     </div>
                     <div id="s-cards" class="card-number">-</div>
@@ -259,16 +274,39 @@
             return res.json();
         } catch(e) { return {}; }
     }
+    
+    // 全局变量存储数据
+    let dashboardData = null;
+
+    // 渲染订单数据
+    window.renderOrders = function() {
+        if(!dashboardData) return;
+        const type = document.getElementById('sel-orders').value;
+        const val = dashboardData.orders[type];
+        document.getElementById('s-orders').innerText = val;
+    }
+
+    // 渲染收入数据
+    window.renderIncome = function() {
+        if(!dashboardData) return;
+        const type = document.getElementById('sel-income').value;
+        const val = dashboardData.income[type];
+        // 格式化金额，保留2位小数
+        document.getElementById('s-income').innerText = '￥' + parseFloat(val).toFixed(2);
+    }
 
     (async function init() {
         const data = await api('dashboard');
         if(data) {
-            document.getElementById('s-orders').innerText = data.orders_today || 0;
-            document.getElementById('s-income').innerText = '￥' + (data.income_today || 0);
+            dashboardData = data; // 存入全局变量
+            
+            // 初始渲染
+            renderOrders();
+            renderIncome();
+            
             document.getElementById('s-cards').innerText = data.cards_unsold || 0;
         }
     })();
-
     // --- MyBlog 风格移动端菜单逻辑 ---
     const mobileBtn = document.getElementById('mobile-menu-toggle');
     const sidebar = document.getElementById('sidebar');
