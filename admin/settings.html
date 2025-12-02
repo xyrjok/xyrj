@@ -113,13 +113,13 @@
                 <li><a href="/admin/dashboard.html"><i class="fas fa-tachometer-alt"></i> 仪表盘</a></li>
                 <li><a href="/admin/categories.html"><i class="fas fa-folder"></i> 商品分类</a></li>
                 <li><a href="/admin/products.html"><i class="fas fa-box"></i> 商品管理</a></li>
-				<li><a href="/admin/cards.html"><i class="fas fa-ticket-alt"></i> 卡密管理</a></li>
+                <li><a href="/admin/cards.html"><i class="fas fa-ticket-alt"></i> 卡密管理</a></li>
                 <li><a href="/admin/orders.html"><i class="fas fa-shopping-cart"></i> 订单管理</a></li>
                 <li><a href="/admin/payments.html"><i class="fas fa-credit-card"></i> 支付设置</a></li>
                 <li><a href="/admin/article_categories.html"><i class="fas fa-tags"></i> 文章分类</a></li>
                 <li><a href="/admin/articles.html"><i class="fas fa-newspaper"></i> 文章管理</a></li>
                 <li><a href="/admin/settings.html" class="active"><i class="fas fa-cog"></i> 系统设置</a></li>
-				<li><a href="/admin/images.html"><i class="fas fa-images"></i> 图片管理</a></li>
+                <li><a href="/admin/images.html"><i class="fas fa-images"></i> 图片管理</a></li>
                 <li><a href="javascript:logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
             </ul>
         </div>
@@ -197,9 +197,10 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Chat ID</label>
-									<input type="text" class="form-control" id="tg_chat_id" placeholder="用户ID或群组ID">
-								</div>
-                                    <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fas fa-envelope text-info"></i> 邮件通知设置 (通用)</h6>
+                                    <input type="text" class="form-control" id="tg_chat_id" placeholder="用户ID或群组ID">
+                                </div>
+
+                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fas fa-envelope text-info"></i> 邮件通知设置 (通用)</h6>
                                 <div class="mb-3">
                                     <label class="form-label">接收通知的邮箱</label>
                                     <input type="email" class="form-control" id="mail_to" placeholder="例如：123456@qq.com">
@@ -229,7 +230,7 @@
                                     <label class="form-label">发件人邮箱 (Sender Email)</label>
                                     <input type="email" class="form-control" id="brevo_sender" placeholder="需在 Brevo 后台验证过的发件人">
                                 </div>
-							</div>
+                            </div>
                         </div>
 
                         <div class="mt-4 pt-3 border-top">
@@ -295,12 +296,12 @@
             document.getElementById('theme_select').value = config.theme || 'default';
             document.getElementById('announce').value = config.announce || '';
             document.getElementById('contact_info').value = config.contact_info || '';
-			// --- 订单推送设置回显 ---
+            // --- 订单推送设置回显 ---
             document.getElementById('tg_active').checked = (config.tg_active === '1');
             document.getElementById('tg_bot_token').value = config.tg_bot_token || '';
             document.getElementById('tg_chat_id').value = config.tg_chat_id || '';
 
-			document.getElementById('mail_to').value = config.mail_to || '';
+            document.getElementById('mail_to').value = config.mail_to || '';
 
             document.getElementById('pa_active').checked = (config.pa_active === '1');
             document.getElementById('pa_url').value = config.pa_url || '';
@@ -324,12 +325,12 @@
             theme: document.getElementById('theme_select').value,
             announce: document.getElementById('announce').value,
             contact_info: document.getElementById('contact_info').value,
-			// --- 订单推送设置保存 ---
+            // --- 订单推送设置保存 ---
             tg_active: document.getElementById('tg_active').checked ? '1' : '0',
             tg_bot_token: document.getElementById('tg_bot_token').value,
             tg_chat_id: document.getElementById('tg_chat_id').value,
 
-			mail_to: document.getElementById('mail_to').value,
+            mail_to: document.getElementById('mail_to').value,
 
             pa_active: document.getElementById('pa_active').checked ? '1' : '0',
             pa_url: document.getElementById('pa_url').value,
