@@ -974,7 +974,18 @@ async function handleApi(request, env, url, ctx) {
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
 
                 try {
-                    await db.exec(sqlContent);
+                    // [修改] 优化导入逻辑：将 SQL 按分号分割，每次执行 50 条，防止请求过大报错
+                    const statements = sqlContent.split(';\n').filter(s => s.trim());
+                    const BATCH_SIZE = 50; 
+
+                    for (let i = 0; i < statements.length; i += BATCH_SIZE) {
+                        // 拼接回完整的 SQL 片段
+                        const batch = statements.slice(i, i + BATCH_SIZE).join(';\n');
+                        if(batch.trim()) {
+                            await db.exec(batch);
+                        }
+                    }
+
                     return jsonRes({ success: true });
                 } catch (e) {
                     return errRes('导入失败: ' + e.message);
