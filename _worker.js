@@ -8,6 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
+ * [新增] 客户订单发货通知
  */
 
 // === 工具函数 ===
@@ -22,6 +23,13 @@ const formatTime = (ts) => {
     // 补时差 +8小时 (8 * 3600 * 1000毫秒)
     const d = new Date(ts * 1000 + 28800000);
     return d.toISOString().replace('T', ' ').substring(0, 19);
+};
+
+// [新增] 简单的邮箱格式校验
+const isEmail = (contact) => {
+    // 粗略校验，只要符合 x@y.z 的基本格式即可
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(contact);
 };
 
 // === 支付宝签名与验签核心 (Web Crypto API) ===
@@ -1404,94 +1412,185 @@ async function handleApi(request, env, url, ctx) {
                 const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status=1").bind(out_trade_no).first();
                 
                 if (order) {
-                    // ================== START: 订单推送通知逻辑 (含库存显示) ==================
+                    
+                    // --- 1. 读取配置 (新增客户通知配置) ---
+                    const adminConfigKeys = [
+                        'tg_active', 'tg_bot_token', 'tg_chat_id', 
+                        'brevo_active', 'brevo_key', 'brevo_sender', 'mail_to',
+                        'outlook_active', 'outlook_client_id', 'outlook_client_secret', 'outlook_refresh_token'
+                    ];
+                    // [新增] 客户通知的配置键
+                    const customerConfigKeys = [
+                        'customer_outlook_active', 'customer_outlook_client_id', 
+                        'customer_outlook_client_secret', 'customer_outlook_refresh_token'
+                    ];
+                    const allConfigKeys = [...adminConfigKeys, ...customerConfigKeys];
+                    const placeholders = allConfigKeys.map(() => '?').join(',');
+                    
+                    const systemConfig = {};
                     try {
-                        // 1. 读取配置
-                        const keys = [
-                            'tg_active', 'tg_bot_token', 'tg_chat_id', 
-                            'brevo_active', 'brevo_key', 'brevo_sender', 'mail_to',
-                            'outlook_active', 'outlook_client_id', 'outlook_client_secret', 'outlook_refresh_token'
-                        ];
-                        const placeholders = keys.map(() => '?').join(',');
-                        const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...keys).all();
-                        const config = {};
+                        const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...allConfigKeys).all();
                         if (confRes && confRes.results) {
-                            confRes.results.forEach(r => config[r.key] = r.value);
+                            confRes.results.forEach(r => systemConfig[r.key] = r.value);
                         }
+                    } catch(e) { console.error("Config read error:", e); }
 
-                        // 2. 准备基础数据
-                        const dateDate = new Date((order.paid_at || Date.now()/1000) * 1000 + 28800000); 
-                        const dateStr = `${dateDate.getFullYear()}/${dateDate.getMonth() + 1}/${dateDate.getDate()}`;
+                    // --- 2. 初始化发货数据结构 ---
+                    let contentBody = ''; // for Admin notification
+                    const allCardsContent = []; // Delivered cards (for order update and customer email)
+                    const stmts = []; // DB statements for fulfillment
+                    const autoVariantIdsToUpdate = new Set(); // Auto-delivery variants needing stock update
+                    let newOrderStatus = 2; // Assume success/manual for now
+                    const isCartOrder = order.variant_id === 0;
+                    let singleVariant; // Store variant info for single order mode (only used if not cart order)
+
+
+                    // --- 3. 核心发货逻辑 (填充 stmts, allCardsContent, contentBody) ---
+                    try {
                         
-                        // 3. 构建核心内容块 (Content Body)
-                        let contentBody = '';
-
-                        if (order.variant_id === 0) {
+                        if (isCartOrder) {
                             // === 情况A：购物车合并订单 ===
                             contentBody = '【购物车合并订单】\n----------------';
-                            try {
-                                const items = JSON.parse(order.cards_sent || '[]');
-                                for (const item of items) {
-                                    let itemNote = '';
-                                    // 自选备注查询
+                            const cartItems = JSON.parse(order.cards_sent || '[]');
+                            
+                            for (const item of cartItems) {
+                                let itemCardsContent = [];
+                                const variant = await db.prepare("SELECT auto_delivery, stock FROM variants WHERE id=?").bind(item.variantId).first();
+                                
+                                if (!variant) continue; // Skip if variant no longer exists
+
+                                if (variant.auto_delivery === 1) {
+                                    // 自动发货
+                                    let cards;
                                     if (item.buyMode === 'select' && item.selectedCardId) {
-                                        const card = await db.prepare("SELECT content FROM cards WHERE id=?").bind(item.selectedCardId).first();
-                                        if (card && card.content) {
-                                           const match = card.content.match(/#\[(.*?)\]/);
-                                           if (match) itemNote = ` (自选: ${match[1]})`;
-                                           else itemNote = ' (自选: 指定卡密)';
-                                        }
+                                        cards = await db.prepare("SELECT id, content FROM cards WHERE id=? AND status=0").bind(item.selectedCardId).all();
                                     } else {
-                                        itemNote = ' (随机)';
+                                        cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?").bind(item.variantId, item.quantity).all();
                                     }
                                     
-                                    // [新增] 查询该规格的实时库存
-                                    // 注意：此时库存尚未扣除，显示“剩余”建议减去当前购买量
-                                    let currentStock = 0;
-                                    try {
-                                        const vInfo = await db.prepare("SELECT stock FROM variants WHERE id=?").bind(item.variantId).first();
-                                        if (vInfo) currentStock = Math.max(0, vInfo.stock - item.quantity);
-                                    } catch(e) {}
+                                    if (cards.results.length >= item.quantity) {
+                                        const cardIds = cards.results.map(c => c.id);
+                                        itemCardsContent = cards.results.map(c => c.content);
+                                        allCardsContent.push(...itemCardsContent);
+                                        
+                                        stmts.push(db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no));
+                                        stmts.push(db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(item.quantity, item.variantId));
+                                        autoVariantIdsToUpdate.add(item.variantId);
 
-                                    // 拼接单行：商品名 - 规格 [备注] x数量 (库存: xx)
-                                    contentBody += `\n• ${item.productName} - ${item.variantName}${itemNote} × ${item.quantity} (库存：${currentStock})`;
+                                        // Admin 通知内容补充
+                                        let itemNote = ' (随机)';
+                                        if (item.buyMode === 'select' && item.selectedCardId) {
+                                            const card = await db.prepare("SELECT content FROM cards WHERE id=?").bind(item.selectedCardId).first();
+                                            const match = card?.content.match(/#\[(.*?)\]/);
+                                            itemNote = ` (自选: ${match ? match[1] : '指定卡密'})`;
+                                        }
+                                        // 库存显示
+                                        const currentCardCount = (await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(item.variantId).first()).c;
+                                        const finalStock = Math.max(0, currentCardCount - item.quantity);
+                                        contentBody += `\n• ${item.productName} - ${item.variantName}${itemNote} × ${item.quantity} (库存：${finalStock})`;
+                                    } else {
+                                        // 缺货，不发货，但订单状态保持已支付 (status=1)
+                                        contentBody += `\n• ${item.productName} - ${item.variantName} × ${item.quantity} (缺货，需手动处理)`;
+                                        newOrderStatus = 1; 
+                                    }
+                                } else {
+                                    // 手动发货
+                                    stmts.push(db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(item.quantity, item.quantity, item.variantId));
+                                    const finalStock = Math.max(0, (variant.stock || 0) - item.quantity);
+                                    contentBody += `\n• ${item.productName} - ${item.variantName} (手动发货) × ${item.quantity} (库存：${finalStock})`;
                                 }
-                            } catch(e) { 
-                                contentBody += '\n(购物车详情解析失败)';
-                                console.error('Cart parse error:', e);
                             }
-                            
+                            if (newOrderStatus !== 1 && allCardsContent.length === 0) {
+                                // 纯手动发货的购物车订单，确保状态仍为 2
+                                newOrderStatus = 2;
+                            }
                         } else {
                             // === 情况B：单个商品直接下单 ===
+                            singleVariant = await db.prepare("SELECT auto_delivery, name, price, stock FROM variants WHERE id=?").bind(order.variant_id).first();
+                            if (!singleVariant) throw new Error("Variant not found for single order fulfillment.");
+                            
                             let modeLine = '类型：默认随机';
                             
-                            // 自选备注查询
-                            try {
-                                const cs = JSON.parse(order.cards_sent || '{}');
-                                if (cs && cs.target_id) {
-                                     const card = await db.prepare("SELECT content FROM cards WHERE id=?").bind(cs.target_id).first();
-                                     let note = '无备注';
-                                     if (card && card.content) {
-                                         const match = card.content.match(/#\[(.*?)\]/);
-                                         if (match) note = match[1];
-                                         else note = '指定卡密';
-                                     }
-                                     modeLine = `类型：自选/加价 (${note})`;
-                                }
-                            } catch(e) {}
+                            if (singleVariant.auto_delivery === 1) {
+                                // 自动发货
+                                let targetCardId = null;
+                                try {
+                                    const placeholder = JSON.parse(order.cards_sent);
+                                    if (placeholder && placeholder.target_id) targetCardId = placeholder.target_id;
+                                } catch(e) {}
 
-                            // [新增] 查询实时库存
-                            let currentStock = 0;
-                            try {
-                                const vInfo = await db.prepare("SELECT stock FROM variants WHERE id=?").bind(order.variant_id).first();
-                                if (vInfo) currentStock = Math.max(0, vInfo.stock - order.quantity);
-                            } catch(e) {}
+                                let cards;
+                                if (targetCardId) {
+                                    cards = await db.prepare("SELECT id, content FROM cards WHERE id=? AND status=0").bind(targetCardId).all();
+                                } else {
+                                    cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?")
+                                        .bind(order.variant_id, order.quantity).all();
+                                }
+                                
+                                if (cards.results.length >= order.quantity) {
+                                    const cardIds = cards.results.map(c => c.id);
+                                    allCardsContent.push(...cards.results.map(c => c.content));
+                                    
+                                    stmts.push(db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no));
+                                    stmts.push(db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.variant_id));
+                                    autoVariantIdsToUpdate.add(order.variant_id);
+                                    
+                                    if (targetCardId) {
+                                        const match = cards.results[0]?.content.match(/#\[(.*?)\]/);
+                                        modeLine = `类型：自选/加价 (${match ? match[1] : '指定卡密'})`;
+                                    }
+                                } else {
+                                    console.error(`Notify Warning: Order ${out_trade_no} paid but insufficient stock.`);
+                                    newOrderStatus = 1; // 缺货，保持已支付状态
+                                }
+                            } else {
+                                // 手动发货
+                                stmts.push(db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.quantity, order.variant_id));
+                                modeLine = '类型：手动发货';
+                            }
+
+                            // Admin 通知内容
+                            const currentCardCount = (await db.prepare("SELECT COUNT(*) as c FROM cards WHERE variant_id=? AND status=0").bind(order.variant_id).first()).c;
+                            const stockValue = singleVariant.auto_delivery === 1 ? currentCardCount : singleVariant.stock;
+                            // 如果成功发货，则从库存中减去购买数量
+                            const finalStock = Math.max(0, stockValue - (newOrderStatus === 2 || singleVariant.auto_delivery === 0 ? order.quantity : 0));
                             
-                            contentBody = `商品：${order.product_name}\n规格：${order.variant_name}\n${modeLine}\n数量：${order.quantity} (库存：${currentStock})`;
+                            contentBody = `商品：${order.product_name}\n规格：${order.variant_name}\n${modeLine}\n数量：${order.quantity} (库存：${finalStock})`;
                         }
 
-                        // 4. 组合最终消息
-                        const msgText = `新订单通知！
+                    } catch (e) {
+                        console.error('Fulfillment Error:', e);
+                        newOrderStatus = 1; // 出现错误，状态保持已支付，留待人工处理
+                        contentBody += '\n(发货系统错误，请人工核查!)';
+                    }
+
+                    // --- 4. 数据库最终更新 (订单状态和卡密内容) ---
+                    if (newOrderStatus === 2) {
+                        // 仅在成功发货或手动发货（不需要卡密）的情况下更新状态到 2
+                        stmts.push(db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(allCardsContent), out_trade_no));
+                    } 
+                    // else: 如果是缺货(status=1)，则不更新 cards_sent，保持 status=1
+
+                    if (stmts.length > 0) {
+                        // 批量执行发货和销售计数更新
+                        await db.batch(stmts);
+                    }
+                    
+                    // 更新自动发货商品的库存 (单独批处理，避免在主事务中出错)
+                    if (autoVariantIdsToUpdate.size > 0) {
+                        const stockUpdateStmts = Array.from(autoVariantIdsToUpdate).map(vid => 
+                            db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?").bind(vid, vid)
+                        );
+                        await db.batch(stockUpdateStmts);
+                    }
+                    
+                    // --- 5. 发送通知 ---
+                    const notifications = [];
+                    const dateDate = new Date((order.paid_at || Date.now()/1000) * 1000 + 28800000); 
+                    const dateStr = `${dateDate.getFullYear()}/${dateDate.getMonth() + 1}/${dateDate.getDate()}`;
+                    
+                    // A. 管理员通知
+                    const msgText = `新订单通知！
 完成订单：${dateStr}
 ${contentBody}
 ----------------
@@ -1499,146 +1598,101 @@ ${contentBody}
 联系方式：${order.contact}
 订单号：${order.id}`;
 
-                        const notifications = [];
-
-                        // --- Telegram 推送 ---
-                        if (config.tg_active === '1' && config.tg_bot_token && config.tg_chat_id) {
-                            notifications.push(fetch(`https://api.telegram.org/bot${config.tg_bot_token}/sendMessage`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ chat_id: config.tg_chat_id, text: msgText })
-                            }));
-                        }
-                        // --- Outlook Graph API 推送 (新增) ---
-                        if (config.outlook_active === '1' && config.outlook_client_id && config.outlook_refresh_token && config.mail_to) {
-                            notifications.push(sendOutlookMail(config, `新订单通知：${order.id}`, msgText));
-                        }
-
-                        // --- Brevo (Sendinblue) 邮件推送 (新增) ---
-                        if (config.brevo_active === '1' && config.brevo_key && config.mail_to && config.brevo_sender) {
-                            notifications.push(fetch("https://api.brevo.com/v3/smtp/email", {
-                                method: "POST",
-                                headers: {
-                                    "accept": "application/json",
-                                    "api-key": config.brevo_key,
-                                    "content-type": "application/json"
-                                },
-                                body: JSON.stringify({
-                                    "sender": { "email": config.brevo_sender, "name": "夏雨店铺" },
-                                    "to": [{ "email": config.mail_to }],
-                                    "subject": `新订单通知：${order.id}`,
-                                    "htmlContent": msgText.replace(/\n/g, '<br>')
-                                })
-                            }));
-                        }
-                        // 异步发送
-                        if (notifications.length > 0 && ctx && ctx.waitUntil) {
-                            ctx.waitUntil(Promise.all(notifications));
-                        } else if (notifications.length > 0) {
-                            Promise.all(notifications).catch(err => console.error('Notification Error:', err));
-                        }
-                    } catch (notifyErr) {
-                        console.error('Notification Logic Error:', notifyErr);
+                    // Telegram/Outlook/Brevo 推送 (保持原有的)
+                    if (systemConfig.tg_active === '1' && systemConfig.tg_bot_token && systemConfig.tg_chat_id) {
+                        notifications.push(fetch(`https://api.telegram.org/bot${systemConfig.tg_bot_token}/sendMessage`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ chat_id: systemConfig.tg_chat_id, text: msgText })
+                        }));
                     }
-                    // ================== END: 订单推送通知逻辑 ==================
-                    // --- 合并订单发货逻辑 ---
-                    if (order.variant_id === 0 && order.cards_sent) { 
-                        let cartItems;
-                        try { cartItems = JSON.parse(order.cards_sent); } catch(e) {}
-
-                        if (!cartItems || cartItems.length === 0) {
-                            return new Response('success'); 
-                        }
-                        
-                        const stmts = []; 
-                        const allCardsContent = []; 
-                        const autoVariantIdsToUpdate = new Set(); 
-
-                        for (const item of cartItems) {
-                            if (item.auto_delivery === 1) {
-                                // 自动发货
-                                let cards;
-                                if (item.buyMode === 'select' && item.selectedCardId) {
-                                    cards = await db.prepare("SELECT id, content FROM cards WHERE id=? AND status=0").bind(item.selectedCardId).all();
-                                } else {
-                                    cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?").bind(item.variantId, item.quantity).all();
-                                }
-                                
-                                if (cards.results.length >= item.quantity) {
-                                    const cardIds = cards.results.map(c => c.id);
-                                    const cardContents = cards.results.map(c => c.content);
-                                    allCardsContent.push(...cardContents);
-                                    
-                                    stmts.push(db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no));
-                                    stmts.push(db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(item.quantity, item.variantId));
-                                    autoVariantIdsToUpdate.add(item.variantId);
-                                }
-                            } else {
-                                // 手动发货
-                                stmts.push(db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(item.quantity, item.quantity, item.variantId));
-                            }
+                    if (systemConfig.outlook_active === '1' && systemConfig.outlook_client_id && systemConfig.outlook_refresh_token && systemConfig.mail_to) {
+                        notifications.push(sendOutlookMail(systemConfig, `新订单通知：${order.id}`, msgText));
+                    }
+                    if (systemConfig.brevo_active === '1' && systemConfig.brevo_key && systemConfig.mail_to && systemConfig.brevo_sender) {
+                        notifications.push(fetch("https://api.brevo.com/v3/smtp/email", {
+                            method: "POST", headers: { "accept": "application/json", "api-key": systemConfig.brevo_key, "content-type": "application/json" },
+                            body: JSON.stringify({
+                                "sender": { "email": systemConfig.brevo_sender, "name": "夏雨店铺" },
+                                "to": [{ "email": systemConfig.mail_to }],
+                                "subject": `新订单通知：${order.id}`,
+                                "htmlContent": msgText.replace(/\n/g, '<br>')
+                            })
+                        }));
+                    }
+                    
+                    // B. [新增] 客户发货通知
+                    const customerEmail = isEmail(order.contact) ? order.contact : null;
+                    
+                    if (newOrderStatus === 2 && customerEmail) {
+                        let isManualOrder = false;
+                        if (!isCartOrder) {
+                             isManualOrder = singleVariant?.auto_delivery === 0;
                         } 
-
-                        // 更新父订单
-                        stmts.push(db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(allCardsContent), out_trade_no));
                         
-                        // 【修复点2】批量执行 (batch 自动保证原子性，无需 COMMIT)
-                        if (stmts.length > 0) {
-                            await db.batch(stmts);
-                        }
+                        const hasDeliveredCards = allCardsContent.length > 0;
                         
-                        // 更新库存
-                        if (autoVariantIdsToUpdate.size > 0) {
-                            const stockUpdateStmts = Array.from(autoVariantIdsToUpdate).map(vid => 
-                                db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?").bind(vid, vid)
-                            );
-                            await db.batch(stockUpdateStmts);
-                        }
-
-                    } else {
-                        // --- 单个订单发货逻辑 ---
-                        const variant = await db.prepare("SELECT auto_delivery FROM variants WHERE id=?").bind(order.variant_id).first();
-
-                        if (variant && variant.auto_delivery === 1) {
-                            // 自动发货
-                            let targetCardId = null;
-                            try {
-                                const placeholder = JSON.parse(order.cards_sent);
-                                if (placeholder && placeholder.target_id) targetCardId = placeholder.target_id;
-                            } catch(e) {}
-
-                            let cards;
-                            if (targetCardId) {
-                                cards = await db.prepare("SELECT id, content FROM cards WHERE id=? AND status=0").bind(targetCardId).all();
+                        // 只有在成功发货（status=2）时，才发送邮件
+                        if (isManualOrder || hasDeliveredCards || (isCartOrder && newOrderStatus === 2)) {
+                            
+                            // --- 构建客户邮件内容 ---
+                            let cardContentForCustomer = '';
+                            let customerEmailSubject = `发货通知：您的订单 ${order.id} 已完成`;
+                            
+                            if (hasDeliveredCards) {
+                                cardContentForCustomer = allCardsContent.join('\n');
+                            } else if (isManualOrder) {
+                                cardContentForCustomer = '该商品为手动发货，系统已扣除库存。请联系客服获取商品或等待客服手动处理。';
+                            } else if (isCartOrder) {
+                                // 购物车中包含手动发货商品的情况
+                                if (allCardsContent.length > 0) {
+                                    cardContentForCustomer = '部分商品卡密已发送：\n' + allCardsContent.join('\n') + '\n\n**注意**：订单中可能包含手动发货商品，请联系客服获取未发货商品。';
+                                } else {
+                                    cardContentForCustomer = '您的订单为手动发货订单（或包含手动发货商品），请联系客服获取商品。';
+                                }
                             } else {
-                                cards = await db.prepare("SELECT id, content FROM cards WHERE variant_id=? AND status=0 LIMIT ?")
-                                    .bind(order.variant_id, order.quantity).all();
+                                cardContentForCustomer = '系统已完成发货操作，但无卡密内容（可能为手动发货或无卡密商品）。请联系客服获取商品。';
                             }
                             
-                            if (cards.results.length >= order.quantity) {
-                                const cardIds = cards.results.map(c => c.id);
-                                const cardContents = cards.results.map(c => c.content);
-                                
-                                // 【修复点3】删除 COMMIT，直接 batch 执行
-                                await db.batch([
-                                    db.prepare(`UPDATE cards SET status=1, order_id=? WHERE id IN (${cardIds.join(',')})`).bind(out_trade_no),
-                                    db.prepare("UPDATE orders SET status=2, cards_sent=? WHERE id=?").bind(JSON.stringify(cardContents), out_trade_no),
-                                    db.prepare("UPDATE variants SET sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.variant_id)
-                                ]);
-                                
-                                await db.prepare("UPDATE variants SET stock = (SELECT COUNT(*) FROM cards WHERE variant_id=? AND status=0) WHERE id = ?")
-                                        .bind(order.variant_id, order.variant_id).run();
-                                        
+                            let productNameForCustomer = order.product_name;
+                            if (!isCartOrder) {
+                                productNameForCustomer = `${order.product_name} - ${order.variant_name}`;
                             } else {
-                                console.error(`Notify Warning: Order ${out_trade_no} paid but insufficient stock.`);
+                                productNameForCustomer = `购物车合并订单`;
                             }
-                        } else {
-                            // 手动发货
-                            // 【修复点4】删除 COMMIT
-                            await db.batch([
-                                db.prepare("UPDATE variants SET stock = stock - ?, sales_count = sales_count + ? WHERE id=?").bind(order.quantity, order.quantity, order.variant_id)
-                            ]);
+
+                            const customerMailBody = `发货通知！
+完成订单：${dateStr}
+商品：${productNameForCustomer}
+卡密：
+${cardContentForCustomer}
+----------------
+总金额：${order.total_amount}元
+订单号：${order.id}`;
+
+                            // --- 客户 Outlook 推送 ---
+                            const c_active = systemConfig.customer_outlook_active === '1';
+                            const c_client_id = systemConfig.customer_outlook_client_id;
+                            const c_secret = systemConfig.customer_outlook_client_secret;
+                            const c_refresh = systemConfig.customer_outlook_refresh_token;
+
+                            if (c_active && c_client_id && c_refresh) {
+                                const customerOutlookConfig = { 
+                                    outlook_client_id: c_client_id, 
+                                    outlook_client_secret: c_secret, 
+                                    outlook_refresh_token: c_refresh, 
+                                    mail_to: customerEmail 
+                                };
+                                notifications.push(sendOutlookMail(customerOutlookConfig, customerEmailSubject, customerMailBody));
+                            }
                         }
+                    } 
+
+
+                    // 异步发送
+                    if (notifications.length > 0 && ctx && ctx.waitUntil) {
+                        ctx.waitUntil(Promise.all(notifications));
+                    } else if (notifications.length > 0) {
+                        Promise.all(notifications).catch(err => console.error('Notification Error:', err));
                     }
                 }
             }
@@ -1660,7 +1714,7 @@ async function sendOutlookMail(config, subject, content) {
         const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
         const params = new URLSearchParams();
         params.append('client_id', config.outlook_client_id);
-        params.append('client_secret', config.outlook_client_secret);
+        params.append('client_secret', config.outlook_client_secret || '');
         params.append('refresh_token', config.outlook_refresh_token);
         params.append('grant_type', 'refresh_token');
         params.append('scope', 'Mail.Send offline_access');
@@ -1679,8 +1733,10 @@ async function sendOutlookMail(config, subject, content) {
             message: {
                 subject: subject,
                 body: {
-                    contentType: "Text",
-                    content: content
+                    // 使用 HTML 格式以便换行符生效
+                    contentType: "Html",
+                    // 将 \n 替换为 <br>
+                    content: content.replace(/\n/g, '<br>')
                 },
                 toRecipients: [
                     { emailAddress: { address: config.mail_to } }
