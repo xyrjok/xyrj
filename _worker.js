@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [修复] 数据库导入采用 db.exec 批量模式，彻底解决 FOREIGN KEY 约束错误
+ * [修复] 数据库导入采用 db.batch 模式，并强制每个批次关闭外键约束，解决 D1 平台导入问题。
  */
 
 // === 工具函数 ===
@@ -656,7 +656,7 @@ async function handleApi(request, env, url, ctx) {
                 // 5. 返回文件下载响应
                 return new Response(fileContent, {
                     headers: {
-                        'Content-Type': 'text/plain; charset=utf-8',
+                        'Content-Type': 'application/sql',
                         'Content-Disposition': `attachment; filename="cards_export_${time()}.txt"`
                     }
                 });
@@ -980,13 +980,13 @@ async function handleApi(request, env, url, ctx) {
                 });
             }
 
-            // 导入数据库 (Import) - 最终修复版：使用 db.exec 一次性处理 PRAGMA 和所有语句
+            // 导入数据库 (Import) - 最终修复版：使用 db.batch 模式，强制每个批次关闭外键约束
             if (path === '/api/admin/db/import' && method === 'POST') {
                 const sqlContent = await request.text();
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
 
                 try {
-                    // 1. 分割 SQL 语句（以便清洗）
+                    // 1. 分割 SQL 语句（兼容新旧格式）
                     let rawStatements;
                     if (sqlContent.includes('/*_SEP_*/')) {
                         rawStatements = sqlContent.split('/*_SEP_*/');
@@ -995,28 +995,46 @@ async function handleApi(request, env, url, ctx) {
                         rawStatements = sqlContent.replace(/\r\n/g, '\n').split(';\n');
                     }
 
-                    // 2. 清洗：只保留有效的 SQL 语句，去除所有 PRAGMA 和注释
+                    // 2. 清洗：只保留有效的 SQL 语句，去除所有 PRAGMA、注释和空行
                     const cleanStatements = rawStatements
                         .map(s => s.trim())
                         .filter(s => s) 
                         .filter(s => !s.toUpperCase().startsWith('PRAGMA') && !s.toUpperCase().startsWith('--'));
                     
-                    // 3. 构建单个巨大的 SQL 字符串，并用 PRAGMA 强制包裹
-                    // 理论上，这是最符合 SQLite 导入规范且最能规避 D1 批处理状态丢失的方法。
-                    let bulkSql = `
-                        PRAGMA foreign_keys = OFF;
-                        ${cleanStatements.join(';\n')}
-                        PRAGMA foreign_keys = ON;
-                    `;
+                    // 3. 批量执行
+                    const BATCH_SIZE = 40; 
                     
-                    // 4. 使用 db.exec() 运行多语句
-                    await db.exec(bulkSql);
+                    for (let i = 0; i < cleanStatements.length; i += BATCH_SIZE) {
+                        const chunk = cleanStatements.slice(i, i + BATCH_SIZE);
+                        if (chunk.length === 0) continue;
+
+                        const preparedStmts = [];
+                        
+                        // [核心修复] 每个 batch 第一条指令强制关闭外键约束
+                        // 解决 FOREIGN KEY 约束失败
+                        preparedStmts.push(db.prepare("PRAGMA foreign_keys = OFF"));
+                        
+                        // 添加实际的 SQL
+                        chunk.forEach(sql => {
+                             // 必须再次检查，防止空字符串被转为 prepare statement
+                             if(sql.length > 0) preparedStmts.push(db.prepare(sql));
+                        });
+                        
+                        // D1 文档建议默认开启外键，所以我们在最后一个批次后重新开启
+                        const isLastChunk = i + BATCH_SIZE >= cleanStatements.length;
+                        if (isLastChunk) {
+                             preparedStmts.push(db.prepare("PRAGMA foreign_keys = ON"));
+                        }
+                        
+                        // 执行批处理，使用 db.batch 避免 db.exec 的 duration 错误
+                        await db.batch(preparedStmts);
+                    }
 
                     return jsonRes({ success: true });
                 } catch (e) {
-                    console.error(e);
-                    // 返回更具体的错误信息
-                    return errRes('导入失败: ' + e.message + ' (请检查SQL文件结构，或尝试使用新版导出功能重新生成备份文件)');
+                    console.error('D1 Import Error:', e);
+                    // 返回更具体的错误信息，指导用户操作
+                    return errRes('导入失败: ' + e.message + ' (请检查 SQL 文件结构，或使用新版导出功能重新生成备份文件)');
                 }
             }
         }
