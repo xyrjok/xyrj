@@ -56,11 +56,9 @@ function renderProductList(products, categoryId) {
         const productPrice = parseFloat(rawPrice).toFixed(2);
         
         // *** 逻辑：发货方式和按钮状态 ***
-        // 假设发货方式从 product.delivery_type 获取，若无则默认为“自动发货”
         const deliveryType = product.delivery_type || "自动发货"; 
         const isAvailable = totalStock > 0;
 
-        // 【修改 2】按钮逻辑：库存 > 0 则为 primary/购买，否则为 secondary/缺货/不可点击
         const buttonClass = isAvailable ? 'btn-primary' : 'btn-secondary disabled';
         const buttonText = isAvailable ? '购买' : '缺货';
         const buttonAction = isAvailable ? `/product?id=${product.id}` : 'javascript:void(0)';
@@ -84,7 +82,7 @@ function renderProductList(products, categoryId) {
                     <small class="d-block text-muted">库存: ${totalStock} | 销量: ${totalSales}</small>
                 </div>
 
-                <div class="ms-auto text-end d-flex flex-column justify-content-center align-items-end">
+                <div class="ms-auto text-end d-flex flex-column justify-content-center align-items-end product-action-area">
                     <div class="product-price mb-2">
                          <span class="text-danger">¥ ${productPrice}</span>
                     </div>
@@ -100,7 +98,10 @@ function renderProductList(products, categoryId) {
     });
 }
 
-// ... (loadProducts, loadCategories 函数保持不变，路径为 /api/shop/...)
+/**
+ * 加载商品数据 (使用 /api/shop/products 接口)
+ * @param {string | number | null} categoryId 
+ */
 function loadProducts(categoryId = null) {
     const listContainer = $('#product-list');
     listContainer.empty().append('<p class="text-center text-muted p-3">商品数据加载中...</p>');
@@ -139,6 +140,9 @@ function loadProducts(categoryId = null) {
     });
 }
 
+/**
+ * 加载分类数据 (使用 /api/shop/categories 接口)
+ */
 function loadCategories() {
     $.ajax({
         url: '/api/shop/categories',
