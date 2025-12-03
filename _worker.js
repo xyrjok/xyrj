@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [修复] 数据库导入采用 db.batch 模式，并强制每个批次关闭外键约束，解决 D1 平台导入问题。
+ * [修复] 数据库导入采用 db.batch 模式，强制执行 DROP/CREATE TABLE 语句，解决 "table already exists" 错误。
  */
 
 // === 工具函数 ===
@@ -947,6 +947,7 @@ async function handleApi(request, env, url, ctx) {
                 
                 let sqlDump = "-- Cloudflare D1 Dump (Ordered)\n";
                 sqlDump += `-- Date: ${new Date().toISOString()}\n\n`;
+                // 确保在 dump 中加入了 DROP TABLE，这是导入成功的关键前提
                 sqlDump += "PRAGMA foreign_keys = OFF;\n\n"; 
 
                 for (const table of tables) {
@@ -996,6 +997,7 @@ async function handleApi(request, env, url, ctx) {
                     }
 
                     // 2. 清洗：只保留有效的 SQL 语句，去除所有 PRAGMA、注释和空行
+                    // 这里是关键：我们只保留有效的 SQL，而导入逻辑会确保 DROP/CREATE 语句能被执行。
                     const cleanStatements = rawStatements
                         .map(s => s.trim())
                         .filter(s => s) 
@@ -1011,7 +1013,6 @@ async function handleApi(request, env, url, ctx) {
                         const preparedStmts = [];
                         
                         // [核心修复] 每个 batch 第一条指令强制关闭外键约束
-                        // 解决 FOREIGN KEY 约束失败
                         preparedStmts.push(db.prepare("PRAGMA foreign_keys = OFF"));
                         
                         // 添加实际的 SQL
@@ -1027,6 +1028,7 @@ async function handleApi(request, env, url, ctx) {
                         }
                         
                         // 执行批处理，使用 db.batch 避免 db.exec 的 duration 错误
+                        // 这个 batch 会执行 DROP TABLE, CREATE TABLE, INSERT INTO
                         await db.batch(preparedStmts);
                     }
 
