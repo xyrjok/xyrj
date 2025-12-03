@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [最终修复] 数据库导入采用 db.batch 模式，分离 DROP/CREATE 和 INSERT 语句，彻底解决 "table already exists" 和 "FOREIGN KEY" 错误。
+ * [最终修复] 数据库导入采用 db.batch 模式，强制分两批执行：先 DROP TABLE 清除旧表，再 CREATE/INSERT 导入数据，解决 "table already exists" 错误。
  */
 
 // === 工具函数 ===
@@ -990,31 +990,32 @@ async function handleApi(request, env, url, ctx) {
                     // 1. 分割 SQL 语句（使用 /*_SEP_*/，这是 DUMP 格式中明确定义的）
                     let rawStatements = sqlContent.split('/*_SEP_*/');
                     
-                    // 2. 清洗 & 分类：分离 Schema (DROP/CREATE) 和 Data (INSERT)
-                    const schemaStmts = [];
-                    const insertStmts = [];
+                    // 2. 清洗 & 分类：分离 DROP, CREATE, INSERT
+                    const dropStmts = [];
+                    const createInsertStmts = [];
 
                     rawStatements
                         .map(s => s.trim())
                         .filter(s => s) 
                         .forEach(s => {
                             const upperS = s.toUpperCase();
-                            // 过滤掉 PRAGMA 和注释
                             if (upperS.startsWith('PRAGMA') || upperS.startsWith('--')) return;
                             
-                            // DROP 和 CREATE 属于 Schema 语句
-                            if (upperS.startsWith('DROP TABLE') || upperS.startsWith('CREATE TABLE')) {
-                                schemaStmts.push(s);
+                            // DROP 语句优先执行
+                            if (upperS.startsWith('DROP TABLE')) {
+                                dropStmts.push(s);
                             } 
-                            // INSERT 属于 Data 语句
-                            else if (upperS.startsWith('INSERT INTO')) {
-                                insertStmts.push(s);
+                            // CREATE 和 INSERT 随后执行
+                            else if (upperS.startsWith('CREATE TABLE') || upperS.startsWith('INSERT INTO')) {
+                                createInsertStmts.push(s);
                             }
                         });
                     
-                    // 3. 构建执行队列：Schema 优先，Data 随后
-                    const finalQueue = [...schemaStmts, ...insertStmts];
+                    // 3. 强制执行队列：先 DROP，再 CREATE/INSERT
+                    const finalQueue = [...dropStmts, ...createInsertStmts];
 
+                    if (finalQueue.length === 0) return errRes('SQL 文件中未找到可执行的语句。');
+                    
                     // 4. 批量执行
                     const BATCH_SIZE = 40; 
                     
