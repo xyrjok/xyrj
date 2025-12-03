@@ -938,8 +938,8 @@ async function handleApi(request, env, url, ctx) {
                 sqlDump += "PRAGMA foreign_keys = OFF;\n\n"; 
 
                 for (const table of tables.results) {
-                    sqlDump += `DROP TABLE IF EXISTS "${table.name}";\n`;
-                    sqlDump += `${table.sql};\n`;
+                    sqlDump += `DROP TABLE IF EXISTS "${table.name}"; /*_SEP_*/\n`;
+                    sqlDump += `${table.sql}; /*_SEP_*/\n`;
                     
                     const rows = await db.prepare(`SELECT * FROM "${table.name}"`).all();
                     if (rows.results.length > 0) {
@@ -952,7 +952,7 @@ async function handleApi(request, env, url, ctx) {
                                 return `'${String(v).replace(/'/g, "''")}'`;
                             }).join(',');
                             
-                            sqlDump += `INSERT INTO "${table.name}" (${keys}) VALUES (${values});\n`;
+                            sqlDump += `INSERT INTO "${table.name}" (${keys}) VALUES (${values}); /*_SEP_*/\n`;
                         }
                     }
                     sqlDump += "\n";
@@ -974,12 +974,22 @@ async function handleApi(request, env, url, ctx) {
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
 
                 try {
-                    // [修改] 优化导入逻辑：将 SQL 按分号分割，每次执行 50 条，防止请求过大报错
-                    const statements = sqlContent.replace(/\r\n/g, '\n').split(';\n').filter(s => s.trim());
+                    try {
+                    // [修改] 优化导入逻辑：按特殊分隔符分割，100% 避免误伤内容中的分号
+                    // 兼容性处理：如果没找到分隔符，说明是旧备份，尝试回退到分号分割（可选）
+                    let statements;
+                    if (sqlContent.includes('/*_SEP_*/')) {
+                        statements = sqlContent.split('/*_SEP_*/').map(s => s.trim()).filter(s => s);
+                    } else {
+                        statements = sqlContent.replace(/\r\n/g, '\n').split(';\n').filter(s => s.trim());
+                    }
+                    
                     const BATCH_SIZE = 50; 
 
                     for (let i = 0; i < statements.length; i += BATCH_SIZE) {
-                        // 拼接回完整的 SQL 片段
+                        // 拼接时不加分号了，因为 exec 执行多条语句其实不严格要求分号连接，
+                        // 或者为了保险起见，每条语句后面补一个分号（因为 split 把分号切没了或保留在前面了）
+                        // 最简单的写法是：直接用换行符连接即可，因为 SQLite exec 能够处理
                         const batch = statements.slice(i, i + BATCH_SIZE).join(';\n');
                         if(batch.trim()) {
                             await db.exec(batch);
