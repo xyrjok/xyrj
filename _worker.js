@@ -8,7 +8,6 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [最终修复] 数据库导入采用 db.batch 模式，分离 DROP/CREATE 和 INSERT 语句，彻底解决 "table already exists" 和 "FOREIGN KEY" 错误。
  */
 
 // === 工具函数 ===
@@ -656,7 +655,7 @@ async function handleApi(request, env, url, ctx) {
                 // 5. 返回文件下载响应
                 return new Response(fileContent, {
                     headers: {
-                        'Content-Type': 'application/sql',
+                        'Content-Type': 'text/plain; charset=utf-8',
                         'Content-Disposition': `attachment; filename="cards_export_${time()}.txt"`
                     }
                 });
@@ -925,158 +924,6 @@ async function handleApi(request, env, url, ctx) {
                 await db.batch(stmts);
                 return jsonRes({ success: true });
             }
-
-            // ===========================
-            // --- 数据库管理 API ---
-            // ===========================
-            
-            // 导出数据库 (Dump) - 优化版：按依赖顺序导出
-            if (path === '/api/admin/db/export') {
-                const tablesRes = await db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
-                const tables = tablesRes.results;
-                
-                // [优化] 表导出顺序排序 (父表在前，子表在后)
-                const priority = ['site_config', 'pay_gateways', 'categories', 'article_categories', 'image_categories', 'products', 'articles', 'images', 'variants', 'orders', 'cards'];
-                tables.sort((a, b) => {
-                    let idxA = priority.indexOf(a.name);
-                    let idxB = priority.indexOf(b.name);
-                    if (idxA === -1) idxA = 999;
-                    if (idxB === -1) idxB = 999;
-                    return idxA - idxB;
-                });
-                
-                let sqlDump = "-- Cloudflare D1 Dump (Ordered)\n";
-                sqlDump += `-- Date: ${new Date().toISOString()}\n\n`;
-                // 确保在 dump 中加入了 DROP TABLE，这是导入成功的关键前提
-                sqlDump += "PRAGMA foreign_keys = OFF;\n\n"; 
-
-                for (const table of tables) {
-                    sqlDump += `DROP TABLE IF EXISTS "${table.name}"; /*_SEP_*/\n`;
-                    sqlDump += `${table.sql}; /*_SEP_*/\n`;
-                    
-                    const rows = await db.prepare(`SELECT * FROM "${table.name}"`).all();
-                    if (rows.results.length > 0) {
-                        sqlDump += `\n-- Data for ${table.name}\n`;
-                        for (const row of rows.results) {
-                            const keys = Object.keys(row).map(k => `"${k}"`).join(',');
-                            const values = Object.values(row).map(v => {
-                                if (v === null) return 'NULL';
-                                if (typeof v === 'number') return v;
-                                return `'${String(v).replace(/'/g, "''")}'`;
-                            }).join(',');
-                            
-                            sqlDump += `INSERT INTO "${table.name}" (${keys}) VALUES (${values}); /*_SEP_*/\n`;
-                        }
-                    }
-                    sqlDump += "\n";
-                }
-                
-                sqlDump += "PRAGMA foreign_keys = ON;\n";
-
-                return new Response(sqlDump, {
-                    headers: {
-                        'Content-Type': 'application/sql',
-                        'Content-Disposition': `attachment; filename="backup_${new Date().toISOString().split('T')[0]}.sql"`
-                    }
-                });
-            }
-
-            // 导入数据库 (Import) - 最终修复版：分离 DROP/CREATE 和 INSERT 语句，强制顺序执行
-            if (path === '/api/admin/db/import' && method === 'POST') {
-                const sqlContent = await request.text();
-                if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
-
-                try {
-                    // 1. 分割 SQL 语句（使用 /*_SEP_*/，这是 DUMP 格式中明确定义的）
-                    let rawStatements = sqlContent.split('/*_SEP_*/');
-                    
-                    // 2. 清洗 & 分类：分离 DROP, CREATE, INSERT
-                    const dropStmts = [];
-                    const createStmts = [];
-                    const insertStmts = [];
-
-                    // [核心修复步骤 1: 强制排序 INSERT 语句，避免外键问题]
-                    const tablePriority = {
-                        'site_config': 1, 'pay_gateways': 1, 'categories': 1, 
-                        'article_categories': 1, 'image_categories': 1,
-                        'products': 2, 'articles': 2, 'images': 2, 
-                        'variants': 3,
-                        'orders': 4,
-                        'cards': 5 
-                    };
-
-                    const getTablePriority = (sql) => {
-                        for (const [name, p] of Object.entries(tablePriority)) {
-                            // 匹配 "table" 或 `table` 或 空格table空格
-                            if (sql.includes(`"${name}"`) || sql.includes(`\`${name}\``) || sql.includes(` ${name} `)) {
-                                return p;
-                            }
-                        }
-                        return 99; // 未知表放在最后
-                    };
-                    
-                    rawStatements
-                        .map(s => s.trim())
-                        .filter(s => s) 
-                        .forEach(s => {
-                            const upperS = s.toUpperCase();
-                            if (upperS.startsWith('PRAGMA') || upperS.startsWith('--')) return;
-                            
-                            if (upperS.startsWith('DROP TABLE')) {
-                                dropStmts.push(s);
-                            } 
-                            else if (upperS.startsWith('CREATE TABLE')) {
-                                createStmts.push(s);
-                            }
-                            else if (upperS.startsWith('INSERT INTO')) {
-                                insertStmts.push(s);
-                            }
-                        });
-                    
-                    // 强制对 INSERT 语句进行排序
-                    insertStmts.sort((a, b) => getTablePriority(a) - getTablePriority(b));
-
-                    // 3. 强制执行队列：DROP -> CREATE -> INSERT
-                    // 必须先清空旧表，再创建新表，最后插入数据。
-                    const finalQueue = [...dropStmts, ...createStmts, ...insertStmts];
-
-                    if (finalQueue.length === 0) return errRes('SQL 文件中未找到可执行的语句。');
-                    
-                    // 4. 批量执行
-                    const BATCH_SIZE = 40; 
-                    
-                    for (let i = 0; i < finalQueue.length; i += BATCH_SIZE) {
-                        const chunk = finalQueue.slice(i, i + BATCH_SIZE);
-                        if (chunk.length === 0) continue;
-
-                        const preparedStmts = [];
-                        
-                        // [核心修复] 每个 batch 第一条指令强制关闭外键约束
-                        preparedStmts.push(db.prepare("PRAGMA foreign_keys = OFF"));
-                        
-                        // 添加实际的 SQL
-                        chunk.forEach(sql => {
-                             if(sql.length > 0) preparedStmts.push(db.prepare(sql));
-                        });
-                        
-                        // D1 文档建议默认开启外键，所以我们在最后一个批次后重新开启
-                        const isLastChunk = i + BATCH_SIZE >= finalQueue.length;
-                        if (isLastChunk) {
-                             preparedStmts.push(db.prepare("PRAGMA foreign_keys = ON"));
-                        }
-                        
-                        // 执行批处理
-                        await db.batch(preparedStmts);
-                    }
-
-                    return jsonRes({ success: true });
-                } catch (e) {
-                    console.error('D1 Import Error:', e);
-                    // 返回更具体的错误信息，指导用户操作
-                    return errRes('导入失败: ' + e.message + ' (请检查 SQL 文件结构，或使用新版导出功能重新生成备份文件)');
-                }
-            }
-        }
 
         // ===========================
         // --- 公开 API (Shop) ---
