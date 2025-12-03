@@ -2,94 +2,57 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商店首页</title>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <title>{{ site_name }} - 首页</title>
+    
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/css/all.min.css" rel="stylesheet">
+    <link href="/themes/default/files/custom-luna-bootstrap.css" rel="stylesheet">
     <style>
-        .product-item { transition: all 0.3s; border: 1px solid #eee; }
-        .product-item:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        body { background: #f2f2f2; }
     </style>
 </head>
-<body class="bg-light">
-    <div class="container py-5">
-        <header class="text-center mb-5">
-            <div id="site-header-container" class="d-flex flex-column align-items-center gap-3">
-                <h1 id="site-name" class="d-none">Loading...</h1>
-                <img id="site-logo" class="d-none" style="max-height: 80px; max-width: 100%;" alt="Logo">
-            </div>
-            <div id="announce" class="alert alert-primary mt-3 d-none"></div>
-        </header>
+<body>
 
-        <div class="row g-4" id="product-list">
-            <div class="text-center text-muted py-5">正在加载商品...</div>
+    <div class="container my-4">
+        <div class="row">
+            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 col-12">
+                <div class="main-box">
+                    
+                    <div class="title">
+                        <i class="fas fa-cubes" style="color:var(--luna-primary-blue)"></i>
+                        <span>商品分类</span>
+                    </div>
+                    <div class="category-bar" id="category-list">
+                        <div class="text-muted p-2">加载分类中...</div>
+                    </div>
+
+                    <div class="goods">
+                        <p class="title-2">
+                            <i class="fas fa-gift" style="color:var(--luna-primary-blue)"></i>
+                            <span>热销商品</span>
+                        </p>
+                        <div class="row" id="product-list">
+                            <div class="col-12"><p class="text-muted p-3">加载商品中...</p></div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        async function init() {
-            // 1. 加载配置
-            const configRes = await fetch('/api/shop/config');
-            const config = await configRes.json();
-            
-            // 设置浏览器标题栏
-            document.title = config.site_name || '商店首页';
+    <div class="query-m d-block d-md-none">
+        <a href="orders.html">
+            <i class="fas fa-search"></i>
+            <span>订单查询</span>
+        </a>
+    </div>
 
-            // --- Logo 和 名称 显示逻辑 ---
-            const nameEl = document.getElementById('site-name');
-            const logoEl = document.getElementById('site-logo');
-
-            // 如果两个都没设置，默认显示名称（防止头部空空如也）
-            if (!config.show_site_name && !config.show_site_logo) {
-                 nameEl.innerText = config.site_name || 'Cloudflare Store';
-                 nameEl.classList.remove('d-none');
-            } else {
-                // 显示名称
-                if (config.show_site_name === '1') {
-                    nameEl.innerText = config.site_name || 'Cloudflare Store';
-                    nameEl.classList.remove('d-none');
-                }
-                // 显示 Logo
-                if (config.show_site_logo === '1' && config.site_logo) {
-                    logoEl.src = config.site_logo;
-                    logoEl.classList.remove('d-none');
-                }
-            }
-
-            if(config.announce) {
-                const annEl = document.getElementById('announce');
-                annEl.innerHTML = config.announce;
-                annEl.classList.remove('d-none');
-            }
-
-            // 2. 加载商品
-            const prodRes = await fetch('/api/shop/products');
-            const products = await prodRes.json();
-            const listEl = document.getElementById('product-list');
-            
-            if(products.length === 0) {
-                listEl.innerHTML = '<div class="col-12 text-center">暂无上架商品</div>';
-                return;
-            }
-
-            listEl.innerHTML = products.map(p => `
-                <div class="col-md-4 col-sm-6">
-                    <div class="card h-100 product-item">
-                        <div class="card-body">
-                            <h5 class="card-title text-truncate">${p.name}</h5>
-                            <p class="card-text text-muted small" style="height: 40px; overflow:hidden;">${p.description || '暂无描述'}</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-danger fw-bold">￥${p.variants[0]?.price || '-'} 起</span>
-                                <a href="/product.html?id=${p.id}" class="btn btn-sm btn-primary">购买 &rarr;</a>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-top-0">
-                             <small class="text-muted">库存: ${p.variants.reduce((sum, v) => sum + v.stock, 0)}</small>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        init();
-    </script>
+    <script src="/assets/jquery-3.6.0.min.js"></script>
+    <script src="/assets/bootstrap.bundle.min.js"></script>
+    <script src="/themes/default/files/main-luna-bs.js"></script>
 </body>
 </html>
