@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [最终修复] 数据库导入采用 db.batch 模式，强制分两批执行：先 DROP TABLE 清除旧表，再 CREATE/INSERT 导入数据，解决 "table already exists" 错误。
+ * [最终修复] 数据库导入采用 db.batch 模式，分离并排序 DROP/CREATE 和 INSERT 语句，彻底解决所有兼容性错误。
  */
 
 // === 工具函数 ===
@@ -981,7 +981,7 @@ async function handleApi(request, env, url, ctx) {
                 });
             }
 
-            // 导入数据库 (Import) - 最终修复版：分离 DROP/CREATE 和 INSERT 语句
+            // 导入数据库 (Import) - 最终修复版：分离 DROP/CREATE 和 INSERT 语句，强制顺序执行
             if (path === '/api/admin/db/import' && method === 'POST') {
                 const sqlContent = await request.text();
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
@@ -992,7 +992,8 @@ async function handleApi(request, env, url, ctx) {
                     
                     // 2. 清洗 & 分类：分离 DROP, CREATE, INSERT
                     const dropStmts = [];
-                    const createInsertStmts = [];
+                    const createStmts = [];
+                    const insertStmts = [];
 
                     rawStatements
                         .map(s => s.trim())
@@ -1001,18 +1002,20 @@ async function handleApi(request, env, url, ctx) {
                             const upperS = s.toUpperCase();
                             if (upperS.startsWith('PRAGMA') || upperS.startsWith('--')) return;
                             
-                            // DROP 语句优先执行
                             if (upperS.startsWith('DROP TABLE')) {
                                 dropStmts.push(s);
                             } 
-                            // CREATE 和 INSERT 随后执行
-                            else if (upperS.startsWith('CREATE TABLE') || upperS.startsWith('INSERT INTO')) {
-                                createInsertStmts.push(s);
+                            else if (upperS.startsWith('CREATE TABLE')) {
+                                createStmts.push(s);
+                            }
+                            else if (upperS.startsWith('INSERT INTO')) {
+                                insertStmts.push(s);
                             }
                         });
                     
-                    // 3. 强制执行队列：先 DROP，再 CREATE/INSERT
-                    const finalQueue = [...dropStmts, ...createInsertStmts];
+                    // 3. 强制执行队列：DROP -> CREATE -> INSERT
+                    // 必须先清空旧表，再创建新表，最后插入数据。
+                    const finalQueue = [...dropStmts, ...createStmts, ...insertStmts];
 
                     if (finalQueue.length === 0) return errRes('SQL 文件中未找到可执行的语句。');
                     
