@@ -1639,13 +1639,15 @@ ${contentBody}
                             let customerEmailSubject = `发货通知：您的订单 ${order.id} 已完成`;
                             
                             if (hasDeliveredCards) {
-                                cardContentForCustomer = allCardsContent.join('\n');
+                                const cleanCards = allCardsContent.map(card => card.replace(/#\[.*?\]/g, '').trim());
+                                cardContentForCustomer = cleanCards.join('\n');
                             } else if (isManualOrder) {
                                 cardContentForCustomer = '该商品为手动发货，系统已扣除库存。请联系客服获取商品或等待客服手动处理。';
                             } else if (isCartOrder) {
                                 // 购物车中包含手动发货商品的情况
                                 if (allCardsContent.length > 0) {
-                                    cardContentForCustomer = '部分商品卡密已发送：\n' + allCardsContent.join('\n') + '\n\n**注意**：订单中可能包含手动发货商品，请联系客服获取未发货商品。';
+                                    const cleanCards = allCardsContent.map(card => card.replace(/#\[.*?\]/g, '').trim());
+                                    cardContentForCustomer = '部分商品卡密已发送：\n' + cleanCards.join('\n') + '\n\n**注意**：订单中可能包含手动发货商品，请联系客服获取未发货商品。';
                                 } else {
                                     cardContentForCustomer = '您的订单为手动发货订单（或包含手动发货商品），请联系客服获取商品。';
                                 }
