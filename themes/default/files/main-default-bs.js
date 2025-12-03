@@ -80,18 +80,22 @@ function loadProducts(categoryId = null) {
     const listContainer = $('#product-list');
     listContainer.empty().append('<p class="text-center text-muted p-3">商品数据加载中...</p>');
 
-    // ***** 修复 API 路径 *****
     const api = categoryId ? `/api/shop/products?category_id=${categoryId}` : '/api/shop/products';
-    // ************************
     
     $.ajax({
         url: api,
         method: 'GET',
         success: function(response) {
-            if (response.code === 0) {
+            // 确保 response 存在，并且 code 字段存在
+            if (response && response.code === 0) {
                 renderProductList(response.data.products || [], categoryId);
             } else {
-                listContainer.empty().append(`<p class="text-center text-danger p-3">加载失败: ${response.message}</p>`);
+                // *** 关键修改：安全访问 message 字段 ***
+                const errorMsg = (response && response.message) 
+                    ? response.message 
+                    : 'API返回数据格式错误或后端未提供具体错误信息';
+
+                listContainer.empty().append(`<p class="text-center text-danger p-3">加载失败: ${errorMsg}</p>`);
             }
         },
         error: function() {
@@ -104,16 +108,20 @@ function loadProducts(categoryId = null) {
  * 加载分类数据
  */
 function loadCategories() {
-    // ***** 修复 API 路径 *****
     $.ajax({
         url: '/api/shop/categories',
-        // ************************
         method: 'GET',
         success: function(response) {
-            if (response.code === 0) {
+             // 确保 response 存在，并且 code 字段存在
+            if (response && response.code === 0) {
                 renderCategoryList(response.data.categories || [], null);
             } else {
-                $('#category-list').empty().append('<p class="text-muted p-2">分类加载失败</p>');
+                // *** 关键修改：安全访问 message 字段 ***
+                const errorMsg = (response && response.message) 
+                    ? response.message 
+                    : 'API返回数据格式错误或后端未提供具体错误信息';
+
+                $('#category-list').empty().append(`<p class="text-muted p-2">分类加载失败: ${errorMsg}</p>`);
             }
         },
         error: function() {
