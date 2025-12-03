@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [最终修复] 数据库导入采用 db.batch 模式，分离并排序 DROP/CREATE 和 INSERT 语句，彻底解决所有兼容性错误。
+ * [最终修复] 数据库导入采用 db.batch 模式，分离 DROP/CREATE 和 INSERT 语句，彻底解决 "table already exists" 和 "FOREIGN KEY" 错误。
  */
 
 // === 工具函数 ===
@@ -995,6 +995,26 @@ async function handleApi(request, env, url, ctx) {
                     const createStmts = [];
                     const insertStmts = [];
 
+                    // [核心修复步骤 1: 强制排序 INSERT 语句，避免外键问题]
+                    const tablePriority = {
+                        'site_config': 1, 'pay_gateways': 1, 'categories': 1, 
+                        'article_categories': 1, 'image_categories': 1,
+                        'products': 2, 'articles': 2, 'images': 2, 
+                        'variants': 3,
+                        'orders': 4,
+                        'cards': 5 
+                    };
+
+                    const getTablePriority = (sql) => {
+                        for (const [name, p] of Object.entries(tablePriority)) {
+                            // 匹配 "table" 或 `table` 或 空格table空格
+                            if (sql.includes(`"${name}"`) || sql.includes(`\`${name}\``) || sql.includes(` ${name} `)) {
+                                return p;
+                            }
+                        }
+                        return 99; // 未知表放在最后
+                    };
+                    
                     rawStatements
                         .map(s => s.trim())
                         .filter(s => s) 
@@ -1013,6 +1033,9 @@ async function handleApi(request, env, url, ctx) {
                             }
                         });
                     
+                    // 强制对 INSERT 语句进行排序
+                    insertStmts.sort((a, b) => getTablePriority(a) - getTablePriority(b));
+
                     // 3. 强制执行队列：DROP -> CREATE -> INSERT
                     // 必须先清空旧表，再创建新表，最后插入数据。
                     const finalQueue = [...dropStmts, ...createStmts, ...insertStmts];
