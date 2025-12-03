@@ -1,5 +1,3 @@
-// themes/default/files/main-default-bs.js (完整内容，商品渲染部分已修改)
-
 /**
  * 渲染分类列表
  * @param {Array<Object>} categories 
@@ -94,8 +92,10 @@ function loadProducts(categoryId = null) {
                 listContainer.empty().append(`<p class="text-center text-danger p-3">加载失败: ${response.message}</p>`);
             }
         },
-        error: function() {
+        error: function(xhr, status, error) {
+            // 这里我们保持原有的 API 调用，因为用户说原来能显示
             listContainer.empty().append('<p class="text-center text-danger p-3">网络错误，无法加载商品数据</p>');
+            console.error("API Error for products:", status, error, xhr.responseText);
         }
     });
 }
@@ -114,8 +114,10 @@ function loadCategories() {
                 $('#category-list').empty().append('<p class="text-muted p-2">分类加载失败</p>');
             }
         },
-        error: function() {
+        error: function(xhr, status, error) {
+            // 这里我们保持原有的 API 调用，因为用户说原来能显示
             $('#category-list').empty().append('<p class="text-muted p-2">网络错误，无法加载分类数据</p>');
+            console.error("API Error for categories:", status, error, xhr.responseText);
         }
     });
 }
