@@ -981,7 +981,7 @@ async function handleApi(request, env, url, ctx) {
                 });
             }
 
-            // 导入数据库 (Import) - 最终修复版：使用 db.batch 模式，强制每个批次关闭外键约束
+            // 导入数据库 (Import) - 最终修复版：使用 db.batch 模式，分离结构和数据，强制清除旧表
             if (path === '/api/admin/db/import' && method === 'POST') {
                 const sqlContent = await request.text();
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
@@ -989,45 +989,59 @@ async function handleApi(request, env, url, ctx) {
                 try {
                     // 1. 分割 SQL 语句（兼容新旧格式）
                     let rawStatements;
-                    if (sqlContent.includes('/*_SEP_*/')) {
-                        rawStatements = sqlContent.split('/*_SEP_*/');
-                    } else {
-                        // 兼容旧格式，按 ;\n 分割
-                        rawStatements = sqlContent.replace(/\r\n/g, '\n').split(';\n');
-                    }
+                    // 使用 /*_SEP_*/ 进行分割，这是 DUMP 格式中明确定义的
+                    rawStatements = sqlContent.split('/*_SEP_*/');
+                    
+                    // 2. 清洗 & 分类：分离 Schema (DROP/CREATE) 和 Data (INSERT)
+                    const schemaStmts = [];
+                    const insertStmts = [];
 
-                    // 2. 清洗：只保留有效的 SQL 语句，去除所有 PRAGMA、注释和空行
-                    const cleanStatements = rawStatements
+                    rawStatements
                         .map(s => s.trim())
                         .filter(s => s) 
-                        .filter(s => !s.toUpperCase().startsWith('PRAGMA') && !s.toUpperCase().startsWith('--'));
+                        .forEach(s => {
+                            const upperS = s.toUpperCase();
+                            // 过滤掉 PRAGMA 和注释
+                            if (upperS.startsWith('PRAGMA') || upperS.startsWith('--')) return;
+                            
+                            // DROP 和 CREATE 属于 Schema 语句
+                            if (upperS.startsWith('DROP TABLE') || upperS.startsWith('CREATE TABLE')) {
+                                schemaStmts.push(s);
+                            } 
+                            // INSERT 属于 Data 语句
+                            else if (upperS.startsWith('INSERT INTO')) {
+                                insertStmts.push(s);
+                            }
+                            // 否则可能是其他结构或注释，暂时忽略
+                        });
                     
-                    // 3. 批量执行
+                    // 3. 构建执行队列：Schema 优先，Data 随后
+                    const finalQueue = [...schemaStmts, ...insertStmts];
+
+                    // 4. 批量执行
                     const BATCH_SIZE = 40; 
                     
-                    for (let i = 0; i < cleanStatements.length; i += BATCH_SIZE) {
-                        const chunk = cleanStatements.slice(i, i + BATCH_SIZE);
+                    for (let i = 0; i < finalQueue.length; i += BATCH_SIZE) {
+                        const chunk = finalQueue.slice(i, i + BATCH_SIZE);
                         if (chunk.length === 0) continue;
 
                         const preparedStmts = [];
                         
-                        // [核心修复 1] 每个 batch 第一条指令强制关闭外键约束 (解决外键问题)
+                        // [核心修复] 每个 batch 第一条指令强制关闭外键约束
                         preparedStmts.push(db.prepare("PRAGMA foreign_keys = OFF"));
                         
                         // 添加实际的 SQL
                         chunk.forEach(sql => {
-                             // 必须再次检查，防止空字符串被转为 prepare statement
                              if(sql.length > 0) preparedStmts.push(db.prepare(sql));
                         });
                         
                         // D1 文档建议默认开启外键，所以我们在最后一个批次后重新开启
-                        const isLastChunk = i + BATCH_SIZE >= cleanStatements.length;
+                        const isLastChunk = i + BATCH_SIZE >= finalQueue.length;
                         if (isLastChunk) {
                              preparedStmts.push(db.prepare("PRAGMA foreign_keys = ON"));
                         }
                         
-                        // 执行批处理，使用 db.batch 避免 db.exec 的 duration 错误
-                        // 这个 batch 会执行 DROP TABLE, CREATE TABLE, INSERT INTO
+                        // 执行批处理
                         await db.batch(preparedStmts);
                     }
 
@@ -1035,7 +1049,6 @@ async function handleApi(request, env, url, ctx) {
                 } catch (e) {
                     console.error('D1 Import Error:', e);
                     // 返回更具体的错误信息，指导用户操作
-                    // 这里的 e.message 包含了 SQLITE_ERROR，说明 SQL 语句确实存在问题
                     return errRes('导入失败: ' + e.message + ' (请检查 SQL 文件结构，或使用新版导出功能重新生成备份文件)');
                 }
             }
