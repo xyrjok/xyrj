@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [修复] 数据库导入增加每批次强制关闭外键约束，解决 SQLITE_CONSTRAINT 错误
+ * [修复] 数据库导入增加依赖排序算法，彻底解决 FOREIGN KEY 约束错误
  */
 
 // === 工具函数 ===
@@ -930,15 +930,26 @@ async function handleApi(request, env, url, ctx) {
             // --- 数据库管理 API ---
             // ===========================
             
-            // 导出数据库 (Dump) - 排除 _cf_ 开头的系统表
+            // 导出数据库 (Dump) - 优化版：按依赖顺序导出
             if (path === '/api/admin/db/export') {
-                const tables = await db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
+                const tablesRes = await db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
+                const tables = tablesRes.results;
                 
-                let sqlDump = "-- Cloudflare D1 Dump\n";
+                // [优化] 表导出顺序排序 (父表在前，子表在后)
+                const priority = ['site_config', 'pay_gateways', 'categories', 'article_categories', 'image_categories', 'products', 'articles', 'images', 'variants', 'orders', 'cards'];
+                tables.sort((a, b) => {
+                    let idxA = priority.indexOf(a.name);
+                    let idxB = priority.indexOf(b.name);
+                    if (idxA === -1) idxA = 999;
+                    if (idxB === -1) idxB = 999;
+                    return idxA - idxB;
+                });
+                
+                let sqlDump = "-- Cloudflare D1 Dump (Ordered)\n";
                 sqlDump += `-- Date: ${new Date().toISOString()}\n\n`;
                 sqlDump += "PRAGMA foreign_keys = OFF;\n\n"; 
 
-                for (const table of tables.results) {
+                for (const table of tables) {
                     sqlDump += `DROP TABLE IF EXISTS "${table.name}"; /*_SEP_*/\n`;
                     sqlDump += `${table.sql}; /*_SEP_*/\n`;
                     
@@ -969,7 +980,7 @@ async function handleApi(request, env, url, ctx) {
                 });
             }
 
-            // 导入数据库 (Import)
+            // 导入数据库 (Import) - 优化版：智能排序插入
             if (path === '/api/admin/db/import' && method === 'POST') {
                 const sqlContent = await request.text();
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
@@ -983,41 +994,69 @@ async function handleApi(request, env, url, ctx) {
                         rawStatements = sqlContent.replace(/\r\n/g, '\n').split(';\n');
                     }
 
-                    // 2. 清洗语句 (去除空行、去除原有的 PRAGMA 语句以免干扰)
-                    const statements = rawStatements
+                    // 2. 清洗语句 & 初步分类
+                    const schemaStmts = [];
+                    const insertStmts = [];
+                    
+                    rawStatements
                         .map(s => s.trim())
-                        .filter(s => {
-                            if (!s) return false;
-                            // 过滤掉原文件里的 PRAGMA 开关，防止重复或顺序错误
-                            if (s.toUpperCase().startsWith('PRAGMA FOREIGN_KEYS')) return false;
-                            return true;
-                        })
-                        .map(s => {
-                            // 再次清理可能残留在语句头部的 PRAGMA (针对旧版导出逻辑)
-                            return s.replace(/PRAGMA foreign_keys\s*=\s*(ON|OFF);?/gi, '').trim();
-                        })
-                        .filter(s => s); // 再次过滤清理后为空的
-                    
-                    // 3. 批量执行
-                    // 关键修复：D1 的 HTTP 接口可能是无状态的，或者 batch 之间不保证连接复用。
-                    // 因此，必须在 **每一次** batch 调用中都显式关闭外键约束。
-                    
-                    const BATCH_SIZE = 40; // 稍微降低 batch 大小，留空间给 PRAGMA
+                        .filter(s => s && !s.toUpperCase().startsWith('PRAGMA')) // 过滤掉 PRAGMA
+                        .forEach(s => {
+                            // 移除头部残留的 PRAGMA
+                            const cleanSql = s.replace(/^PRAGMA.*;/i, '').trim();
+                            if (!cleanSql) return;
+                            
+                            if (cleanSql.toUpperCase().startsWith('INSERT INTO')) {
+                                insertStmts.push(cleanSql);
+                            } else {
+                                schemaStmts.push(cleanSql);
+                            }
+                        });
 
-                    for (let i = 0; i < statements.length; i += BATCH_SIZE) {
-                        const chunk = statements.slice(i, i + BATCH_SIZE);
+                    // 3. 对 INSERT 语句进行排序 (核心修复：解决外键依赖)
+                    // 优先级定义：越小越先执行 (父表 -> 子表)
+                    const tablePriority = {
+                        'site_config': 1,
+                        'pay_gateways': 1,
+                        'categories': 1, 
+                        'article_categories': 1, 
+                        'image_categories': 1,
+                        'products': 2,       // 依赖 categories
+                        'articles': 2,       // 依赖 article_categories
+                        'images': 2,         // 依赖 image_categories
+                        'variants': 3,       // 依赖 products
+                        'orders': 4,         // 依赖 variants
+                        'cards': 5           // 依赖 variants, orders
+                    };
+
+                    const getTablePriority = (sql) => {
+                        // 简单正则提取表名: INSERT INTO "table" ... 或 INSERT INTO table ...
+                        for (const [name, p] of Object.entries(tablePriority)) {
+                            // 匹配 "表名" 或 `表名` 或 空格表名空格
+                            if (sql.includes(`"${name}"`) || sql.includes(`\`${name}\``) || sql.includes(` ${name} `)) {
+                                return p;
+                            }
+                        }
+                        return 99; // 未知表放在最后
+                    };
+
+                    // 执行排序
+                    insertStmts.sort((a, b) => getTablePriority(a) - getTablePriority(b));
+
+                    // 4. 合并执行队列: 先结构后数据
+                    const finalQueue = [...schemaStmts, ...insertStmts];
+                    
+                    // 5. 批量执行
+                    const BATCH_SIZE = 40; 
+                    for (let i = 0; i < finalQueue.length; i += BATCH_SIZE) {
+                        const chunk = finalQueue.slice(i, i + BATCH_SIZE);
                         if (chunk.length === 0) continue;
 
                         const preparedStmts = [];
-                        
-                        // [核心修改] 每个 batch 第一条指令强制关闭外键约束
-                        // 这确保了无论连接是否被重置，该批次内的 DROP/INSERT 都不受外键限制
+                        // 强制关闭外键约束 (虽然排序了，但加上更保险)
                         preparedStmts.push(db.prepare("PRAGMA foreign_keys = OFF"));
-
-                        // 添加实际的 SQL
                         chunk.forEach(sql => preparedStmts.push(db.prepare(sql)));
                         
-                        // 执行
                         await db.batch(preparedStmts);
                     }
 
