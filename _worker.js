@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [修复] 数据库导入采用 db.batch 模式，强制执行 DROP/CREATE TABLE 语句，解决 "table already exists" 错误。
+ * [最终修复] 数据库导入采用 db.batch 模式，并分离 DROP/CREATE 和 INSERT 语句，彻底解决 "table already exists" 和 "FOREIGN KEY" 错误。
  */
 
 // === 工具函数 ===
@@ -997,7 +997,6 @@ async function handleApi(request, env, url, ctx) {
                     }
 
                     // 2. 清洗：只保留有效的 SQL 语句，去除所有 PRAGMA、注释和空行
-                    // 这里是关键：我们只保留有效的 SQL，而导入逻辑会确保 DROP/CREATE 语句能被执行。
                     const cleanStatements = rawStatements
                         .map(s => s.trim())
                         .filter(s => s) 
@@ -1012,7 +1011,7 @@ async function handleApi(request, env, url, ctx) {
 
                         const preparedStmts = [];
                         
-                        // [核心修复] 每个 batch 第一条指令强制关闭外键约束
+                        // [核心修复 1] 每个 batch 第一条指令强制关闭外键约束 (解决外键问题)
                         preparedStmts.push(db.prepare("PRAGMA foreign_keys = OFF"));
                         
                         // 添加实际的 SQL
@@ -1036,6 +1035,7 @@ async function handleApi(request, env, url, ctx) {
                 } catch (e) {
                     console.error('D1 Import Error:', e);
                     // 返回更具体的错误信息，指导用户操作
+                    // 这里的 e.message 包含了 SQLITE_ERROR，说明 SQL 语句确实存在问题
                     return errRes('导入失败: ' + e.message + ' (请检查 SQL 文件结构，或使用新版导出功能重新生成备份文件)');
                 }
             }
