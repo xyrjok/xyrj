@@ -8,6 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
+ * [修复] 数据库导入增加每批次强制关闭外键约束，解决 SQLITE_CONSTRAINT 错误
  */
 
 // === 工具函数 ===
@@ -975,46 +976,49 @@ async function handleApi(request, env, url, ctx) {
 
                 try {
                     // 1. 分割 SQL 语句
-                    let statements;
+                    let rawStatements;
                     if (sqlContent.includes('/*_SEP_*/')) {
-                        // 新版备份：使用自定义分隔符
-                        statements = sqlContent.split('/*_SEP_*/').map(s => s.trim()).filter(s => s);
+                        rawStatements = sqlContent.split('/*_SEP_*/');
                     } else {
-                        // 旧版备份或通用 SQL：尝试用分号分割 (风险较大，建议用新版备份)
-                        statements = sqlContent.replace(/\r\n/g, '\n').split(';\n').map(s => s.trim()).filter(s => s);
-                    }
-                    
-                    // 2. [关键修复] 处理首个语句块可能包含 Header 注释、PRAGMA 和 DROP 导致 prepare 失败的问题
-                    // 导出的文件开头通常是：注释 + PRAGMA...; + DROP TABLE...; 都在第一个分隔符前
-                    if (statements.length > 0) {
-                        const first = statements[0];
-                        // 检查是否包含标准头部的 PRAGMA 语句
-                        if (first.includes('PRAGMA foreign_keys = OFF;')) {
-                             const parts = first.split('PRAGMA foreign_keys = OFF;');
-                             // parts[0] 是注释(丢弃), parts[1] 是随后的 DROP TABLE 语句
-                             statements.shift(); // 移除混合的第一个块
-                             
-                             if (parts[1] && parts[1].trim()) {
-                                 statements.unshift(parts[1].trim()); // 将 DROP 语句放回开头
-                             }
-                             statements.unshift("PRAGMA foreign_keys = OFF"); // 将 PRAGMA 单独作为一条语句放回开头
-                        }
+                        rawStatements = sqlContent.replace(/\r\n/g, '\n').split(';\n');
                     }
 
-                    // 3. 批量执行 (改为使用 db.batch)
-                    // D1 batch 一次限制约 128 条，这里保守设为 50
-                    const BATCH_SIZE = 50; 
+                    // 2. 清洗语句 (去除空行、去除原有的 PRAGMA 语句以免干扰)
+                    const statements = rawStatements
+                        .map(s => s.trim())
+                        .filter(s => {
+                            if (!s) return false;
+                            // 过滤掉原文件里的 PRAGMA 开关，防止重复或顺序错误
+                            if (s.toUpperCase().startsWith('PRAGMA FOREIGN_KEYS')) return false;
+                            return true;
+                        })
+                        .map(s => {
+                            // 再次清理可能残留在语句头部的 PRAGMA (针对旧版导出逻辑)
+                            return s.replace(/PRAGMA foreign_keys\s*=\s*(ON|OFF);?/gi, '').trim();
+                        })
+                        .filter(s => s); // 再次过滤清理后为空的
+                    
+                    // 3. 批量执行
+                    // 关键修复：D1 的 HTTP 接口可能是无状态的，或者 batch 之间不保证连接复用。
+                    // 因此，必须在 **每一次** batch 调用中都显式关闭外键约束。
+                    
+                    const BATCH_SIZE = 40; // 稍微降低 batch 大小，留空间给 PRAGMA
 
                     for (let i = 0; i < statements.length; i += BATCH_SIZE) {
                         const chunk = statements.slice(i, i + BATCH_SIZE);
+                        if (chunk.length === 0) continue;
+
+                        const preparedStmts = [];
                         
-                        // 将 SQL 字符串转换为 PreparedStatement
-                        // 注意：db.prepare() 不支持一次包含多条语句，所以上面必须拆分干净
-                        const preparedStmts = chunk.map(sql => db.prepare(sql));
+                        // [核心修改] 每个 batch 第一条指令强制关闭外键约束
+                        // 这确保了无论连接是否被重置，该批次内的 DROP/INSERT 都不受外键限制
+                        preparedStmts.push(db.prepare("PRAGMA foreign_keys = OFF"));
+
+                        // 添加实际的 SQL
+                        chunk.forEach(sql => preparedStmts.push(db.prepare(sql)));
                         
-                        if (preparedStmts.length > 0) {
-                            await db.batch(preparedStmts);
-                        }
+                        // 执行
+                        await db.batch(preparedStmts);
                     }
 
                     return jsonRes({ success: true });
