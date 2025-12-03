@@ -80,7 +80,9 @@ function loadProducts(categoryId = null) {
     const listContainer = $('#product-list');
     listContainer.empty().append('<p class="text-center text-muted p-3">商品数据加载中...</p>');
 
-    const api = categoryId ? `/api/products?category_id=${categoryId}` : '/api/products';
+    // ***** 修复 API 路径 *****
+    const api = categoryId ? `/api/shop/products?category_id=${categoryId}` : '/api/shop/products';
+    // ************************
     
     $.ajax({
         url: api,
@@ -92,10 +94,8 @@ function loadProducts(categoryId = null) {
                 listContainer.empty().append(`<p class="text-center text-danger p-3">加载失败: ${response.message}</p>`);
             }
         },
-        error: function(xhr, status, error) {
-            // 这里我们保持原有的 API 调用，因为用户说原来能显示
+        error: function() {
             listContainer.empty().append('<p class="text-center text-danger p-3">网络错误，无法加载商品数据</p>');
-            console.error("API Error for products:", status, error, xhr.responseText);
         }
     });
 }
@@ -104,8 +104,10 @@ function loadProducts(categoryId = null) {
  * 加载分类数据
  */
 function loadCategories() {
+    // ***** 修复 API 路径 *****
     $.ajax({
-        url: '/api/categories',
+        url: '/api/shop/categories',
+        // ************************
         method: 'GET',
         success: function(response) {
             if (response.code === 0) {
@@ -114,10 +116,8 @@ function loadCategories() {
                 $('#category-list').empty().append('<p class="text-muted p-2">分类加载失败</p>');
             }
         },
-        error: function(xhr, status, error) {
-            // 这里我们保持原有的 API 调用，因为用户说原来能显示
+        error: function() {
             $('#category-list').empty().append('<p class="text-muted p-2">网络错误，无法加载分类数据</p>');
-            console.error("API Error for categories:", status, error, xhr.responseText);
         }
     });
 }
