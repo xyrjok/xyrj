@@ -204,33 +204,9 @@
                                 <div class="mb-3">
                                     <label class="form-label">接收通知的邮箱</label>
                                     <input type="email" class="form-control" id="mail_to" placeholder="例如：123456@qq.com">
-                                    <div class="form-text text-muted" style="font-size: 12px;">Power Automate, Brevo 和 Outlook 都会发送到这个邮箱。</div>
+                                    <div class="form-text text-muted" style="font-size: 12px;">Brevo 和 Outlook 都会发送到这个邮箱。</div>
                                 </div>
 
-                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fab fa-microsoft text-primary"></i> Microsoft Power Automate</h6>
-                                <div class="mb-3 form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pa_active">
-                                    <label class="form-check-label" for="pa_active">开启 Power Automate 推送</label>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Webhook URL (HTTP Post URL)</label>
-                                    <input type="text" class="form-control" id="pa_url" placeholder="https://prod-xx.westus.logic.azure.com:443/...">
-                                </div>
-
-                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fas fa-paper-plane text-success"></i> Brevo (原 Sendinblue)</h6>
-                                <div class="mb-3 form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="brevo_active">
-                                    <label class="form-check-label" for="brevo_active">开启 Brevo 邮件推送</label>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">API Key (v3)</label>
-                                    <input type="text" class="form-control" id="brevo_key" placeholder="xkeysib-...">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">发件人邮箱 (Sender Email)</label>
-                                    <input type="email" class="form-control" id="brevo_sender" placeholder="需在 Brevo 后台验证过的发件人">
-                                </div>
-                                
                                 <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fab fa-microsoft text-primary"></i> Outlook (Graph API)</h6>
                                 <div class="mb-3 form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="outlook_active">
@@ -248,6 +224,20 @@
                                     <label class="form-label">Refresh Token (刷新令牌)</label>
                                     <input type="text" class="form-control" id="outlook_refresh_token" placeholder="需手动获取长效 Refresh Token">
                                     <div class="form-text text-muted" style="font-size: 12px;">请确保该 Token 拥有 Mail.Send 和 offline_access 权限。</div>
+                                </div>
+                                
+                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fas fa-paper-plane text-success"></i> Brevo (原 Sendinblue)</h6>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="brevo_active">
+                                    <label class="form-check-label" for="brevo_active">开启 Brevo 邮件推送</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">API Key (v3)</label>
+                                    <input type="text" class="form-control" id="brevo_key" placeholder="xkeysib-...">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">发件人邮箱 (Sender Email)</label>
+                                    <input type="email" class="form-control" id="brevo_sender" placeholder="需在 Brevo 后台验证过的发件人">
                                 </div>
                             </div>
                         </div>
@@ -299,19 +289,20 @@
             document.getElementById('tg_chat_id').value = config.tg_chat_id || '';
 
             document.getElementById('mail_to').value = config.mail_to || '';
-
-            document.getElementById('pa_active').checked = (config.pa_active === '1');
-            document.getElementById('pa_url').value = config.pa_url || '';
-
-            document.getElementById('brevo_active').checked = (config.brevo_active === '1');
-            document.getElementById('brevo_key').value = config.brevo_key || '';
-            document.getElementById('brevo_sender').value = config.brevo_sender || '';
             
             // --- Outlook 回显 ---
             document.getElementById('outlook_active').checked = (config.outlook_active === '1');
             document.getElementById('outlook_client_id').value = config.outlook_client_id || '';
             document.getElementById('outlook_client_secret').value = config.outlook_client_secret || '';
             document.getElementById('outlook_refresh_token').value = config.outlook_refresh_token || '';
+            
+            document.getElementById('brevo_active').checked = (config.brevo_active === '1');
+            document.getElementById('brevo_key').value = config.brevo_key || '';
+            document.getElementById('brevo_sender').value = config.brevo_sender || '';
+            
+            // Power Automate 已删除
+            // document.getElementById('pa_active').checked = (config.pa_active === '1');
+            // document.getElementById('pa_url').value = config.pa_url || '';
 
         } catch (e) {
             console.warn("Initial load failed (likely empty DB):", e);
@@ -334,19 +325,20 @@
             tg_chat_id: document.getElementById('tg_chat_id').value,
 
             mail_to: document.getElementById('mail_to').value,
-
-            pa_active: document.getElementById('pa_active').checked ? '1' : '0',
-            pa_url: document.getElementById('pa_url').value,
-
-            brevo_active: document.getElementById('brevo_active').checked ? '1' : '0',
-            brevo_key: document.getElementById('brevo_key').value,
-            brevo_sender: document.getElementById('brevo_sender').value,
             
             // --- Outlook 保存 ---
             outlook_active: document.getElementById('outlook_active').checked ? '1' : '0',
             outlook_client_id: document.getElementById('outlook_client_id').value,
             outlook_client_secret: document.getElementById('outlook_client_secret').value,
-            outlook_refresh_token: document.getElementById('outlook_refresh_token').value
+            outlook_refresh_token: document.getElementById('outlook_refresh_token').value,
+
+            brevo_active: document.getElementById('brevo_active').checked ? '1' : '0',
+            brevo_key: document.getElementById('brevo_key').value,
+            brevo_sender: document.getElementById('brevo_sender').value,
+            
+            // Power Automate 已删除
+            // pa_active: document.getElementById('pa_active').checked ? '1' : '0',
+            // pa_url: document.getElementById('pa_url').value,
         };
         const res = await api('settings/save', { method: 'POST', body: JSON.stringify(data) });
         if (res.success) {
