@@ -1,10 +1,12 @@
 /* themes/default/files/footer.js - 渲染页面底部 */
 
-function renderFooter() {
+// 函数现在接受 siteName 作为参数
+function renderFooter(siteName = '我的商店') {
     const currentYear = new Date().getFullYear();
-    // 尝试从页面标题获取站点名称，否则使用默认值
-    const siteName = document.title.split(' - ')[0] || '我的商店'; 
-
+    // 检查是否已渲染，防止重复
+    if ($('footer').length > 0) return;
+    
+    // 使用传入的 siteName
     const footerHtml = `
         <footer class="text-center text-muted py-3">
             <div class="container">
@@ -18,10 +20,9 @@ function renderFooter() {
     $('body').append(footerHtml);
 }
 
-// 确保在 jQuery 加载后执行
-$(document).ready(function() {
-    // 只有当 DOM 中没有 <footer> 元素时才渲染，以防重复调用。
-    if ($('footer').length === 0) {
-        renderFooter();
-    }
-});
+// 移除自动执行逻辑，等待 main-default-bs.js 调用
+// $(document).ready(function() {
+//     if ($('footer').length === 0) {
+//         renderFooter();
+//     }
+// });
