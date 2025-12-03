@@ -176,7 +176,74 @@ function loadCategories() {
     });
 }
 
+/**
+ * 动态更新页面标题
+ */
+function updatePageTitle(siteName) {
+    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+    let title = siteName;
+    
+    if (currentPath === 'index.html' || currentPath === '') {
+        title += ' - 首页';
+    } else if (currentPath === 'orders.html') {
+        title = '订单查询 - ' + siteName;
+    } else if (currentPath === 'articles.html') {
+        title = '文章列表 - ' + siteName;
+    } else if (currentPath === 'pay.html') { // Assuming there is a pay.html
+        title = '支付中心 - ' + siteName;
+    }
+    // product.html 和 article.html 的标题由各自页面脚本处理
+    
+    document.title = title;
+}
+
+/**
+ * 加载网站配置 (使用 /api/shop/config 接口)
+ */
+function loadGlobalConfig() {
+    $.ajax({
+        url: '/api/shop/config',
+        method: 'GET',
+        success: function(config) {
+            // 确保配置数据是对象
+            if (config && typeof config === 'object') {
+                const siteName = config.site_name || '夏雨店铺'; // 使用默认值
+                
+                // 1. 更新页面标题
+                updatePageTitle(siteName);
+                
+                // 2. 渲染 Header 和 Footer，传入 siteName
+                if (typeof renderHeader === 'function') {
+                    renderHeader(siteName);
+                }
+                if (typeof renderFooter === 'function') {
+                    renderFooter(siteName);
+                }
+            } else {
+                 console.warn('Config API returned invalid data.');
+            }
+        },
+        error: function() {
+            console.error('Failed to load site configuration. Rendering with default name.');
+            const defaultName = '我的商店';
+            // 即使加载失败，也尝试渲染默认名称的 Header/Footer
+            if (typeof renderHeader === 'function') {
+                renderHeader(defaultName);
+            }
+            if (typeof renderFooter === 'function') {
+                renderFooter(defaultName);
+            }
+        }
+    });
+}
+
 $(document).ready(function() {
-    loadCategories();
-    loadProducts();
+    loadGlobalConfig(); // 新增：加载配置并渲染 Header/Footer
+    
+    // 只有首页才需要加载分类和商品
+    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+    if (currentPath === 'index.html' || currentPath === '') {
+        loadCategories();
+        loadProducts();
+    }
 });
