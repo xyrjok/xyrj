@@ -92,9 +92,9 @@ CREATE TABLE orders (
 
 DROP TABLE IF EXISTS article_categories;
 CREATE TABLE article_categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    sort INTEGER DEFAULT 0
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL,
+	sort INTEGER DEFAULT 0
 );
 INSERT INTO article_categories (name, sort) VALUES ('默认分类', 0);
 
