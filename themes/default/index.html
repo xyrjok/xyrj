@@ -12,34 +12,66 @@
     <link href="/themes/default/files/custom-default-bootstrap.css" rel="stylesheet">
     <style>
         body { background: #f2f2f2; }
+        /* 模拟 hyper-card 的行式卡片外观样式 */
+        .product-card-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #fff;
+            border: 1px solid #e9ecef; /* 浅色边框 */
+            border-radius: 0.25rem; /* 圆角 */
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s ease-in-out;
+        }
+        .product-card-item:hover {
+            /* 模仿 hover 效果，增加阴影和主色边框 */
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15)!important;
+            border-color: var(--luna-primary-blue, #007bff);
+        }
+        .product-info {
+            flex-grow: 1;
+        }
+        .product-price {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--luna-primary-blue, #007bff); /* 假设 primary blue 是价格颜色 */
+            white-space: nowrap; /* 确保价格不换行 */
+        }
     </style>
 </head>
 <body>
     <div class="container my-4">
-        <div class="row">
-            <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 col-12">
-                <div class="main-box">
-                    
-                    <div class="title">
-                        <i class="fas fa-cubes" style="color:var(--luna-primary-blue)"></i>
-                        <span>商品分类</span>
-                    </div>
-                    <div class="category-bar" id="category-list">
-                        <div class="text-muted p-2">加载分类中...</div>
-                    </div>
+        <div class="main-box">
+            
+            <div class="title">
+                <i class="fas fa-cubes" style="color:var(--luna-primary-blue)"></i>
+                <span>商品分类</span>
+            </div>
+            <div class="category-bar" id="category-list">
+                <div class="text-muted p-2">加载分类中...</div>
+            </div>
 
-                    <div class="goods">
-                        <p class="title-2">
-                            <i class="fas fa-gift" style="color:var(--luna-primary-blue)"></i>
-                            <span>热销商品</span>
-                        </p>
-                        <div id="product-list" class="list-group">
-                            <p class="list-group-item text-muted p-3">加载商品中...</p>
+            <div class="goods">
+                <p class="title-2">
+                    <i class="fas fa-gift" style="color:var(--luna-primary-blue)"></i>
+                    <span>热销商品</span>
+                </p>
+                <div id="product-list">
+                    <a href="javascript:void(0);" class="product-card-item">
+                        <div style="width: 48px; height: 48px; background-color: #f8f9fa; border-radius: 4px;" class="me-3"></div>
+                        <div class="product-info">
+                            <p class="mb-0 text-truncate">商品数据加载中...</p>
                         </div>
-                    </div>
-                    
+                        <div class="product-price">
+                             <span class="text-muted">¥ 0.00</span>
+                        </div>
+                    </a>
+                    <p class="text-center text-muted p-3">商品数据加载中...</p>
                 </div>
             </div>
+            
         </div>
     </div>
 
