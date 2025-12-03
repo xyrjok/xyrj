@@ -2,7 +2,7 @@
 
 function renderFooter() {
     const currentYear = new Date().getFullYear();
-    // 假设站点名称模板变量 {{ site_name }} 在后端渲染时会被替换
+    // 尝试从页面标题获取站点名称，否则使用默认值
     const siteName = document.title.split(' - ')[0] || '我的商店'; 
 
     const footerHtml = `
