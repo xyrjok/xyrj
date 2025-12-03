@@ -975,7 +975,7 @@ async function handleApi(request, env, url, ctx) {
 
                 try {
                     // [修改] 优化导入逻辑：将 SQL 按分号分割，每次执行 50 条，防止请求过大报错
-                    const statements = sqlContent.split(';\n').filter(s => s.trim());
+                    const statements = sqlContent.replace(/\r\n/g, '\n').split(';\n').filter(s => s.trim());
                     const BATCH_SIZE = 50; 
 
                     for (let i = 0; i < statements.length; i += BATCH_SIZE) {
