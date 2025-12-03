@@ -132,7 +132,7 @@
         </div>
         
         <div class="row g-4">
-            <div class="col-lg-8">
+            <div class="col-lg-12">
                 <div class="card">
                     <div class="card-header">
                         <ul class="nav nav-tabs card-header-tabs" id="settingTabs" role="tablist">
@@ -259,29 +259,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card db-card">
-                    <div class="card-header"><i class="fas fa-database"></i> 数据库管理</div>
-                    <div class="card-body p-4">
-                        <div class="mb-4 border-bottom pb-4">
-                            <label class="form-label fw-bold">备份数据</label>
-                            <p class="text-muted small mb-2">将所有数据导出为 .sql 文件下载到本地。</p>
-                            <button class="btn btn-outline-dark w-100 btn-sm" onclick="exportDb()">
-                                <i class="fas fa-download"></i> 导出数据库 (.sql)
-                            </button>
-                        </div>
-                        
-                        <div>
-                            <label class="form-label fw-bold text-danger">恢复数据 (慎用)</label>
-                            <p class="text-muted small mb-2">从 .sql 文件恢复数据。<strong>警告：这将覆盖现有数据！</strong></p>
-                            <input type="file" id="import-file" class="form-control form-control-sm mb-2" accept=".sql">
-                            <button class="btn btn-danger w-100 btn-sm" onclick="importDb()">
-                                <i class="fas fa-upload"></i> 开始导入
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
 </div>
@@ -376,67 +354,6 @@
         } else {
             alert('保存失败: ' + (res.error || '未知错误'));
         }
-    }
-
-    // 导出数据库
-    function exportDb() {
-        const token = localStorage.getItem('ADMIN_TOKEN');
-        fetch('/api/admin/db/export', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => {
-            if(res.status === 401) return logout();
-            return res.blob();
-        })
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `backup_${new Date().toISOString().slice(0,10)}.sql`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        })
-        .catch(e => alert('导出失败: ' + e.message));
-    }
-
-    // 导入数据库
-    async function importDb() {
-        const fileInput = document.getElementById('import-file');
-        const file = fileInput.files[0];
-        if (!file) return alert('请先选择一个 .sql 文件');
-
-        if (!confirm('警告：导入操作将执行 SQL 脚本，可能会清空或覆盖现有数据！\n\n确定要继续吗？')) return;
-
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const sqlContent = e.target.result;
-            const btn = document.querySelector('button[onclick="importDb()"]');
-            const oldText = btn.innerHTML;
-            btn.disabled = true; 
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在导入...';
-
-            try {
-                const res = await api('db/import', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' }, // 发送纯文本
-                    body: sqlContent
-                });
-
-                if (res.success) {
-                    alert('数据库导入成功！页面将刷新。');
-                    window.location.reload();
-                } else {
-                    alert('导入失败: ' + (res.error || '未知错误'));
-                }
-            } catch (err) {
-                alert('网络错误: ' + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = oldText;
-            }
-        };
-        reader.readAsText(file);
     }
 
     init();
