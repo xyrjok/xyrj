@@ -1,0 +1,256 @@
+/* Custom Luna-Bootstrap Theme Styles */
+
+:root {
+    --luna-dark-blue: #2f4056;
+    --luna-primary-blue: #3C8CE7;
+    --luna-secondary-blue: #00EAFF;
+    --luna-light-gray: #f2f2f2;
+    --luna-text-dark: #333;
+    --luna-text-light: #fff;
+    --luna-box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* 1. Global/Body */
+body {
+    background-color: var(--luna-light-gray);
+    color: var(--luna-text-dark);
+}
+
+.main-box {
+    background-color: #fff;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: var(--luna-box-shadow);
+}
+
+/* 2. Titles/Headers (Luna Style) */
+.main-box .title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--luna-primary-blue);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+}
+.main-box .title i {
+    margin-right: 8px;
+    font-size: 20px;
+}
+.goods .title-2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--luna-text-dark);
+    margin-top: 20px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+.goods .title-2 i {
+    margin-right: 8px;
+}
+
+/* 3. Category Bar (Mimic Luna's cate bar) */
+.category-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.cate-box {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+}
+.cate-box:hover {
+    background-color: #f0f0f0;
+}
+.cate-box.active {
+    background-color: var(--luna-primary-blue);
+    color: var(--luna-text-light);
+    border-color: var(--luna-primary-blue);
+    box-shadow: 0 2px 5px rgba(60, 140, 231, 0.4);
+}
+.cate-box p {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+.cate-box div {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* 4. Product List (Grid style) */
+.goods-box {
+    display: block;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    background-color: #fff;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.goods-box:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: var(--luna-primary-blue);
+}
+.goods-box .picture img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+.goods-box .msg {
+    padding: 10px;
+}
+.goods-name {
+    font-size: 14px;
+    font-weight: 600;
+    height: 40px; /* 两行高度 */
+    overflow: hidden;
+}
+.goods-price {
+    font-size: 18px;
+    color: var(--luna-primary-blue);
+    font-weight: 700;
+    margin-top: 5px;
+}
+.goods-num {
+    font-size: 12px;
+    color: #999;
+    margin-top: 5px;
+}
+
+/* 5. Product Detail Page Specifics */
+.goods-img img {
+    max-width: 100%;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+.goods-msg .entry {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+.goods-msg .l-msg {
+    width: 80px;
+    font-weight: 500;
+    color: var(--luna-text-dark);
+    font-size: 14px;
+}
+.goods-msg .input {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+}
+.goods-msg .price {
+    margin: 15px 0;
+    font-size: 24px;
+    color: var(--luna-primary-blue);
+}
+.pay-type {
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+.pay-type i, .pay-type svg {
+    margin-right: 10px;
+    width: 24px;
+    height: 24px;
+}
+.pay-type.pay-select {
+    border-color: var(--luna-primary-blue);
+    background-color: #e0f0ff;
+}
+
+/* Stepper for Quantity */
+.input .sub, .input .add {
+    display: inline-block;
+    padding: 0 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    cursor: pointer;
+    line-height: 36px;
+    height: 38px;
+    font-weight: bold;
+    color: var(--luna-primary-blue);
+}
+.input .sub {
+    border-radius: 4px 0 0 4px;
+}
+.input .add {
+    border-radius: 0 4px 4px 0;
+}
+.input input.pay-num {
+    width: 60px;
+    text-align: center;
+    border: 1px solid #ced4da;
+    border-left: none;
+    border-right: none;
+    height: 38px;
+    display: inline-block;
+}
+.input .form-control {
+    border-radius: 0;
+}
+.input .form-control:first-child {
+    border-radius: 4px 0 0 4px;
+}
+.input .form-control:last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+/* 6. Mobile/Utility (Query Button) */
+.query-m {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+.query-m a {
+    display: flex;
+    align-items: center;
+    background-color: var(--luna-primary-blue);
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 50px;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(60, 140, 231, 0.6);
+    transition: all 0.2s;
+}
+.query-m a:hover {
+    background-color: #2b74d3;
+}
+.query-m i {
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    margin-right: 5px;
+}
+.query-m span {
+    font-weight: 600;
+}
+
+/* Order Search Page */
+.status-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+.bg-warning { background-color: #ffc107!important; color: #333!important; } /* Pending */
+.bg-info { background-color: #0dcaf0!important; color: #333!important; } /* Paid/Waiting */
+.bg-success { background-color: #198754!important; color: #fff!important; } /* Completed */
