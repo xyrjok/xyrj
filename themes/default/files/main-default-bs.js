@@ -80,20 +80,41 @@ function loadProducts(categoryId = null) {
     const listContainer = $('#product-list');
     listContainer.empty().append('<p class="text-center text-muted p-3">商品数据加载中...</p>');
 
-    // ***** 还原 API 路径 *****
-    const api = categoryId ? `/api/products?category_id=${categoryId}` : '/api/products';
-    // ************************
+    // ***** 修正 API 路径为 /api/shop/ (TBshop 路径) *****
+    const api = categoryId ? `/api/shop/products?category_id=${categoryId}` : '/api/shop/products';
+    // ***************************************************
     
     $.ajax({
         url: api,
         method: 'GET',
         success: function(response) {
-            // 还原到原始的成功判断逻辑
-            if (response && response.code === 0) {
-                renderProductList(response.data.products || [], categoryId);
+            let products = [];
+            let isSuccess = false;
+
+            // 1. 尝试解析标准格式：{code: 0, data: {products: [...]}}
+            if (response && response.code === 0 && response.data && Array.isArray(response.data.products)) {
+                products = response.data.products;
+                isSuccess = true;
+            } 
+            // 2. 尝试解析纯数组格式 (兼容 /api/shop/products 可能直接返回数据)
+            else if (response && Array.isArray(response)) {
+                products = response;
+                isSuccess = true;
+            }
+            // 3. 尝试解析纯对象格式 (兼容 {products: [...]})
+            else if (response && Array.isArray(response.products)) {
+                products = response.products;
+                isSuccess = true;
+            }
+            
+            if (isSuccess) {
+                renderProductList(products, categoryId);
             } else {
-                // 还原到原始的错误信息处理
-                const errorMsg = (response && response.message) ? response.message : 'API返回数据格式错误或后端未提供具体错误信息';
+                // 如果 API 返回了非零错误代码，显示错误信息
+                const errorMsg = (response && response.message) 
+                    ? response.message 
+                    : 'API返回数据格式错误或后端未提供具体错误信息。';
+
                 listContainer.empty().append(`<p class="text-center text-danger p-3">加载失败: ${errorMsg}</p>`);
             }
         },
@@ -108,17 +129,37 @@ function loadProducts(categoryId = null) {
  */
 function loadCategories() {
     $.ajax({
-        // ***** 还原 API 路径 *****
-        url: '/api/categories',
-        // ************************
+        // ***** 修正 API 路径为 /api/shop/ (TBshop 路径) *****
+        url: '/api/shop/categories',
+        // ***************************************************
         method: 'GET',
         success: function(response) {
-            // 还原到原始的成功判断逻辑
-            if (response && response.code === 0) {
-                renderCategoryList(response.data.categories || [], null);
+            let categories = [];
+            let isSuccess = false;
+
+            // 1. 尝试解析标准格式：{code: 0, data: {categories: [...]}}
+            if (response && response.code === 0 && response.data && Array.isArray(response.data.categories)) {
+                categories = response.data.categories;
+                isSuccess = true;
+            } 
+            // 2. 尝试解析纯数组格式 (兼容 /api/shop/categories 可能直接返回数据)
+            else if (response && Array.isArray(response)) {
+                categories = response;
+                isSuccess = true;
+            }
+            // 3. 尝试解析纯对象格式 (兼容 {categories: [...]})
+            else if (response && Array.isArray(response.categories)) {
+                categories = response.categories;
+                isSuccess = true;
+            }
+            
+            if (isSuccess) {
+                renderCategoryList(categories, null);
             } else {
-                // 还原到原始的错误信息处理
-                const errorMsg = (response && response.message) ? response.message : 'API返回数据格式错误或后端未提供具体错误信息';
+                const errorMsg = (response && response.message) 
+                    ? response.message 
+                    : 'API返回数据格式错误或后端未提供具体错误信息。';
+                
                 $('#category-list').empty().append(`<p class="text-muted p-2">分类加载失败: ${errorMsg}</p>`);
             }
         },
