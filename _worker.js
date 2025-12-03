@@ -974,28 +974,52 @@ async function handleApi(request, env, url, ctx) {
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
 
                 try {
-                    // [修改] 优化导入逻辑：按特殊分隔符分割，100% 避免误伤内容中的分号
-                    // 兼容性处理：如果没找到分隔符，说明是旧备份，尝试回退到分号分割（可选）
+                    // 1. 分割 SQL 语句
                     let statements;
                     if (sqlContent.includes('/*_SEP_*/')) {
+                        // 新版备份：使用自定义分隔符
                         statements = sqlContent.split('/*_SEP_*/').map(s => s.trim()).filter(s => s);
                     } else {
-                        statements = sqlContent.replace(/\r\n/g, '\n').split(';\n').filter(s => s.trim());
+                        // 旧版备份或通用 SQL：尝试用分号分割 (风险较大，建议用新版备份)
+                        statements = sqlContent.replace(/\r\n/g, '\n').split(';\n').map(s => s.trim()).filter(s => s);
                     }
                     
+                    // 2. [关键修复] 处理首个语句块可能包含 Header 注释、PRAGMA 和 DROP 导致 prepare 失败的问题
+                    // 导出的文件开头通常是：注释 + PRAGMA...; + DROP TABLE...; 都在第一个分隔符前
+                    if (statements.length > 0) {
+                        const first = statements[0];
+                        // 检查是否包含标准头部的 PRAGMA 语句
+                        if (first.includes('PRAGMA foreign_keys = OFF;')) {
+                             const parts = first.split('PRAGMA foreign_keys = OFF;');
+                             // parts[0] 是注释(丢弃), parts[1] 是随后的 DROP TABLE 语句
+                             statements.shift(); // 移除混合的第一个块
+                             
+                             if (parts[1] && parts[1].trim()) {
+                                 statements.unshift(parts[1].trim()); // 将 DROP 语句放回开头
+                             }
+                             statements.unshift("PRAGMA foreign_keys = OFF"); // 将 PRAGMA 单独作为一条语句放回开头
+                        }
+                    }
+
+                    // 3. 批量执行 (改为使用 db.batch)
+                    // D1 batch 一次限制约 128 条，这里保守设为 50
                     const BATCH_SIZE = 50; 
 
                     for (let i = 0; i < statements.length; i += BATCH_SIZE) {
-                        // 拼接时不加分号了，因为 exec 执行多条语句其实不严格要求分号连接
-                        // 直接用换行符连接即可
-                        const batch = statements.slice(i, i + BATCH_SIZE).join('\n');
-                        if(batch.trim()) {
-                            await db.exec(batch);
+                        const chunk = statements.slice(i, i + BATCH_SIZE);
+                        
+                        // 将 SQL 字符串转换为 PreparedStatement
+                        // 注意：db.prepare() 不支持一次包含多条语句，所以上面必须拆分干净
+                        const preparedStmts = chunk.map(sql => db.prepare(sql));
+                        
+                        if (preparedStmts.length > 0) {
+                            await db.batch(preparedStmts);
                         }
                     }
 
                     return jsonRes({ success: true });
                 } catch (e) {
+                    console.error(e);
                     return errRes('导入失败: ' + e.message);
                 }
             }
