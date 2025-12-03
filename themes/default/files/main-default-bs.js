@@ -32,7 +32,7 @@ function renderCategoryList(categories, currentId) {
 }
 
 /**
- * 渲染商品列表，使用左图右文的列表样式 (新布局)
+ * 渲染商品列表，使用左图右文的列表样式 (新布局，已修复数据兼容性)
  * @param {Array<Object>} products 
  * @param {string | number | null} categoryId 
  */
@@ -46,13 +46,23 @@ function renderProductList(products, categoryId) {
     }
 
     products.forEach(product => {
-        // 使用 product.img，如果不存在则使用 /assets/noimage.jpg 
-        const productImg = product.img || '/assets/noimage.jpg'; 
+        // *** 关键修改：适配 /api/shop/ 返回的嵌套数据结构 (variants) ***
+        const mainVariant = product.variants && product.variants.length > 0 ? product.variants[0] : {};
         
-        // 格式化价格，确保是两位小数
-        const productPrice = parseFloat(product.price).toFixed(2);
+        // 计算总库存和总销量
+        const totalSales = (product.variants || []).reduce((sum, v) => sum + (v.sales_count || 0), 0);
+        const totalStock = (product.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0);
         
-        // *** 关键：生成新的列表项 HTML 结构 (左图右文) ***
+        // 获取图片 URL (优先使用 product.image_url，然后是 variant.image_url)
+        const productImg = product.image_url || mainVariant.image_url || '/assets/noimage.jpg'; 
+        
+        // 获取价格并格式化 (使用主要变体价格)
+        const rawPrice = mainVariant.price || 0;
+        const productPrice = parseFloat(rawPrice).toFixed(2);
+        
+        // ***************************************************************
+        
+        // *** 生成新的列表项 HTML 结构 (左图右文) ***
         const productHtml = `
             <a href="/product?id=${product.id}" class="product-card-item">
                 <div class="product-img me-3">
@@ -60,7 +70,7 @@ function renderProductList(products, categoryId) {
                 </div>
                 <div class="product-info">
                     <p class="mb-1 fw-bold text-truncate">${product.name}</p>
-                    <small class="text-muted">库存: ${product.stock} | 销量: ${product.sales}</small>
+                    <small class="text-muted">库存: ${totalStock} | 销量: ${totalSales}</small>
                 </div>
                 <div class="product-price">
                      <span class="text-danger">¥ ${productPrice}</span>
@@ -73,16 +83,15 @@ function renderProductList(products, categoryId) {
 }
 
 /**
- * 加载商品数据
+ * 加载商品数据 (使用 /api/shop/products 接口)
  * @param {string | number | null} categoryId 
  */
 function loadProducts(categoryId = null) {
     const listContainer = $('#product-list');
     listContainer.empty().append('<p class="text-center text-muted p-3">商品数据加载中...</p>');
 
-    // ***** 修正 API 路径为 /api/shop/ (TBshop 路径) *****
+    // ***** 修正 API 路径为 /api/shop/ *****
     const api = categoryId ? `/api/shop/products?category_id=${categoryId}` : '/api/shop/products';
-    // ***************************************************
     
     $.ajax({
         url: api,
@@ -96,21 +105,15 @@ function loadProducts(categoryId = null) {
                 products = response.data.products;
                 isSuccess = true;
             } 
-            // 2. 尝试解析纯数组格式 (兼容 /api/shop/products 可能直接返回数据)
-            else if (response && Array.isArray(response)) {
-                products = response;
-                isSuccess = true;
-            }
-            // 3. 尝试解析纯对象格式 (兼容 {products: [...]})
-            else if (response && Array.isArray(response.products)) {
-                products = response.products;
+            // 2. 尝试解析纯数组/对象格式 (兼容 /api/shop/ 返回格式)
+            else if (response && (Array.isArray(response) || Array.isArray(response.products))) {
+                products = Array.isArray(response) ? response : response.products;
                 isSuccess = true;
             }
             
             if (isSuccess) {
                 renderProductList(products, categoryId);
             } else {
-                // 如果 API 返回了非零错误代码，显示错误信息
                 const errorMsg = (response && response.message) 
                     ? response.message 
                     : 'API返回数据格式错误或后端未提供具体错误信息。';
@@ -125,13 +128,12 @@ function loadProducts(categoryId = null) {
 }
 
 /**
- * 加载分类数据
+ * 加载分类数据 (使用 /api/shop/categories 接口)
  */
 function loadCategories() {
     $.ajax({
-        // ***** 修正 API 路径为 /api/shop/ (TBshop 路径) *****
+        // ***** 修正 API 路径为 /api/shop/ *****
         url: '/api/shop/categories',
-        // ***************************************************
         method: 'GET',
         success: function(response) {
             let categories = [];
@@ -142,14 +144,9 @@ function loadCategories() {
                 categories = response.data.categories;
                 isSuccess = true;
             } 
-            // 2. 尝试解析纯数组格式 (兼容 /api/shop/categories 可能直接返回数据)
-            else if (response && Array.isArray(response)) {
-                categories = response;
-                isSuccess = true;
-            }
-            // 3. 尝试解析纯对象格式 (兼容 {categories: [...]})
-            else if (response && Array.isArray(response.categories)) {
-                categories = response.categories;
+            // 2. 尝试解析纯数组/对象格式 (兼容 /api/shop/ 返回格式)
+            else if (response && (Array.isArray(response) || Array.isArray(response.categories))) {
+                categories = Array.isArray(response) ? response : response.categories;
                 isSuccess = true;
             }
             
