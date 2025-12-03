@@ -12,8 +12,9 @@
     <link href="/themes/default/files/custom-default-bootstrap.css" rel="stylesheet">
     <style>
         body { background: #f2f2f2; }
-        /* 模拟 hyper-card 的行式卡片外观样式 */
+        /* 模拟 hyper-card 的行式卡片外观样式，实现【左图右文】效果 */
         .product-card-item {
+            /* 关键：使用 Flexbox 实现内容水平对齐 */
             display: flex;
             align-items: center;
             padding: 15px;
@@ -26,18 +27,17 @@
             transition: all 0.2s ease-in-out;
         }
         .product-card-item:hover {
-            /* 模仿 hover 效果，增加阴影和主色边框 */
             box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15)!important;
             border-color: var(--luna-primary-blue, #007bff);
         }
         .product-info {
-            flex-grow: 1;
+            flex-grow: 1; /* 确保中间的文字区域占据剩余空间 */
         }
         .product-price {
             font-size: 1.25rem;
             font-weight: bold;
-            color: var(--luna-primary-blue, #007bff); /* 假设 primary blue 是价格颜色 */
-            white-space: nowrap; /* 确保价格不换行 */
+            color: var(--luna-primary-blue, #007bff);
+            white-space: nowrap; 
         }
     </style>
 </head>
