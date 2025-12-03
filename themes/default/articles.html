@@ -8,20 +8,16 @@
 </head>
 <body class="bg-light">
     <div class="container py-5" style="max-width: 800px;">
-        <header class="text-center mb-5">
-            <h1 id="site-name">文章中心</h1>
-            <a href="/">返回首页</a>
-        </header>
-
         <div class="card shadow-sm">
             <div class="list-group list-group-flush" id="article-list">
-                <!-- JS 渲染 -->
                 <div class="list-group-item">加载中...</div>
             </div>
         </div>
     </div>
-
-    <script>
+    
+    <script src="/assets/jquery-3.6.0.min.js"></script>
+    <script src="/assets/bootstrap.bundle.min.js"></script>
+    <script src="/themes/default/files/header.js"></script> <script src="/themes/default/files/footer.js"></script> <script src="/themes/default/files/main-default-bs.js"></script> <script>
         function formatTime(timestamp) {
             return new Date(timestamp * 1000).toLocaleDateString();
         }
