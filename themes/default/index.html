@@ -12,51 +12,66 @@
     <link href="/themes/default/files/custom-default-bootstrap.css" rel="stylesheet">
     <style>
         body { background: #f2f2f2; }
+        
         /* 模拟 hyper-card 的行式卡片外观样式，实现【左图右文】效果 */
         .product-card-item {
-            /* 关键：使用 Flexbox 实现内容水平对齐 */
             display: flex;
             align-items: center;
             padding: 15px;
             margin-bottom: 10px;
             background-color: #fff;
-            border: 1px solid #e9ecef; /* 浅色边框 */
-            border-radius: 0.25rem; /* 圆角 */
+            
+            /* 【修改 3】：去除蓝边框，使用浅灰色边框和阴影保持结构分离 */
+            border: 1px solid #dee2e6; 
+            border-radius: 0.25rem; 
             text-decoration: none;
             color: inherit;
             transition: all 0.2s ease-in-out;
         }
         .product-card-item:hover {
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15)!important;
-            border-color: var(--luna-primary-blue, #007bff);
+            box-shadow: 0 0.2rem 0.5rem rgba(0,0,0,0.08)!important; /* 调整 hover 阴影 */
+            border-color: #dee2e6; /* 确保 hover 时没有蓝色边框 */
         }
+        
+        /* 图片样式保持不变 */
         .product-card-item .product-img {
-            width: 64px; /* 固定图片宽度 */
-            height: 64px; /* 固定图片高度 */
-            border-radius: 4px; /* 圆角 */
-            overflow: hidden; /* 隐藏超出部分 */
-            flex-shrink: 0; /* 不允许图片被压缩 */
+            width: 64px; 
+            height: 64px; 
+            border-radius: 4px; 
+            overflow: hidden; 
+            flex-shrink: 0; 
         }
         .product-card-item .product-img img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* 确保图片覆盖整个区域，不失真 */
+            object-fit: cover; 
         }
+        
+        /* 【修改 1】：设置商品文字为 14px，并移除 font-weight */
         .product-info {
-            flex-grow: 1; /* 确保中间的文字区域占据剩余空间 */
-            margin-left: 15px; /* 图片和文字间隔 */
+            flex-grow: 1; 
+            margin-left: 15px; 
             margin-right: 15px;
         }
+        .product-info p, .product-info small {
+            font-size: 14px !important; 
+            font-weight: normal !important; 
+        }
+        /* 确保标题链接没有下划线 */
+        .product-info a {
+            text-decoration: none;
+        }
+        
+        /* 价格保持 1.25rem (约 20px) 和 bold */
         .product-price {
-            font-size: 1.25rem;
-            font-weight: bold;
-            color: var(--luna-primary-blue, #007bff);
+            font-size: 1.25rem !important; /* 价格保持 15px 以上 */
+            font-weight: bold !important; 
             white-space: nowrap; 
-            flex-shrink: 0; /* 不允许价格被压缩 */
+            flex-shrink: 0; 
             text-align: right;
         }
         .product-price .text-danger {
-             color: #dc3545!important; /* 确保价格颜色醒目 */
+             color: #dc3545!important;
         }
     </style>
 </head>
@@ -78,18 +93,24 @@
                     <span>热销商品</span>
                 </p>
                 <div id="product-list">
-                    <a href="javascript:void(0);" class="product-card-item">
+                    <div class="product-card-item">
                         <div class="product-img me-3">
-                             <img src="/assets/noimage.jpg" alt="商品图片占位" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" />
+                            <img src="/assets/noimage.jpg" alt="商品图片占位" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" />
                         </div>
                         <div class="product-info">
-                            <p class="mb-1 fw-bold text-truncate">商品数据加载中...</p>
-                            <small class="text-muted">库存: 0 | 销量: 0</small>
+                            <a href="javascript:void(0);" class="text-dark d-block mb-1">
+                                <p class="mb-0 text-truncate">商品数据加载中...</p>
+                            </a>
+                            <small class="d-block text-primary">发货方式: 自动发货</small>
+                            <small class="d-block text-muted">库存: 0</small>
                         </div>
-                        <div class="product-price">
-                             <span class="text-muted">¥ 0.00</span>
+                        <div class="ms-auto text-end d-flex flex-column justify-content-center align-items-end">
+                            <div class="product-price mb-2">
+                                <span class="text-muted">¥ 0.00</span>
+                            </div>
+                            <a href="javascript:void(0);" class="btn btn-sm btn-secondary disabled">缺货</a>
                         </div>
-                    </a>
+                    </div>
                     <p class="text-center text-muted p-3">商品数据加载中...</p>
                 </div>
             </div>
