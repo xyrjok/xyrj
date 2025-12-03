@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [修复] 数据库导入增加依赖排序算法，彻底解决 FOREIGN KEY 约束错误
+ * [修复] 数据库导入采用 db.exec 批量模式，彻底解决 FOREIGN KEY 约束错误
  */
 
 // === 工具函数 ===
@@ -980,90 +980,43 @@ async function handleApi(request, env, url, ctx) {
                 });
             }
 
-            // 导入数据库 (Import) - 优化版：智能排序插入
+            // 导入数据库 (Import) - 最终修复版：使用 db.exec 一次性处理 PRAGMA 和所有语句
             if (path === '/api/admin/db/import' && method === 'POST') {
                 const sqlContent = await request.text();
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
 
                 try {
-                    // 1. 分割 SQL 语句
+                    // 1. 分割 SQL 语句（以便清洗）
                     let rawStatements;
                     if (sqlContent.includes('/*_SEP_*/')) {
                         rawStatements = sqlContent.split('/*_SEP_*/');
                     } else {
+                        // 兼容旧格式，按 ;\n 分割
                         rawStatements = sqlContent.replace(/\r\n/g, '\n').split(';\n');
                     }
 
-                    // 2. 清洗语句 & 初步分类
-                    const schemaStmts = [];
-                    const insertStmts = [];
-                    
-                    rawStatements
+                    // 2. 清洗：只保留有效的 SQL 语句，去除所有 PRAGMA 和注释
+                    const cleanStatements = rawStatements
                         .map(s => s.trim())
-                        .filter(s => s && !s.toUpperCase().startsWith('PRAGMA')) // 过滤掉 PRAGMA
-                        .forEach(s => {
-                            // 移除头部残留的 PRAGMA
-                            const cleanSql = s.replace(/^PRAGMA.*;/i, '').trim();
-                            if (!cleanSql) return;
-                            
-                            if (cleanSql.toUpperCase().startsWith('INSERT INTO')) {
-                                insertStmts.push(cleanSql);
-                            } else {
-                                schemaStmts.push(cleanSql);
-                            }
-                        });
-
-                    // 3. 对 INSERT 语句进行排序 (核心修复：解决外键依赖)
-                    // 优先级定义：越小越先执行 (父表 -> 子表)
-                    const tablePriority = {
-                        'site_config': 1,
-                        'pay_gateways': 1,
-                        'categories': 1, 
-                        'article_categories': 1, 
-                        'image_categories': 1,
-                        'products': 2,       // 依赖 categories
-                        'articles': 2,       // 依赖 article_categories
-                        'images': 2,         // 依赖 image_categories
-                        'variants': 3,       // 依赖 products
-                        'orders': 4,         // 依赖 variants
-                        'cards': 5           // 依赖 variants, orders
-                    };
-
-                    const getTablePriority = (sql) => {
-                        // 简单正则提取表名: INSERT INTO "table" ... 或 INSERT INTO table ...
-                        for (const [name, p] of Object.entries(tablePriority)) {
-                            // 匹配 "表名" 或 `表名` 或 空格表名空格
-                            if (sql.includes(`"${name}"`) || sql.includes(`\`${name}\``) || sql.includes(` ${name} `)) {
-                                return p;
-                            }
-                        }
-                        return 99; // 未知表放在最后
-                    };
-
-                    // 执行排序
-                    insertStmts.sort((a, b) => getTablePriority(a) - getTablePriority(b));
-
-                    // 4. 合并执行队列: 先结构后数据
-                    const finalQueue = [...schemaStmts, ...insertStmts];
+                        .filter(s => s) 
+                        .filter(s => !s.toUpperCase().startsWith('PRAGMA') && !s.toUpperCase().startsWith('--'));
                     
-                    // 5. 批量执行
-                    const BATCH_SIZE = 40; 
-                    for (let i = 0; i < finalQueue.length; i += BATCH_SIZE) {
-                        const chunk = finalQueue.slice(i, i + BATCH_SIZE);
-                        if (chunk.length === 0) continue;
-
-                        const preparedStmts = [];
-                        // 强制关闭外键约束 (虽然排序了，但加上更保险)
-                        preparedStmts.push(db.prepare("PRAGMA foreign_keys = OFF"));
-                        chunk.forEach(sql => preparedStmts.push(db.prepare(sql)));
-                        
-                        await db.batch(preparedStmts);
-                    }
+                    // 3. 构建单个巨大的 SQL 字符串，并用 PRAGMA 强制包裹
+                    // 理论上，这是最符合 SQLite 导入规范且最能规避 D1 批处理状态丢失的方法。
+                    let bulkSql = `
+                        PRAGMA foreign_keys = OFF;
+                        ${cleanStatements.join(';\n')}
+                        PRAGMA foreign_keys = ON;
+                    `;
+                    
+                    // 4. 使用 db.exec() 运行多语句
+                    await db.exec(bulkSql);
 
                     return jsonRes({ success: true });
                 } catch (e) {
                     console.error(e);
-                    return errRes('导入失败: ' + e.message);
+                    // 返回更具体的错误信息
+                    return errRes('导入失败: ' + e.message + ' (请检查SQL文件结构，或尝试使用新版导出功能重新生成备份文件)');
                 }
             }
         }
