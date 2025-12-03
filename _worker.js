@@ -925,63 +925,6 @@ async function handleApi(request, env, url, ctx) {
                 return jsonRes({ success: true });
             }
 
-            // ===========================
-            // --- 数据库管理 API ---
-            // ===========================
-            
-            // 导出数据库 (Dump) - 排除 _cf_ 开头的系统表
-            if (path === '/api/admin/db/export') {
-                const tables = await db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
-                
-                let sqlDump = "-- Cloudflare D1 Dump\n";
-                sqlDump += `-- Date: ${new Date().toISOString()}\n\n`;
-                sqlDump += "PRAGMA foreign_keys = OFF;\n\n"; 
-
-                for (const table of tables.results) {
-                    sqlDump += `DROP TABLE IF EXISTS "${table.name}";\n`;
-                    sqlDump += `${table.sql};\n`;
-                    
-                    const rows = await db.prepare(`SELECT * FROM "${table.name}"`).all();
-                    if (rows.results.length > 0) {
-                        sqlDump += `\n-- Data for ${table.name}\n`;
-                        for (const row of rows.results) {
-                            const keys = Object.keys(row).map(k => `"${k}"`).join(',');
-                            const values = Object.values(row).map(v => {
-                                if (v === null) return 'NULL';
-                                if (typeof v === 'number') return v;
-                                return `'${String(v).replace(/'/g, "''")}'`;
-                            }).join(',');
-                            
-                            sqlDump += `INSERT INTO "${table.name}" (${keys}) VALUES (${values});\n`;
-                        }
-                    }
-                    sqlDump += "\n";
-                }
-                
-                sqlDump += "PRAGMA foreign_keys = ON;\n";
-
-                return new Response(sqlDump, {
-                    headers: {
-                        'Content-Type': 'application/sql',
-                        'Content-Disposition': `attachment; filename="backup_${new Date().toISOString().split('T')[0]}.sql"`
-                    }
-                });
-            }
-
-            // 导入数据库 (Import)
-            if (path === '/api/admin/db/import' && method === 'POST') {
-                const sqlContent = await request.text();
-                if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
-
-                try {
-                    await db.exec(sqlContent);
-                    return jsonRes({ success: true });
-                } catch (e) {
-                    return errRes('导入失败: ' + e.message);
-                }
-            }
-        }
-
         // ===========================
         // --- 公开 API (Shop) ---
         // ===========================
