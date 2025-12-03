@@ -1,9 +1,11 @@
 /* themes/default/files/header.js - 渲染页面头部（导航栏） */
 
-function renderHeader() {
-    // 尝试从页面标题获取站点名称，否则使用默认值
-    const siteName = document.title.split(' - ')[0] || '我的商店'; 
-
+// 函数现在接受 siteName 作为参数
+function renderHeader(siteName = '我的商店') {
+    // 检查是否已渲染，防止重复
+    if ($('header').length > 0) return;
+    
+    // 使用传入的 siteName
     const headerHtml = `
         <header>
             <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -35,16 +37,19 @@ function renderHeader() {
     
     // 激活当前页面的导航链接
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-    $(`a[href="${currentPath}"]`).closest('li.nav-item').find('a').addClass('active').attr('aria-current', 'page');
-    if (currentPath === 'index.html') {
-        $('a[href="index.html"]').addClass('active').attr('aria-current', 'page');
+    // 移除之前的 active 状态
+    $('.nav-link').removeClass('active').removeAttr('aria-current');
+    // 激活当前页面的链接
+    $(`a[href="${currentPath}"]`).addClass('active').attr('aria-current', 'page');
+    // 特殊处理根路径
+    if (currentPath === '' || currentPath === 'index.html') {
+         $('a[href="index.html"]').addClass('active').attr('aria-current', 'page');
     }
 }
 
-// 确保在 jQuery 加载后执行
-$(document).ready(function() {
-    // 只有当 DOM 中没有 <header> 元素时才渲染，以防重复调用。
-    if ($('header').length === 0) {
-        renderHeader();
-    }
-});
+// 移除自动执行逻辑，等待 main-default-bs.js 调用
+// $(document).ready(function() {
+//     if ($('header').length === 0) {
+//         renderHeader();
+//     }
+// });
