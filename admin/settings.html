@@ -299,7 +299,7 @@
     function logout() { if(confirm('确定要退出登录吗？')) { localStorage.removeItem('ADMIN_TOKEN'); window.location.href = '/admin/index.html'; } }
     
     async function api(path, options = {}) {
-        options.headers = { ...options.headers, 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+        options.headers = { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json', ...options.headers };
         try { const res = await fetch('/api/admin/' + path, options); if(res.status === 401) { logout(); return {}; } return res.json(); } catch(e) { console.error(e); return {}; }
     }
 
