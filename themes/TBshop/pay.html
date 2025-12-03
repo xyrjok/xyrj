@@ -265,16 +265,12 @@
                         return;
                     }
 
-                    // 情况2：订单状态 == 1 (已支付)，但需要判断是否有卡密
+                    // 情况2：订单状态 == 1 (已支付/待发货)
                     if (data.status === 1) {
-                        // 如果已经有卡密了，直接显示
-                        if (data.cards && data.cards.length > 0) {
-                            clearInterval(pollTimer);
-                            handlePaySuccess(data);
-                            return;
-                        }
+                        // 订单状态为 1 时，cards_sent 存的是购物车列表，不能作为发货成功的判断依据。
+                        // 必须等待状态变为 2 (已完成) 才停止轮询。
 
-                        // 如果已支付但没有卡密（可能还在处理自动发货），我们多等一会儿
+                        // 如果已支付但没有完成，我们多等一会儿
                         retryCount++;
                         if (retryCount <= MAX_RETRIES) {
                             // 更新提示文字，安抚用户
@@ -283,9 +279,10 @@
                             return; // 继续轮询
                         }
 
-                        // 如果等了很久（超过15秒）还是没卡密，那确实是缺货或手动发货了，显示默认提示
+                        // 如果等了很久（超过15秒）还是 status=1，说明发货失败或人工发货，显示默认提示
                         clearInterval(pollTimer);
-                        handlePaySuccess(data); 
+                        // 强制传入空卡密数组，确保 handlePaySuccess 显示“等待发货”提示
+                        handlePaySuccess({ status: 1, cards: [] }); 
                     }
                 } catch(e) { console.error('Check status failed', e); }
             }, 3000); 
