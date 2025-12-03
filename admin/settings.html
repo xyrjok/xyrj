@@ -140,7 +140,10 @@
                                 <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button">基本设置</button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link" id="notify-tab" data-bs-toggle="tab" data-bs-target="#notify" type="button">订单推送</button>
+                                <button class="nav-link" id="notify-tab" data-bs-toggle="tab" data-bs-target="#notify" type="button">管理员订单推送</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" id="customer-notify-tab" data-bs-toggle="tab" data-bs-target="#customer-notify" type="button">客户订单推送</button>
                             </li>
                         </ul>
                     </div>
@@ -240,7 +243,30 @@
                                     <input type="email" class="form-control" id="brevo_sender" placeholder="需在 Brevo 后台验证过的发件人">
                                 </div>
                             </div>
-                        </div>
+
+                            <div class="tab-pane fade" id="customer-notify" role="tabpanel">
+                                <p class="text-muted">当客户在下单时填写了邮箱地址，并且订单发货成功时，系统将通过以下配置自动发送发货通知邮件（包含卡密）。</p>
+                                
+                                <h6 class="mb-3 border-bottom pb-2 mt-4"><i class="fab fa-microsoft text-primary"></i> Outlook (Graph API)</h6>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="customer_outlook_active">
+                                    <label class="form-check-label" for="customer_outlook_active">开启 Outlook 客户发信</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Client ID (应用程序 ID)</label>
+                                    <input type="text" class="form-control" id="customer_outlook_client_id" placeholder="Azure 后台获取">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Client Secret (客户端密码)</label>
+                                    <input type="text" class="form-control" id="customer_outlook_client_secret" placeholder="Azure 后台获取">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Refresh Token (刷新令牌)</label>
+                                    <input type="text" class="form-control" id="customer_outlook_refresh_token" placeholder="需手动获取长效 Refresh Token">
+                                    <div class="form-text text-muted" style="font-size: 12px;">建议单独使用一个邮箱账户，确保该 Token 拥有 Mail.Send 和 offline_access 权限。</div>
+                                </div>
+                            </div>
+                            </div>
 
                         <div class="mt-4 pt-3 border-top">
                             <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> 保存所有设置</button>
@@ -283,22 +309,30 @@
             document.getElementById('theme_select').value = config.theme || 'default';
             document.getElementById('announce').value = config.announce || '';
             document.getElementById('contact_info').value = config.contact_info || '';
-            // --- 订单推送设置回显 ---
+            
+            // --- 订单推送设置回显 (管理员) ---
             document.getElementById('tg_active').checked = (config.tg_active === '1');
             document.getElementById('tg_bot_token').value = config.tg_bot_token || '';
             document.getElementById('tg_chat_id').value = config.tg_chat_id || '';
 
             document.getElementById('mail_to').value = config.mail_to || '';
             
-            // --- Outlook 回显 ---
+            // --- Outlook 回显 (管理员) ---
             document.getElementById('outlook_active').checked = (config.outlook_active === '1');
             document.getElementById('outlook_client_id').value = config.outlook_client_id || '';
             document.getElementById('outlook_client_secret').value = config.outlook_client_secret || '';
             document.getElementById('outlook_refresh_token').value = config.outlook_refresh_token || '';
             
+            // --- Brevo 回显 (管理员) ---
             document.getElementById('brevo_active').checked = (config.brevo_active === '1');
             document.getElementById('brevo_key').value = config.brevo_key || '';
             document.getElementById('brevo_sender').value = config.brevo_sender || '';
+            
+            // --- [新增] 客户 Outlook 回显 ---
+            document.getElementById('customer_outlook_active').checked = (config.customer_outlook_active === '1');
+            document.getElementById('customer_outlook_client_id').value = config.customer_outlook_client_id || '';
+            document.getElementById('customer_outlook_client_secret').value = config.customer_outlook_client_secret || '';
+            document.getElementById('customer_outlook_refresh_token').value = config.customer_outlook_refresh_token || '';
             
             // Power Automate 已删除
             // document.getElementById('pa_active').checked = (config.pa_active === '1');
@@ -319,19 +353,21 @@
             theme: document.getElementById('theme_select').value,
             announce: document.getElementById('announce').value,
             contact_info: document.getElementById('contact_info').value,
-            // --- 订单推送设置保存 ---
+            
+            // --- 订单推送设置保存 (管理员) ---
             tg_active: document.getElementById('tg_active').checked ? '1' : '0',
             tg_bot_token: document.getElementById('tg_bot_token').value,
             tg_chat_id: document.getElementById('tg_chat_id').value,
 
             mail_to: document.getElementById('mail_to').value,
             
-            // --- Outlook 保存 ---
+            // --- Outlook 保存 (管理员) ---
             outlook_active: document.getElementById('outlook_active').checked ? '1' : '0',
             outlook_client_id: document.getElementById('outlook_client_id').value,
             outlook_client_secret: document.getElementById('outlook_client_secret').value,
             outlook_refresh_token: document.getElementById('outlook_refresh_token').value,
 
+            // --- Brevo 保存 (管理员) ---
             brevo_active: document.getElementById('brevo_active').checked ? '1' : '0',
             brevo_key: document.getElementById('brevo_key').value,
             brevo_sender: document.getElementById('brevo_sender').value,
@@ -339,6 +375,12 @@
             // Power Automate 已删除
             // pa_active: document.getElementById('pa_active').checked ? '1' : '0',
             // pa_url: document.getElementById('pa_url').value,
+
+            // --- [新增] 客户 Outlook 保存 ---
+            customer_outlook_active: document.getElementById('customer_outlook_active').checked ? '1' : '0',
+            customer_outlook_client_id: document.getElementById('customer_outlook_client_id').value,
+            customer_outlook_client_secret: document.getElementById('customer_outlook_client_secret').value,
+            customer_outlook_refresh_token: document.getElementById('customer_outlook_refresh_token').value,
         };
         const res = await api('settings/save', { method: 'POST', body: JSON.stringify(data) });
         if (res.success) {
