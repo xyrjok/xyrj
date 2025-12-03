@@ -1,8 +1,7 @@
 /* themes/default/files/header.js - 渲染页面头部（导航栏） */
 
 function renderHeader() {
-    // 假设站点名称模板变量 {{ site_name }} 在后端渲染时会被替换，这里使用一个占位符。
-    // 在纯前端代码中，如果需要 site_name，可能需要从一个全局变量或API中获取。
+    // 尝试从页面标题获取站点名称，否则使用默认值
     const siteName = document.title.split(' - ')[0] || '我的商店'; 
 
     const headerHtml = `
