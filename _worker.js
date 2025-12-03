@@ -1410,7 +1410,6 @@ async function handleApi(request, env, url, ctx) {
                         const keys = [
                             'tg_active', 'tg_bot_token', 'tg_chat_id', 
                             'brevo_active', 'brevo_key', 'brevo_sender', 'mail_to',
-                            'pa_active', 'pa_url',
                             'outlook_active', 'outlook_client_id', 'outlook_client_secret', 'outlook_refresh_token'
                         ];
                         const placeholders = keys.map(() => '?').join(',');
@@ -1510,6 +1509,10 @@ ${contentBody}
                                 body: JSON.stringify({ chat_id: config.tg_chat_id, text: msgText })
                             }));
                         }
+                        // --- Outlook Graph API 推送 (新增) ---
+                        if (config.outlook_active === '1' && config.outlook_client_id && config.outlook_refresh_token && config.mail_to) {
+                            notifications.push(sendOutlookMail(config, `新订单通知：${order.id}`, msgText));
+                        }
 
                         // --- Brevo (Sendinblue) 邮件推送 (新增) ---
                         if (config.brevo_active === '1' && config.brevo_key && config.mail_to && config.brevo_sender) {
@@ -1528,25 +1531,6 @@ ${contentBody}
                                 })
                             }));
                         }
-
-                        // --- Microsoft Power Automate 推送 (新增) ---
-                        if (config.pa_active === '1' && config.pa_url) {
-                            notifications.push(fetch(config.pa_url, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                    "subject": `新订单通知：${order.id}`,
-                                    "content": msgText,
-                                    "email": config.mail_to || ""
-                                })
-                            }));
-                        }
-
-                        // --- Outlook Graph API 推送 (新增) ---
-                        if (config.outlook_active === '1' && config.outlook_client_id && config.outlook_refresh_token && config.mail_to) {
-                            notifications.push(sendOutlookMail(config, `新订单通知：${order.id}`, msgText));
-                        }
-
                         // 异步发送
                         if (notifications.length > 0 && ctx && ctx.waitUntil) {
                             ctx.waitUntil(Promise.all(notifications));
