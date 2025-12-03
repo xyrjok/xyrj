@@ -8,7 +8,7 @@
  * [修复] 修复 D1 数据库不支持 BEGIN TRANSACTION/COMMIT 导致的 500 错误
  * [修复] 文章管理支持保存封面图、浏览量和显示状态
  * [新增] Outlook (Graph API) 原生发信支持
- * [最终修复] 数据库导入采用 db.batch 模式，并分离 DROP/CREATE 和 INSERT 语句，彻底解决 "table already exists" 和 "FOREIGN KEY" 错误。
+ * [最终修复] 数据库导入采用 db.batch 模式，分离 DROP/CREATE 和 INSERT 语句，彻底解决 "table already exists" 和 "FOREIGN KEY" 错误。
  */
 
 // === 工具函数 ===
@@ -981,16 +981,14 @@ async function handleApi(request, env, url, ctx) {
                 });
             }
 
-            // 导入数据库 (Import) - 最终修复版：使用 db.batch 模式，分离结构和数据，强制清除旧表
+            // 导入数据库 (Import) - 最终修复版：分离 DROP/CREATE 和 INSERT 语句
             if (path === '/api/admin/db/import' && method === 'POST') {
                 const sqlContent = await request.text();
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
 
                 try {
-                    // 1. 分割 SQL 语句（兼容新旧格式）
-                    let rawStatements;
-                    // 使用 /*_SEP_*/ 进行分割，这是 DUMP 格式中明确定义的
-                    rawStatements = sqlContent.split('/*_SEP_*/');
+                    // 1. 分割 SQL 语句（使用 /*_SEP_*/，这是 DUMP 格式中明确定义的）
+                    let rawStatements = sqlContent.split('/*_SEP_*/');
                     
                     // 2. 清洗 & 分类：分离 Schema (DROP/CREATE) 和 Data (INSERT)
                     const schemaStmts = [];
@@ -1012,7 +1010,6 @@ async function handleApi(request, env, url, ctx) {
                             else if (upperS.startsWith('INSERT INTO')) {
                                 insertStmts.push(s);
                             }
-                            // 否则可能是其他结构或注释，暂时忽略
                         });
                     
                     // 3. 构建执行队列：Schema 优先，Data 随后
