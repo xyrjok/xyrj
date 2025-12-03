@@ -974,7 +974,6 @@ async function handleApi(request, env, url, ctx) {
                 if (!sqlContent || !sqlContent.trim()) return errRes('SQL 文件内容为空');
 
                 try {
-                    try {
                     // [修改] 优化导入逻辑：按特殊分隔符分割，100% 避免误伤内容中的分号
                     // 兼容性处理：如果没找到分隔符，说明是旧备份，尝试回退到分号分割（可选）
                     let statements;
@@ -987,10 +986,9 @@ async function handleApi(request, env, url, ctx) {
                     const BATCH_SIZE = 50; 
 
                     for (let i = 0; i < statements.length; i += BATCH_SIZE) {
-                        // 拼接时不加分号了，因为 exec 执行多条语句其实不严格要求分号连接，
-                        // 或者为了保险起见，每条语句后面补一个分号（因为 split 把分号切没了或保留在前面了）
-                        // 最简单的写法是：直接用换行符连接即可，因为 SQLite exec 能够处理
-                        const batch = statements.slice(i, i + BATCH_SIZE).join(';\n');
+                        // 拼接时不加分号了，因为 exec 执行多条语句其实不严格要求分号连接
+                        // 直接用换行符连接即可
+                        const batch = statements.slice(i, i + BATCH_SIZE).join('\n');
                         if(batch.trim()) {
                             await db.exec(batch);
                         }
