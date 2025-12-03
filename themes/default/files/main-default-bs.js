@@ -32,7 +32,7 @@ function renderCategoryList(categories, currentId) {
 }
 
 /**
- * 渲染商品列表，使用左图右文的列表样式
+ * 渲染商品列表，使用左图右文的列表样式 (新布局)
  * @param {Array<Object>} products 
  * @param {string | number | null} categoryId 
  */
@@ -40,7 +40,7 @@ function renderProductList(products, categoryId) {
     const listContainer = $('#product-list');
     listContainer.empty();
 
-    if (products.length === 0) {
+    if (!Array.isArray(products) || products.length === 0) {
         listContainer.append('<p class="text-center text-muted p-3">当前分类下暂无商品</p>');
         return;
     }
@@ -52,7 +52,7 @@ function renderProductList(products, categoryId) {
         // 格式化价格，确保是两位小数
         const productPrice = parseFloat(product.price).toFixed(2);
         
-        // *** 生成新的列表项 HTML 结构 (左图右文) ***
+        // *** 关键：生成新的列表项 HTML 结构 (左图右文) ***
         const productHtml = `
             <a href="/product?id=${product.id}" class="product-card-item">
                 <div class="product-img me-3">
@@ -80,21 +80,20 @@ function loadProducts(categoryId = null) {
     const listContainer = $('#product-list');
     listContainer.empty().append('<p class="text-center text-muted p-3">商品数据加载中...</p>');
 
-    const api = categoryId ? `/api/shop/products?category_id=${categoryId}` : '/api/shop/products';
+    // ***** 还原 API 路径 *****
+    const api = categoryId ? `/api/products?category_id=${categoryId}` : '/api/products';
+    // ************************
     
     $.ajax({
         url: api,
         method: 'GET',
         success: function(response) {
-            // 确保 response 存在，并且 code 字段存在
+            // 还原到原始的成功判断逻辑
             if (response && response.code === 0) {
                 renderProductList(response.data.products || [], categoryId);
             } else {
-                // *** 关键修改：安全访问 message 字段 ***
-                const errorMsg = (response && response.message) 
-                    ? response.message 
-                    : 'API返回数据格式错误或后端未提供具体错误信息';
-
+                // 还原到原始的错误信息处理
+                const errorMsg = (response && response.message) ? response.message : 'API返回数据格式错误或后端未提供具体错误信息';
                 listContainer.empty().append(`<p class="text-center text-danger p-3">加载失败: ${errorMsg}</p>`);
             }
         },
@@ -109,18 +108,17 @@ function loadProducts(categoryId = null) {
  */
 function loadCategories() {
     $.ajax({
-        url: '/api/shop/categories',
+        // ***** 还原 API 路径 *****
+        url: '/api/categories',
+        // ************************
         method: 'GET',
         success: function(response) {
-             // 确保 response 存在，并且 code 字段存在
+            // 还原到原始的成功判断逻辑
             if (response && response.code === 0) {
                 renderCategoryList(response.data.categories || [], null);
             } else {
-                // *** 关键修改：安全访问 message 字段 ***
-                const errorMsg = (response && response.message) 
-                    ? response.message 
-                    : 'API返回数据格式错误或后端未提供具体错误信息';
-
+                // 还原到原始的错误信息处理
+                const errorMsg = (response && response.message) ? response.message : 'API返回数据格式错误或后端未提供具体错误信息';
                 $('#category-list').empty().append(`<p class="text-muted p-2">分类加载失败: ${errorMsg}</p>`);
             }
         },
