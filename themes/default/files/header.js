@@ -94,7 +94,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
             .header-search-input {
                 border-radius: 20px;
                 font-size: 13px;
-                padding: 5px 15px 5px 35px;
+                padding: 5px 15px 5px 15px;
                 border: 1px solid #eee;
                 background-color: #f8f9fa;
                 width: 200px;
@@ -103,18 +103,18 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
             }
             .header-search-input:focus {
                 background-color: #fff;
-                border: 1px solid var(--bs-primary); /* 强制 1px 边框 */
+                border: 1px solid #555; /* 强制 1px 边框 */
                 box-shadow: none;  /* 去掉浅蓝色光晕/外边框 */
                 width: 240px;
-                /* outline: none; 去掉浏览器默认的高亮轮廓 */
+                outline: none; /* 去掉浏览器默认的高亮轮廓 */
             }
             .header-search-icon {
                 position: absolute;
-                left: 12px;
+                right: 11px;
                 top: 50%;
                 transform: translateY(-50%);
                 color: #aaa;
-                font-size: 12px;
+                font-size: 14px;
                 pointer-events: none;
             }
 
@@ -239,7 +239,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                         </ul>
 
                         <div class="header-search-form">
-                            <i class="fas fa-search header-search-icon"></i>
+                            <i class="far fa-search header-search-icon"></i>
                             <input type="text" class="header-search-input" id="top-search-input" placeholder="搜索商品...">
                         </div>
 
