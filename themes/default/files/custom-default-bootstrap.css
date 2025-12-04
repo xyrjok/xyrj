@@ -65,7 +65,7 @@ body {
     text-align: center;
     white-space: nowrap;
     vertical-align: baseline;
-    border-radius: 3em; /* 将 !important 移动到属性值后 */
+    border-radius: 3em;
 }
 
 /* 3. Category Bar (Mimic Luna's cate bar) */
