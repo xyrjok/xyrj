@@ -188,7 +188,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
             <nav class="navbar navbar-expand-lg navbar-light">
                 <div class="container">
                     
-                    <a class="navbar-brand" href="index.html">
+                    <a class="navbar-brand" href="/">
                         ${logoHtml}
                         ${nameHtml}
                     </a>
@@ -201,13 +201,13 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                         
                         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                             <li class="nav-item">
-                                <a class="nav-link" href="index.html">
+                                <a class="nav-link" href="/">
                                     <i class="fas fa-home"></i>首页
                                 </a>
                             </li>
                             <!-- 下拉菜单分类 -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="index.html#category-list" id="categoryDropdown" role="button" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle" href="/#category-list" id="categoryDropdown" role="button" aria-expanded="false">
                                     <i class="fas fa-list-ul"></i>商品分类
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="categoryDropdown" id="header-category-menu">
@@ -216,12 +216,12 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                             </li>
 
                             <li class="nav-item">
-                                <a class="nav-link" href="orders.html">
+                                <a class="nav-link" href="orders">
                                     <i class="fas fa-search"></i>订单查询
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="articles.html">
+                                <a class="nav-link" href="articles">
                                     <i class="fas fa-book-open"></i>文章中心
                                 </a>
                             </li>
@@ -245,11 +245,11 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
     
     $('body').prepend(headerHtml);
     
-    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+    const currentPath = window.location.pathname.split('/').pop() || '/';
     $('.nav-link').removeClass('active');
     
-    if (currentPath === '' || currentPath === 'index.html') {
-        $('a[href="index.html"]').first().addClass('active');
+    if (currentPath === '' || currentPath === '/') {
+        $('a[href="/"]').first().addClass('active');
     } else {
         $(`a[href="${currentPath}"]`).addClass('active');
     }
@@ -261,7 +261,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
             const kw = $(this).val().trim().toLowerCase();
             if (!kw) return;
 
-            if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+            if (window.location.pathname.endsWith('/') || window.location.pathname === '/') {
                 let found = 0;
                 $('.product-card-item').each(function() {
                     const text = $(this).text().toLowerCase();
@@ -281,7 +281,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                     }, 500);
                 }
             } else {
-                window.location.href = 'index.html';
+                window.location.href = '/';
             }
         }
     });
@@ -314,7 +314,7 @@ function loadHeaderCategories() {
 
             menuContainer.append(`
                 <li>
-                    <a class="dropdown-item" href="index.html#category-list" onclick="if(typeof loadProducts === 'function') loadProducts(null);">
+                    <a class="dropdown-item" href="/#category-list" onclick="if(typeof loadProducts === 'function') loadProducts(null);">
                         全部商品
                     </a>
                 </li>
@@ -351,6 +351,6 @@ window.handleCategoryClick = function(catId) {
         }
         $('html, body').animate({ scrollTop: $("#product-list").offset().top - 100 }, 300);
     } else {
-        window.location.href = 'index.html'; 
+        window.location.href = '/'; 
     }
 };
