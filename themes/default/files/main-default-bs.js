@@ -157,12 +157,12 @@ function renderProductList(products, categoryId) {
                         </div>
                     </div>
 
-                    <div class="product-action-area d-flex align-items-center justify-content-end gap-3 flex-wrap flex-md-nowrap">
+                    <div class="product-action-area d-flex align-items-center justify-content-end gap-4 flex-wrap flex-md-nowrap">
                         <div class="d-flex align-items-center justify-content-end" style="min-width: 90px;">
                             ${deliveryHtml}
                         </div>
 
-                        <div class="text-muted text-end" style="min-width: 70px; font-size: 13px;">
+                        <div class="text-muted text-end" style="min-width: 70px; font-size: 12px;">
                             库存: ${totalStock}
                         </div>
 
