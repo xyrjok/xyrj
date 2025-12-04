@@ -41,8 +41,8 @@ const TB_LAYOUT = {
 
             <nav class="main-nav d-none d-md-flex">
                 <a href="/" class="nav-link-item ${activePage === 'home' ? 'active' : ''}" style="${activePage==='home'?'color:var(--tb-orange);':''}">首页</a>
-                <a href="/articles.html" class="nav-link-item ${activePage === 'articles' ? 'active' : ''}" style="${activePage==='articles'?'color:var(--tb-orange);':''}">教程文章</a>
-                <a href="/orders.html" class="nav-link-item ${activePage === 'orders' ? 'active' : ''}" style="${activePage==='orders'?'color:var(--tb-orange);':''}">查询订单</a>
+                <a href="/articles" class="nav-link-item ${activePage === 'articles' ? 'active' : ''}" style="${activePage==='articles'?'color:var(--tb-orange);':''}">教程文章</a>
+                <a href="/orders" class="nav-link-item ${activePage === 'orders' ? 'active' : ''}" style="${activePage==='orders'?'color:var(--tb-orange);':''}">查询订单</a>
             </nav>
 
             <div class="header-right">
@@ -78,17 +78,17 @@ const TB_LAYOUT = {
             <i class="fa fa-th-large"></i>
             <span>分类</span>
         </a>
-        <a href="/orders.html" class="mbn-item ${activePage === 'orders' ? 'active' : ''}">
+        <a href="/orders" class="mbn-item ${activePage === 'orders' ? 'active' : ''}">
             <i class="fa fa-file-alt"></i>
             <span>查单</span>
         </a>
-        <a href="/cart.html" class="mbn-item ${activePage === 'cart' ? 'active' : ''}" style="position:relative;">
+        <a href="/cart" class="mbn-item ${activePage === 'cart' ? 'active' : ''}" style="position:relative;">
             <i class="fa fa-shopping-cart"></i>
             <span>购物车</span>
              <span id="cart-badge-mobile" class="badge bg-danger rounded-pill" 
                   style="position: absolute; top: 2px; right: 15px; font-size: 8px; padding: 2px 4px; display: none;">0</span>
         </a>
-        <a href="/articles.html" class="mbn-item ${activePage === 'articles' ? 'active' : ''}">
+        <a href="/articles" class="mbn-item ${activePage === 'articles' ? 'active' : ''}">
             <i class="fas fa-book"></i>
             <span>文章</span>
         </a>
@@ -112,8 +112,8 @@ const TB_LAYOUT = {
         <div class="container">
             <div class="footer-links">
                 <a href="/">首页</a>
-                <a href="/articles.html">教程文章</a>
-                <a href="/orders.html">查询订单</a>
+                <a href="/articles">教程文章</a>
+                <a href="/orders">查询订单</a>
                 <a href="#" onclick="event.preventDefault(); togglePanel('mobile-contact-sheet', 'mobile-contact-overlay');">联系客服</a>
             </div>
             <div class="copyright">
@@ -197,7 +197,7 @@ function renderCommonLayout(activePage) {
     const headerRight = document.querySelector('.tb-header .header-right');
     if (headerRight && !document.getElementById('cart-btn-pc')) {
         const cartBtnHtml = `
-        <a href="/cart.html" class="icon-btn-pc" id="cart-btn-pc" style="position: relative; margin-left: 0px; color: #ff0036; text-decoration: none;">
+        <a href="/cart" class="icon-btn-pc" id="cart-btn-pc" style="position: relative; margin-left: 0px; color: #ff0036; text-decoration: none;">
             <i class="far fa-shopping-cart" style="font-size: 20px;"></i>
             <span id="cart-badge-pc" class="badge bg-danger rounded-pill" style="position: absolute; top: -8px; right: -10px; font-size: 9px; padding: 2px 4px; display: none;">0</span>
         </a>`;
@@ -258,7 +258,7 @@ function handleMobileCategoryClick(catId) {
 
     const path = window.location.pathname;
     // 如果在首页，直接筛选
-    if (path === '/' || path === '/index.html') {
+    if (path === '/' || path === '/') {
         if (typeof filterCategory === 'function') {
             filterCategory(catId);
         } else {
@@ -266,7 +266,7 @@ function handleMobileCategoryClick(catId) {
         }
     } else {
         // 其他页面跳转
-        window.location.href = `/index.html?cat=${catId}`;
+        window.location.href = `/?cat=${catId}`;
     }
 }
 
@@ -457,7 +457,7 @@ function renderSidebarTopSales(allProducts) {
     if(!el || !allProducts) return;
     const list = [...allProducts].sort((a,b) => (b.variants[0]?.sales_count||0) - (a.variants[0]?.sales_count||0)).slice(0,5);
     el.innerHTML = list.length ? list.map(p => `
-        <a href="/product.html?id=${p.id}" class="top-item">
+        <a href="/product?id=${p.id}" class="top-item">
             <img src="${p.image_url}" class="top-img">
             <div class="top-info"><div class="top-title">${p.name}</div><div class="top-price">¥${p.variants[0]?.price}</div></div>
         </a>`).join('') : '<div class="text-muted small text-center">暂无数据</div>';
@@ -479,7 +479,7 @@ function renderSidebarArticleCats(articles) {
     const el = document.getElementById('article-cat-list');
     if(el && articles?.length) {
         const cats = [...new Set(articles.map(a=>a.category_name).filter(Boolean))];
-        el.innerHTML = cats.length ? cats.map(c=>`<a href="/articles.html?cat=${encodeURIComponent(c)}">${c}</a>`).join('') : '<div class="text-muted small">暂无分类</div>';
+        el.innerHTML = cats.length ? cats.map(c=>`<a href="/articles?cat=${encodeURIComponent(c)}">${c}</a>`).join('') : '<div class="text-muted small">暂无分类</div>';
     }
 }
 
