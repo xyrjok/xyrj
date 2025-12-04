@@ -10,8 +10,8 @@ function renderCategoryList(categories, currentId) {
     const listContainer = $('#category-list');
     listContainer.empty();
     
-    // [修改] 按钮基础样式：胶囊状(rounded-pill)，无边框(border-0)，内边距(px-3)
-    const btnClass = "btn rounded-pill px-3 me-2 mb-2 border-0"; 
+    // [修改] 按钮基础样式：胶囊状(rounded-pill)，带边框(border)，内边距(px-3)
+    const btnClass = "btn rounded-pill px-3 me-2 mb-2 border"; 
 
     // 添加 "全部" 按钮
     // 激活状态：蓝色背景+阴影；未激活：浅色背景+深色文字
@@ -68,17 +68,68 @@ function renderProductList(products, categoryId) {
         const buttonClass = isAvailable ? 'btn-primary' : 'btn-secondary disabled';
         const buttonText = isAvailable ? '购买' : '缺货';
         const buttonAction = isAvailable ? `/product?id=${product.id}` : 'javascript:void(0)';
+        
+        // [修改] 解析标签 (格式: b1#色 b2#色 标签名#色)
         let tagsHtml = '';
         if (product.tags) {
-            // 支持中英文逗号或空格分隔
-            const tagsArr = product.tags.split(/[,，\s]+/).filter(t => t);
-            tagsArr.forEach(tag => {
-                tagsHtml += `<span class="badge bg-light text-dark border fw-normal me-1">${tag}</span>`;
+            // 1. 按逗号分隔标签
+            const tagsArr = product.tags.split(/[,，]+/).filter(t => t && t.trim());
+            
+            tagsArr.forEach(tagStr => {
+                tagStr = tagStr.trim();
+                let borderColor = null;
+                let bgColor = null;
+                let textColor = null;
+                let labelText = tagStr;
+
+                // 2. 检查是否有自定义属性 (必须包含空格且含有 b1# 或 b2#)
+                if (tagStr.includes(' ') && (tagStr.includes('b1#') || tagStr.includes('b2#'))) {
+                    const parts = tagStr.split(/\s+/);
+                    parts.forEach(part => {
+                        if (part.startsWith('b1#')) {
+                            borderColor = part.replace('b1#', '');
+                        } else if (part.startsWith('b2#')) {
+                            bgColor = part.replace('b2#', '');
+                        } else {
+                            // 解析 标签名#文字色
+                            if (part.includes('#')) {
+                                const txtParts = part.split('#');
+                                labelText = txtParts[0];
+                                // 如果后面有颜色码
+                                if (txtParts[1]) textColor = txtParts[1];
+                            } else {
+                                labelText = part;
+                            }
+                        }
+                    });
+                }
+
+                // 3. 生成 HTML
+                if (borderColor || bgColor || textColor) {
+                    // 自定义样式
+                    let style = '';
+                    // 自动补齐 # 号
+                    if (borderColor) style += `border-color: #${borderColor.replace(/^#/, '')} !important;`;
+                    if (bgColor) style += `background-color: #${bgColor.replace(/^#/, '')} !important;`;
+                    
+                    if (textColor) {
+                        style += `color: #${textColor.replace(/^#/, '')} !important;`;
+                    } else if (bgColor) {
+                        // 如果有背景色但没指定文字色，默认文字为白色，防止深色背景看不清
+                        style += `color: #fff !important;`;
+                    }
+
+                    tagsHtml += `<span class="badge border fw-normal me-1" style="${style}">${labelText}</span>`;
+                } else {
+                    // 纯文字使用默认样式
+                    tagsHtml += `<span class="badge bg-light text-dark border fw-normal me-1">${labelText}</span>`;
+                }
             });
         }
         
         // [修改] HTML结构：表格卡片式布局 (Table-Card)
-        // 使用 col-12 占满整行，内部使用 Flex 布局
+        // 1. 删除了销量显示
+        // 2. 信息区底部改为水平排列 (flex-row)
         const productHtml = `
             <div class="col-12">
                 <div class="product-card-item">
@@ -92,20 +143,19 @@ function renderProductList(products, categoryId) {
                         </div>
                         <div class="product-meta">
                             ${tagsHtml}
-                            <span class="text-muted small ${tagsHtml ? 'ms-1' : ''}">销量: ${totalSales}</span>
                         </div>
                     </div>
 
                     <div class="product-action-area">
-                        <div class="d-flex flex-column align-items-end me-md-3 me-0 mb-1 mb-md-0 text-muted" style="font-size: 12px;">
+                        <div class="d-flex flex-row align-items-center me-3 text-muted gap-3" style="font-size: 12px;">
                             <span>${deliveryType}</span>
                             <span>库存: ${totalStock}</span>
                         </div>
 
-                        <div class="product-price">
+                        <div class="product-price me-3">
                              ¥ ${productPrice}
                         </div>
-                        <a href="${buttonAction}" class="btn btn-sm ${buttonClass} rounded-pill px-4 ms-md-3 mt-2 mt-md-0">
+                        <a href="${buttonAction}" class="btn btn-sm ${buttonClass} rounded-pill px-4">
                             ${buttonText}
                         </a>
                     </div>
