@@ -270,3 +270,118 @@ body {
 .bg-warning { background-color: #ffc107!important; color: #333!important; } /* Pending */
 .bg-info { background-color: #0dcaf0!important; color: #333!important; } /* Paid/Waiting */
 .bg-success { background-color: #198754!important; color: #fff!important; } /* Completed */
+
+
+/* =========================================
+   Product Detail Page Layout (1296px, 2.32:1)
+   ========================================= */
+
+/* 自定义宽容器 */
+.container-1296 {
+    max-width: 1296px;
+    margin: 0 auto;
+    padding: 0 15px; /* 防止在小屏幕贴边 */
+}
+
+/* 详情页网格布局 */
+.product-detail-grid {
+    display: grid;
+    /* 核心比例 2.32 : 1 */
+    grid-template-columns: 2.32fr 1fr; 
+    gap: 10px; 
+    margin-bottom: 30px;
+    align-items: start; /* 顶部对齐 */
+}
+
+/* 左侧详情区 */
+.detail-left {
+    min-width: 0; /* 防止内容撑开 grid */
+}
+
+/* 右侧购买/参数区 (侧边栏) */
+.detail-right {
+    position: sticky;
+    top: 80px; /* 滚动时吸顶 */
+    min-width: 0;
+}
+
+/* 商品主图 (在右侧) */
+.detail-product-img {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid #eee;
+    margin-bottom: 15px;
+    aspect-ratio: 16/9; /* 保持图片比例 */
+    object-fit: cover;
+}
+
+/* 详情页标题 */
+.product-page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--luna-text-dark);
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+/* 详情内容排版优化 */
+.product-description-content {
+    color: #555;
+    line-height: 1.8;
+    font-size: 15px;
+}
+.product-description-content img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* 价格大字体 */
+.detail-price-lg {
+    font-size: 28px;
+    color: var(--luna-primary-blue);
+    font-weight: 700;
+    margin-bottom: 15px;
+    display: block;
+}
+
+/* 规格按钮 */
+.variant-btn {
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #555;
+    padding: 6px 12px;
+    margin-right: 5px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.variant-btn:hover {
+    border-color: var(--luna-primary-blue);
+    color: var(--luna-primary-blue);
+}
+.variant-btn.active {
+    background-color: var(--luna-primary-blue);
+    color: #fff;
+    border-color: var(--luna-primary-blue);
+}
+.variant-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f9f9f9;
+}
+
+/* 移动端适配 */
+@media (max-width: 991px) {
+    .product-detail-grid {
+        grid-template-columns: 1fr; /* 变为单列 */
+        gap: 20px;
+    }
+    .detail-right {
+        position: static; /* 移动端取消吸顶 */
+        order: -1; /* 移动端让购买框显示在上方 */
+    }
+}
