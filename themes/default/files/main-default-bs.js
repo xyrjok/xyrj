@@ -62,12 +62,35 @@ function renderProductList(products, categoryId) {
         const rawPrice = mainVariant.price || 0;
         const productPrice = parseFloat(rawPrice).toFixed(2);
         
-        const deliveryType = product.delivery_type || "自动发货"; 
         const isAvailable = totalStock > 0;
 
         const buttonClass = isAvailable ? 'btn-primary' : 'btn-secondary disabled';
         const buttonText = isAvailable ? '购买' : '缺货';
         const buttonAction = isAvailable ? `/product?id=${product.id}` : 'javascript:void(0)';
+        
+        // === [修改开始] 发货方式样式逻辑 ===
+        let isManual = false;
+        let deliveryLabel = "自动发货";
+        
+        // 判断是否为手动发货 (根据 delivery_type: 1 为手动, 0 或其他为自动)
+        if (product.delivery_type == 1) {
+            isManual = true;
+            deliveryLabel = "手动发货";
+        }
+        
+        // 设置颜色类和图标
+        // 自动发货: 红色(#dc3545 -> text-danger), 闪电图标(fa-bolt)
+        // 手动发货: 蓝色(#0d6efd -> text-primary), 手动/时钟图标(fa-user-clock)
+        const badgeColorClass = isManual ? 'text-primary border-primary' : 'text-danger border-danger';
+        const badgeIconClass = isManual ? 'fa-user-clock' : 'fa-bolt';
+        
+        // 生成徽章 HTML: 椭圆边框(rounded-pill), 背景透明, 带图标, 颜色根据类型变化
+        const deliveryHtml = `
+            <span class="badge rounded-pill bg-transparent border ${badgeColorClass} d-flex align-items-center justify-content-center" style="font-weight: normal; padding: 4px 10px; min-width: 85px;">
+                <i class="fas ${badgeIconClass} me-1"></i>${deliveryLabel}
+            </span>
+        `;
+        // === [修改结束] ===
         
         // [修改] 解析标签 (格式: b1#色 b2#色 标签名#色)
         let tagsHtml = '';
@@ -128,8 +151,7 @@ function renderProductList(products, categoryId) {
         }
         
         // [修改] HTML结构：表格卡片式布局 (Table-Card)
-        // 1. 删除了销量显示
-        // 2. 信息区底部改为水平排列 (flex-row)
+        // 调整 product-action-area 内容，确保发货标签、库存、价格、按钮靠右对齐
         const productHtml = `
             <div class="col-12">
                 <div class="product-card-item">
@@ -147,9 +169,9 @@ function renderProductList(products, categoryId) {
                     </div>
 
                     <div class="product-action-area">
-                        <div class="d-flex flex-row align-items-center me-3 text-muted gap-3" style="font-size: 12px;">
-                            <span>${deliveryType}</span>
-                            <span>库存: ${totalStock}</span>
+                        <div class="d-flex flex-column align-items-end me-3 gap-1" style="font-size: 12px;">
+                            ${deliveryHtml}
+                            <span class="text-muted mt-1">库存: ${totalStock}</span>
                         </div>
 
                         <div class="product-price me-3">
