@@ -106,7 +106,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                 border: 1px solid var(--bs-primary); /* 强制 1px 边框 */
                 box-shadow: none;  /* 去掉浅蓝色光晕/外边框 */
                 width: 240px;
-                outline: none; /* 去掉浏览器默认的高亮轮廓 */
+                /* outline: none; 去掉浏览器默认的高亮轮廓 */
             }
             .header-search-icon {
                 position: absolute;
