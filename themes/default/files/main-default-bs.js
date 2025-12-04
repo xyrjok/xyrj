@@ -84,7 +84,7 @@ function renderProductList(products, categoryId) {
         
         // 生成徽章 HTML
         const deliveryHtml = `
-            <span class="badge rounded-pill bg-transparent border ${badgeColorClass} d-flex align-items-center justify-content-center" style="font-weight: normal; padding: 4px 10px; min-width: 85px;">
+            <span class="badge rounded-pill bg-transparent border ${badgeColorClass} d-inline-flex align-items-center justify-content-center" style="font-weight: normal; padding: 3px 6px; min-width: 65px;font-size: 11px;">
                 <i class="fas ${badgeIconClass} me-1"></i>${deliveryLabel}
             </span>
         `;
@@ -158,7 +158,7 @@ function renderProductList(products, categoryId) {
                     </div>
 
                     <div class="product-action-area d-flex align-items-center justify-content-end gap-3 flex-wrap flex-md-nowrap">
-                        <div class="text-end" style="min-width: 90px;">
+                        <div class="d-flex align-items-center justify-content-end" style="min-width: 90px;">
                             ${deliveryHtml}
                         </div>
 
