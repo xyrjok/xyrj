@@ -119,7 +119,7 @@ function renderProductList(products, categoryId) {
                         style += `color: #fff !important;`;
                     }
 
-                    tagsHtml += `<span class="badge border fw-normal me-1" style="${style}">${labelText}</span>`;
+                    tagsHtml += `<span class="badge-tag" style="${style}">${labelText}</span>`;
                 } else {
                     // 纯文字使用默认样式
                     tagsHtml += `<span class="badge-tag">${labelText}</span>`;
