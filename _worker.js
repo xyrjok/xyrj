@@ -179,9 +179,10 @@ export default {
         }
         
         // 规则 C: 普通 HTML 页面 (商品详情、文章详情等)
-        if (path.endsWith('.html')) {
-            const newPath = path.replace(/\.html$/, ''); 
-            const newUrl = new URL(`/themes/${theme}${newPath}`, url.origin);
+        if ((!path.includes('.') || path.endsWith('.html')) && !path.startsWith('/api/') && !path.startsWith('/admin/') && !path.startsWith('/assets/') && !path.startsWith('/themes/')) {
+            // 如果路径带 .html 则去掉，确保内部统一请求无后缀路径 (Cloudflare Pages 会自动匹配 .html)
+            const cleanPath = path.endsWith('.html') ? path.replace(/\.html$/, '') : path;
+            const newUrl = new URL(`/themes/${theme}${cleanPath}`, url.origin);
             const newRequest = new Request(newUrl, request);
             
             let response = await env.ASSETS.fetch(newRequest);
@@ -195,7 +196,7 @@ export default {
                 const db = env.MY_XYRJ;
 
                 // --- 情况1：商品详情页 (product.html) ---
-                if (path === '/product.html') {
+                if (path === '/product' || path === '/product.html') {
                     const id = url.searchParams.get('id');
                     if (id) {
                         try {
@@ -218,7 +219,7 @@ export default {
                 }
                 
                 // --- 情况2：文章详情页 (article.html) ---
-                else if (path === '/article.html') {
+                else if (path === '/article' || path === '/article.html') {
                     const id = url.searchParams.get('id');
                     if (id) {
                         try {
@@ -247,7 +248,7 @@ export default {
                 }
 
                 // --- 情况3：文章中心 (articles.html) ---
-                else if (path === '/articles.html') {
+                else if (path === '/articles' || path === '/articles.html') {
                     response = await injectMetaTags(response, {
                         url: request.url,
                         title: '资讯中心 - 教程与公告',
