@@ -103,9 +103,10 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
             }
             .header-search-input:focus {
                 background-color: #fff;
-                border-color: var(--bs-primary);
-                box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+                border: 1px solid var(--bs-primary); /* 强制 1px 边框 */
+                box-shadow: none;  /* 去掉浅蓝色光晕/外边框 */
                 width: 240px;
+                outline: none; /* 去掉浏览器默认的高亮轮廓 */
             }
             .header-search-icon {
                 position: absolute;
