@@ -223,7 +223,7 @@ function renderProductDetail(p) {
                         </div>
 
                         <div class="action-btns d-flex mt-4 align-items-center">
-                            <a href="/cart.html" class="d-none d-lg-flex align-items-center justify-content-center me-3 position-relative p-0" style="border: none; background: none; color: #dc3545; text-decoration: none; width: 40px; height: 40px;">
+                            <a href="/cart" class="d-none d-lg-flex align-items-center justify-content-center me-3 position-relative p-0" style="border: none; background: none; color: #dc3545; text-decoration: none; width: 40px; height: 40px;">
                                 <i class="far fa-shopping-cart" style="font-size: 1.5rem;"></i>
                                 <span id="pc-detail-cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger text-white" style="display: none; font-size: 10px; padding: 3px 6px; transform: translate(-50%, -50%) !important;">0</span>
                             </a>
@@ -761,7 +761,7 @@ async function buyNow() {
                 // 弹出确认框
                 if(confirm('提示：' + data.error + '\n\n点击“确定”前往查单页面处理。')) {
                     // 跳转到查单页
-                    window.location.href = '/orders.html';
+                    window.location.href = '/orders';
                     return; // 阻止后续逻辑
                 }
             } else {
@@ -771,7 +771,7 @@ async function buyNow() {
             btn.disabled = false;
             btn.innerHTML = originalContent;
         } else {
-            window.location.href = `/pay.html?order_id=${data.order_id}&method=${paymentMethod}`;
+            window.location.href = `/pay?order_id=${data.order_id}&method=${paymentMethod}`;
         }
 
     } catch (e) {
