@@ -335,14 +335,14 @@ function loadCategories(callback) {
  * 动态更新页面标题
  */
 function updatePageTitle(siteName) {
-    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+    const currentPath = window.location.pathname.split('/').pop() || '/';
     let title = siteName;
     
-    if (currentPath === 'index.html' || currentPath === '') {
+    if (currentPath === '/' || currentPath === '') {
         title += ' - 首页';
-    } else if (currentPath === 'orders.html') {
+    } else if (currentPath === 'orders') {
         title = '订单查询 - ' + siteName;
-    } else if (currentPath === 'articles.html') {
+    } else if (currentPath === 'articles') {
         title = '文章列表 - ' + siteName;
     }
     
@@ -398,8 +398,8 @@ function loadGlobalConfig() {
 $(document).ready(function() {
     loadGlobalConfig();
     
-    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-    if (currentPath === 'index.html' || currentPath === '') {
+    const currentPath = window.location.pathname.split('/').pop() || '/';
+    if (currentPath === '/' || currentPath === '') {
         // [修改] 确保分类加载完成后再加载商品，以便正确获取分类名称和排序
         loadCategories(function() {
             loadProducts();
