@@ -8,6 +8,30 @@ let currentVariant = null;
 
 $(document).ready(function() {
     loadProductDetail();
+
+    // === 新增：加载全局配置并渲染页头页尾 ===
+    $.ajax({
+        url: '/api/shop/config',
+        method: 'GET',
+        success: function(config) {
+            // 获取配置或使用默认值
+            const siteName = (config && config.site_name) || '我的商店';
+            const siteLogo = (config && config.site_logo) || '';
+            const showName = (config && config.show_site_name);
+
+            // 执行渲染 (函数来自 header.js 和 footer.js)
+            if (typeof renderHeader === 'function') renderHeader(siteName, siteLogo, showName);
+            if (typeof renderFooter === 'function') renderFooter(siteName);
+            
+            // 可选：更新网页标题
+            if (document.title === '商品详情加载中...') document.title = siteName;
+        },
+        error: function() {
+            // 如果接口失败，强制渲染默认页头页尾
+            if (typeof renderHeader === 'function') renderHeader();
+            if (typeof renderFooter === 'function') renderFooter();
+        }
+    });
 });
 
 // 获取 URL 参数
