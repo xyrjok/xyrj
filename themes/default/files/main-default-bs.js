@@ -214,7 +214,10 @@ function loadGlobalConfig() {
                 
                 // 2. 渲染 Header 和 Footer，传入 siteName
                 if (typeof renderHeader === 'function') {
-                    renderHeader(siteName);
+                    // 从 config 中获取 site_logo，如果没设置则为空
+                    const siteLogo = config.site_logo || ''; 
+                    // 传入两个参数
+                    renderHeader(siteName, siteLogo);
                 }
                 if (typeof renderFooter === 'function') {
                     renderFooter(siteName);
