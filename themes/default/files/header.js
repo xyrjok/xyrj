@@ -205,16 +205,10 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                                     <i class="fas fa-home"></i>首页
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="index.html#product-list">
-                                    <i class="fas fa-list-ul"></i>所有商品
-                                </a>
-                            </li>
-                            
                             <!-- 下拉菜单分类 -->
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="index.html#category-list" id="categoryDropdown" role="button" aria-expanded="false">
-                                    <i class="fas fa-th-large"></i>商品分类
+                                    <i class="fas fa-list-ul"></i>商品分类
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="categoryDropdown" id="header-category-menu">
                                     <li><span class="dropdown-item text-muted">加载中...</span></li>
