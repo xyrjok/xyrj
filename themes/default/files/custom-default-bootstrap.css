@@ -44,7 +44,7 @@ body {
     font-weight: 400;
     color: var(--luna-text-dark);
     margin-top: 0px;
-    margin-bottom: 0px;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
 }
