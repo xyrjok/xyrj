@@ -122,7 +122,7 @@ function renderProductList(products, categoryId) {
                     tagsHtml += `<span class="badge border fw-normal me-1" style="${style}">${labelText}</span>`;
                 } else {
                     // 纯文字使用默认样式
-                    tagsHtml += `<span class="badge bg-danger text-white border fw-normal me-1" style="border:1px solid #dc3545;">${labelText}</span>`;
+                    tagsHtml += `<span class="badge bg-danger text-white fw-normal me-1" style="border:1px solid #dc3545;">${labelText}</span>`;
                 }
             });
         }
