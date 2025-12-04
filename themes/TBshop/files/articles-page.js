@@ -127,7 +127,7 @@ function renderArticles() {
         const imageSection = `
             <div class="article-item-image">
                 <div class="image-category">${cat}</div>
-                <a href="/article.html?id=${article.id}">
+                <a href="/article?id=${article.id}">
                     <img src="${imgUrl}" alt="${article.title}" onerror="this.src='/assets/noimage.jpg'">
                 </a>
             </div>
@@ -140,7 +140,7 @@ function renderArticles() {
             <div class="article-item-content">
                 <h3>
                     ${pinnedHtml}
-                    <a href="/article.html?id=${article.id}">${article.title}</a>
+                    <a href="/article?id=${article.id}">${article.title}</a>
                 </h3>
                 <p>${summary}</p>
                 <div class="article-meta">
