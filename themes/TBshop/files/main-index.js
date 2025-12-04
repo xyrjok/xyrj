@@ -140,7 +140,7 @@ function renderHotArticlesHome(articles) {
             <div class="d-flex align-items-center overflow-hidden" style="flex: 1; margin-right: 10px;">
                 <span class="${badgeClass}">${rank}</span>
                 
-                <a href="/article.html?id=${a.id}" class="hot-article-title" title="${a.title}">
+                <a href="/article?id=${a.id}" class="hot-article-title" title="${a.title}">
                     ${a.title}
                 </a>
             </div>
@@ -164,7 +164,7 @@ function getProductCardHtml(p) {
     const tagsHtml = renderTagsLocal(p.tags); 
 
     return `
-        <a href="/product.html?id=${p.id}" class="tb-card">
+        <a href="/product?id=${p.id}" class="tb-card">
             <div class="tb-img-wrap">
                 <img src="${imgUrl}" alt="${p.name}" class="tb-img" loading="lazy">
             </div>
