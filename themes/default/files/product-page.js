@@ -21,7 +21,7 @@ function loadProductDetail() {
     const id = getQueryParam('id');
     if (!id) {
         alert('未指定商品ID');
-        window.location.href = 'index.html';
+        window.location.href = '/';
         return;
     }
 
@@ -36,7 +36,7 @@ function loadProductDetail() {
             if (!res || res.error) {
                 const msg = res.error || '商品不存在或已下架';
                 alert(msg);
-                window.location.href = 'index.html';
+                window.location.href = '/';
                 return;
             }
             
@@ -45,7 +45,7 @@ function loadProductDetail() {
         },
         error: function() {
             alert('网络错误，无法加载商品');
-            window.location.href = 'index.html';
+            window.location.href = '/';
         }
     });
 }
@@ -244,7 +244,7 @@ function initiatePay(orderId) {
         success: function(res) {
             if (res.error) {
                 alert('支付初始化失败: ' + res.error);
-                window.location.href = 'orders.html'; // 跳转订单页
+                window.location.href = 'orders'; // 跳转订单页
             } else if (res.type === 'qrcode') {
                 // 简单展示二维码，实际项目中建议用 Modal 弹窗
                 showPayModal(res.qr_code, res.amount, orderId);
@@ -294,7 +294,7 @@ function showPayModal(qrUrl, amount, orderId) {
                 clearInterval(checkInterval);
                 $('#pay-overlay').remove();
                 alert('支付成功！');
-                window.location.href = 'orders.html'; // 跳转查单页查看卡密
+                window.location.href = 'orders'; // 跳转查单页查看卡密
             }
         });
     }, 2000);
