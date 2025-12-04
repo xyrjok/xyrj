@@ -41,10 +41,10 @@ body {
 }
 .goods .title-2 {
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 400;
     color: var(--luna-text-dark);
-    margin-top: 20px;
-    margin-bottom: 15px;
+    margin-top: 0px;
+    margin-bottom: 0px;
     display: flex;
     align-items: center;
 }
