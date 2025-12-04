@@ -128,7 +128,7 @@ function renderPCItem(rawItem, index) {
     const item = normalizeItem(rawItem);
     const subtotal = (item.price * item.quantity).toFixed(2);
     const specDisplay = `<span class="text-muted">${item.sku}</span>`;
-    const productLink = item.productId ? `/product.html?id=${item.productId}` : 'javascript:void(0)';
+    const productLink = item.productId ? `/product?id=${item.productId}` : 'javascript:void(0)';
     
     let extraInfo = '';
     if (item.buyMode === 'select') {
@@ -183,7 +183,7 @@ function renderPCItem(rawItem, index) {
 
 function renderMobileItem(rawItem, index) {
     const item = normalizeItem(rawItem);
-    const productLink = item.productId ? `/product.html?id=${item.productId}` : 'javascript:void(0)';
+    const productLink = item.productId ? `/product?id=${item.productId}` : 'javascript:void(0)';
 
     let infoText = '';
     if (item.buyMode === 'select') {
@@ -373,7 +373,7 @@ window.handleCheckout = async function() {
             // [新增] 拦截未支付订单错误
             if (data.error.includes('未支付订单')) {
                 if(confirm('提示：' + data.error + '\n\n点击“确定”前往查单页面处理。')) {
-                    window.location.href = '/orders.html';
+                    window.location.href = '/orders';
                     return;
                 }
             }
@@ -383,7 +383,7 @@ window.handleCheckout = async function() {
         const remaining = cart.filter(i => i.checked === false);
         localStorage.setItem('tbShopCart', JSON.stringify(remaining));
         
-        window.location.href = `pay.html?order_id=${data.order_id}&method=${cartPaymentMethod}`;
+        window.location.href = `pay?order_id=${data.order_id}&method=${cartPaymentMethod}`;
     } catch(e) {
         alert('结算失败: ' + e.message);
         btns.forEach(b => { b.disabled = false; b.innerText = '立即结算'; });
