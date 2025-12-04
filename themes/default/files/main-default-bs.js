@@ -1,7 +1,14 @@
+{
+type: uploaded file
+fileName: xyrjok/xyrj/xyrj-6641e0238cd7f0623c8fc71950d0eea40a505a60/themes/default/files/main-default-bs.js
+fullContent:
 /**
  * themes/default/files/main-default-bs.js
  * 默认主题的核心逻辑，负责商品加载、配置读取和页头渲染
  */
+
+// 全局分类缓存
+let g_categories = [];
 
 /**
  * 渲染分类列表 (页面中部的按钮栏)
@@ -22,7 +29,16 @@ function renderCategoryList(categories, currentId) {
     categories.forEach(category => {
         const isActive = (category.id == currentId);
         const activeClass = isActive ? 'btn-primary shadow-sm' : 'btn-light text-dark';
-        const btn = $(`<button class="${btnClass} ${activeClass}" data-id="${category.id}">${category.name}</button>`);
+        
+        // [修改] 如果分类有图片，则添加图片标签
+        let imgHtml = '';
+        if (category.image_url) {
+            imgHtml = `<img src="${category.image_url}" alt="icon">`;
+        }
+
+        const btn = $(`<button class="${btnClass} ${activeClass}" data-id="${category.id}">
+            ${imgHtml}${category.name}
+        </button>`);
         listContainer.append(btn);
     });
 
@@ -41,155 +57,223 @@ function renderCategoryList(categories, currentId) {
 }
 
 /**
+ * 生成单个商品的 HTML (提取出来以便复用)
+ */
+function generateProductCardHtml(product) {
+    const mainVariant = product.variants && product.variants.length > 0 ? product.variants[0] : {};
+    
+    const totalSales = (product.variants || []).reduce((sum, v) => sum + (v.sales_count || 0), 0);
+    const totalStock = (product.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0);
+    
+    const productImg = product.image_url || mainVariant.image_url || '/assets/noimage.jpg'; 
+    const rawPrice = mainVariant.price || 0;
+    const productPrice = parseFloat(rawPrice).toFixed(2);
+    
+    const isAvailable = totalStock > 0;
+
+    const buttonClass = isAvailable ? 'btn-primary' : 'btn-secondary disabled';
+    const buttonText = isAvailable ? '购买' : '缺货';
+    const buttonAction = isAvailable ? `/product?id=${product.id}` : 'javascript:void(0)';
+    
+    // 发货方式样式逻辑
+    let isManual = false;
+    let deliveryLabel = "自动发货";
+    
+    if (product.delivery_type == 1) {
+        isManual = true;
+        deliveryLabel = "手动发货";
+    }
+    
+    const badgeColorClass = isManual ? 'text-primary border-primary' : 'text-danger border-danger';
+    const badgeIconClass = isManual ? 'fa-user-clock' : 'fa-bolt';
+    
+    const deliveryHtml = `
+        <span class="badge rounded-pill bg-transparent border ${badgeColorClass} d-inline-flex align-items-center justify-content-center" style="font-weight: normal; padding: 3px 6px; min-width: 65px;font-size: 11px;">
+            <i class="fas ${badgeIconClass} me-1"></i>${deliveryLabel}
+        </span>
+    `;
+    
+    // 解析标签
+    let tagsHtml = '';
+    if (product.tags) {
+        const tagsArr = product.tags.split(/[,，]+/).filter(t => t && t.trim());
+        
+        tagsArr.forEach(tagStr => {
+            tagStr = tagStr.trim();
+            let borderColor = null;
+            let bgColor = null;
+            let textColor = null;
+            let labelText = tagStr;
+
+            if (tagStr.includes(' ') && (tagStr.includes('b1#') || tagStr.includes('b2#'))) {
+                const parts = tagStr.split(/\s+/);
+                parts.forEach(part => {
+                    if (part.startsWith('b1#')) {
+                        borderColor = part.replace('b1#', '');
+                    } else if (part.startsWith('b2#')) {
+                        bgColor = part.replace('b2#', '');
+                    } else {
+                        if (part.includes('#')) {
+                            const txtParts = part.split('#');
+                            labelText = txtParts[0];
+                            if (txtParts[1]) textColor = txtParts[1];
+                        } else {
+                            labelText = part;
+                        }
+                    }
+                });
+            }
+
+            if (borderColor || bgColor || textColor) {
+                let style = '';
+                if (borderColor) style += `border-color: #${borderColor.replace(/^#/, '')} !important;`;
+                if (bgColor) style += `background-color: #${bgColor.replace(/^#/, '')} !important;`;
+                if (textColor) {
+                    style += `color: #${textColor.replace(/^#/, '')} !important;`;
+                } else if (bgColor) {
+                    style += `color: #fff !important;`;
+                }
+                tagsHtml += `<span class="badge-tag" style="${style}">${labelText}</span>`;
+            } else {
+                tagsHtml += `<span class="badge-tag">${labelText}</span>`;
+            }
+        });
+    }
+    
+    // 返回 HTML
+    return `
+        <div class="col-12">
+            <div class="product-card-item">
+                <div class="product-img">
+                    <img src="${productImg}" alt="${product.name}" loading="lazy" />
+                </div>
+                
+                <div class="product-info">
+                    <div class="product-title" title="${product.name}">
+                        <a href="/product?id=${product.id}" class="text-dark text-decoration-none">${product.name}</a>
+                    </div>
+                    <div class="product-meta">
+                        ${tagsHtml}
+                    </div>
+                </div>
+
+                <div class="product-action-area d-flex align-items-center justify-content-end gap-4 flex-wrap flex-md-nowrap">
+                    <div class="d-flex align-items-center justify-content-end" style="min-width: 90px;">
+                        ${deliveryHtml}
+                    </div>
+
+                    <div class="text-muted text-end" style="min-width: 70px; font-size: 12px;">
+                        库存: ${totalStock}
+                    </div>
+
+                    <div class="product-price text-end" style="min-width: 80px;">
+                         ¥ ${productPrice}
+                    </div>
+                    
+                    <div class="text-end" style="min-width: 70px;">
+                        <a href="${buttonAction}" class="btn btn-sm ${buttonClass} rounded-pill px-3 w-100">
+                            ${buttonText}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
  * 渲染商品列表
+ * [修改] 实现了分模块渲染逻辑
  */
 function renderProductList(products, categoryId) {
-    const listContainer = $('#product-list');
-    listContainer.empty();
+    const mainContainer = $('#goods-container');
+    mainContainer.empty();
 
+    // 如果没有商品
     if (!Array.isArray(products) || products.length === 0) {
-        listContainer.append('<div class="col-12"><p class="text-center text-muted p-4 bg-white rounded border">当前分类下暂无商品</p></div>');
+        mainContainer.append('<div class="main-box"><p class="text-center text-muted p-4">当前分类下暂无商品</p></div>');
         return;
     }
 
-    products.forEach(product => {
-        const mainVariant = product.variants && product.variants.length > 0 ? product.variants[0] : {};
-        
-        const totalSales = (product.variants || []).reduce((sum, v) => sum + (v.sales_count || 0), 0);
-        const totalStock = (product.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0);
-        
-        const productImg = product.image_url || mainVariant.image_url || '/assets/noimage.jpg'; 
-        const rawPrice = mainVariant.price || 0;
-        const productPrice = parseFloat(rawPrice).toFixed(2);
-        
-        const isAvailable = totalStock > 0;
+    // 模式 1: 显示全部商品 (按分类分组显示)
+    if (!categoryId || categoryId === 'all') {
+        // 1. 将商品按 category_id 分组
+        const groups = {};
+        products.forEach(p => {
+            const cid = p.category_id || 0;
+            if (!groups[cid]) groups[cid] = [];
+            groups[cid].push(p);
+        });
 
-        const buttonClass = isAvailable ? 'btn-primary' : 'btn-secondary disabled';
-        const buttonText = isAvailable ? '购买' : '缺货';
-        const buttonAction = isAvailable ? `/product?id=${product.id}` : 'javascript:void(0)';
+        // 2. 遍历全局分类列表 (g_categories) 以保证排序
+        let hasRenderedAny = false;
         
-        // === [修改开始] 发货方式样式逻辑 ===
-        let isManual = false;
-        let deliveryLabel = "自动发货";
-        
-        // 判断是否为手动发货
-        if (product.delivery_type == 1) {
-            isManual = true;
-            deliveryLabel = "手动发货";
-        }
-        
-        // 设置颜色类和图标
-        const badgeColorClass = isManual ? 'text-primary border-primary' : 'text-danger border-danger';
-        const badgeIconClass = isManual ? 'fa-user-clock' : 'fa-bolt';
-        
-        // 生成徽章 HTML
-        const deliveryHtml = `
-            <span class="badge rounded-pill bg-transparent border ${badgeColorClass} d-inline-flex align-items-center justify-content-center" style="font-weight: normal; padding: 3px 6px; min-width: 65px;font-size: 11px;">
-                <i class="fas ${badgeIconClass} me-1"></i>${deliveryLabel}
-            </span>
-        `;
-        // === [修改结束] ===
-        
-        // 解析标签 (格式: b1#色 b2#色 标签名#色)
-        let tagsHtml = '';
-        if (product.tags) {
-            const tagsArr = product.tags.split(/[,，]+/).filter(t => t && t.trim());
-            
-            tagsArr.forEach(tagStr => {
-                tagStr = tagStr.trim();
-                let borderColor = null;
-                let bgColor = null;
-                let textColor = null;
-                let labelText = tagStr;
+        g_categories.forEach(cat => {
+            const catProducts = groups[cat.id];
+            // 如果该分类下有商品，则渲染一个模块
+            if (catProducts && catProducts.length > 0) {
+                hasRenderedAny = true;
+                
+                let cardsHtml = '';
+                catProducts.forEach(p => {
+                    cardsHtml += generateProductCardHtml(p);
+                });
 
-                if (tagStr.includes(' ') && (tagStr.includes('b1#') || tagStr.includes('b2#'))) {
-                    const parts = tagStr.split(/\s+/);
-                    parts.forEach(part => {
-                        if (part.startsWith('b1#')) {
-                            borderColor = part.replace('b1#', '');
-                        } else if (part.startsWith('b2#')) {
-                            bgColor = part.replace('b2#', '');
-                        } else {
-                            if (part.includes('#')) {
-                                const txtParts = part.split('#');
-                                labelText = txtParts[0];
-                                if (txtParts[1]) textColor = txtParts[1];
-                            } else {
-                                labelText = part;
-                            }
-                        }
-                    });
-                }
+                // 如果分类有图标，也可以在这里加
+                const iconHtml = cat.image_url ? `<img src="${cat.image_url}" style="width:20px;height:20px;margin-right:8px;vertical-align:middle;">` : `<i class="fas fa-layer-group" style="color:var(--luna-primary-blue)"></i>`;
 
-                if (borderColor || bgColor || textColor) {
-                    let style = '';
-                    if (borderColor) style += `border-color: #${borderColor.replace(/^#/, '')} !important;`;
-                    if (bgColor) style += `background-color: #${bgColor.replace(/^#/, '')} !important;`;
-                    if (textColor) {
-                        style += `color: #${textColor.replace(/^#/, '')} !important;`;
-                    } else if (bgColor) {
-                        style += `color: #fff !important;`;
-                    }
-                    tagsHtml += `<span class="badge-tag" style="${style}">${labelText}</span>`;
-                } else {
-                    tagsHtml += `<span class="badge-tag">${labelText}</span>`;
-                }
-            });
-        }
-        
-        // === [修改] HTML结构：表格化布局 ===
-        // 顺序：发货方式 | 库存 | 价格 | 购买
-        // 使用 min-width 和 text-end 来模拟表格列对齐
-        // gap-3 增加列间距
-        const productHtml = `
-            <div class="col-12">
-                <div class="product-card-item">
-                    <div class="product-img">
-                        <img src="${productImg}" alt="${product.name}" loading="lazy" />
-                    </div>
-                    
-                    <div class="product-info">
-                        <div class="product-title" title="${product.name}">
-                            <a href="/product?id=${product.id}" class="text-dark text-decoration-none">${product.name}</a>
-                        </div>
-                        <div class="product-meta">
-                            ${tagsHtml}
+                const sectionHtml = `
+                    <div class="main-box">
+                        <div class="goods">
+                            <p class="title-2" style="display: flex; align-items: center;">
+                                ${iconHtml}
+                                <span>${cat.name}</span>
+                            </p>
+                            <div class="row g-3">
+                                ${cardsHtml}
+                            </div>
                         </div>
                     </div>
+                `;
+                mainContainer.append(sectionHtml);
+            }
+        });
 
-                    <div class="product-action-area d-flex align-items-center justify-content-end gap-4 flex-wrap flex-md-nowrap">
-                        <div class="d-flex align-items-center justify-content-end" style="min-width: 90px;">
-                            ${deliveryHtml}
-                        </div>
+        // 处理未分类商品或不在 g_categories 中的商品 (防漏)
+        // 这里简化处理，如果 g_categories 覆盖全了通常不需要
+        if (!hasRenderedAny) {
+             mainContainer.append('<div class="main-box"><p class="text-center text-muted p-4">暂无商品数据</p></div>');
+        }
 
-                        <div class="text-muted text-end" style="min-width: 70px; font-size: 12px;">
-                            库存: ${totalStock}
-                        </div>
+    } 
+    // 模式 2: 显示特定分类商品 (保持原有单列表模式，但包裹在 main-box 中)
+    else {
+        let cardsHtml = '';
+        products.forEach(p => {
+            cardsHtml += generateProductCardHtml(p);
+        });
 
-                        <div class="product-price text-end" style="min-width: 80px;">
-                             ¥ ${productPrice}
-                        </div>
-                        
-                        <div class="text-end" style="min-width: 70px;">
-                            <a href="${buttonAction}" class="btn btn-sm ${buttonClass} rounded-pill px-3 w-100">
-                                ${buttonText}
-                            </a>
-                        </div>
+        const sectionHtml = `
+            <div class="main-box">
+                <div class="goods">
+                    <div class="row g-3">
+                        ${cardsHtml}
                     </div>
                 </div>
             </div>
         `;
-        
-        listContainer.append(productHtml);
-    });
+        mainContainer.append(sectionHtml);
+    }
 }
 
 /**
  * 加载商品数据
  */
 function loadProducts(categoryId = null) {
-    const listContainer = $('#product-list');
-    listContainer.empty().append('<div class="col-12"><p class="text-center text-muted p-3">商品数据加载中...</p></div>');
+    const listContainer = $('#goods-container');
+    // 如果是第一次加载（已有内容是"加载中..."），则不显示Loading，避免闪烁
+    // 这里简单处理：每次都显示加载提示，但因为是本地渲染，速度很快
+    listContainer.empty().append('<div class="main-box"><p class="text-center text-muted p-3">商品数据加载中...</p></div>');
 
     const api = categoryId ? `/api/shop/products?category_id=${categoryId}` : '/api/shop/products';
     
@@ -212,19 +296,20 @@ function loadProducts(categoryId = null) {
             if (isSuccess) {
                 renderProductList(products, categoryId);
             } else {
-                listContainer.empty().append(`<div class="col-12"><p class="text-center text-danger p-3">加载失败</p></div>`);
+                listContainer.empty().append(`<div class="main-box"><p class="text-center text-danger p-3">加载失败</p></div>`);
             }
         },
         error: function() {
-            listContainer.empty().append('<div class="col-12"><p class="text-center text-danger p-3">网络错误，无法加载商品数据</p></div>');
+            listContainer.empty().append('<div class="main-box"><p class="text-center text-danger p-3">网络错误，无法加载商品数据</p></div>');
         }
     });
 }
 
 /**
  * 加载分类数据 (用于页面中部的分类条)
+ * [修改] 增加 callback 参数
  */
-function loadCategories() {
+function loadCategories(callback) {
     $.ajax({
         url: '/api/shop/categories',
         method: 'GET',
@@ -246,7 +331,9 @@ function loadCategories() {
             }
             
             if (isSuccess) {
+                g_categories = categories; // 更新全局缓存
                 renderCategoryList(categories, null);
+                if (callback) callback();
             }
         }
     });
@@ -321,7 +408,10 @@ $(document).ready(function() {
     
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
     if (currentPath === 'index.html' || currentPath === '') {
-        loadCategories();
-        loadProducts();
+        // [修改] 确保分类加载完成后再加载商品，以便正确获取分类名称和排序
+        loadCategories(function() {
+            loadProducts();
+        });
     }
 });
+}
