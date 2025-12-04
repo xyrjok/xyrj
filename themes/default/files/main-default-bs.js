@@ -10,13 +10,19 @@ function renderCategoryList(categories, currentId) {
     const listContainer = $('#category-list');
     listContainer.empty();
     
+    // [修改] 按钮基础样式：胶囊状(rounded-pill)，无边框(border-0)，内边距(px-3)
+    const btnClass = "btn rounded-pill px-3 me-2 mb-2 border-0"; 
+
     // 添加 "全部" 按钮
-    const allBtn = $(`<button class="btn ${!currentId ? 'btn-primary' : 'btn-outline-primary'} me-2 mb-2" data-id="all">全部</button>`);
+    // 激活状态：蓝色背景+阴影；未激活：浅色背景+深色文字
+    const allActive = !currentId ? 'btn-primary shadow-sm' : 'btn-light text-dark';
+    const allBtn = $(`<button class="${btnClass} ${allActive}" data-id="all">全部</button>`);
     listContainer.append(allBtn);
 
     categories.forEach(category => {
         const isActive = (category.id == currentId);
-        const btn = $(`<button class="btn ${isActive ? 'btn-primary' : 'btn-outline-primary'} me-2 mb-2" data-id="${category.id}">${category.name}</button>`);
+        const activeClass = isActive ? 'btn-primary shadow-sm' : 'btn-light text-dark';
+        const btn = $(`<button class="${btnClass} ${activeClass}" data-id="${category.id}">${category.name}</button>`);
         listContainer.append(btn);
     });
 
@@ -25,9 +31,9 @@ function renderCategoryList(categories, currentId) {
         const id = $(this).data('id');
         const newCategoryId = (id === 'all') ? null : id;
         
-        // 切换激活状态
-        listContainer.find('button').removeClass('btn-primary').addClass('btn-outline-primary');
-        $(this).removeClass('btn-outline-primary').addClass('btn-primary');
+        // 切换样式：先重置所有为浅色，再点亮当前点击的
+        listContainer.find('button').removeClass('btn-primary shadow-sm').addClass('btn-light text-dark');
+        $(this).removeClass('btn-light text-dark').addClass('btn-primary shadow-sm');
 
         // 重新加载商品列表
         loadProducts(newCategoryId);
@@ -42,7 +48,7 @@ function renderProductList(products, categoryId) {
     listContainer.empty();
 
     if (!Array.isArray(products) || products.length === 0) {
-        listContainer.append('<p class="text-center text-muted p-3">当前分类下暂无商品</p>');
+        listContainer.append('<div class="col-12"><p class="text-center text-muted p-4 bg-white rounded border">当前分类下暂无商品</p></div>');
         return;
     }
 
@@ -63,30 +69,36 @@ function renderProductList(products, categoryId) {
         const buttonText = isAvailable ? '购买' : '缺货';
         const buttonAction = isAvailable ? `/product?id=${product.id}` : 'javascript:void(0)';
         
+        // [修改] HTML结构：表格卡片式布局 (Table-Card)
+        // 使用 col-12 占满整行，内部使用 Flex 布局
         const productHtml = `
-            <div class="product-card-item">
-                <div class="product-img me-3">
-                    <img src="${productImg}" alt="${product.name}" />
-                </div>
-                
-                <div class="product-info">
-                    <a href="/product?id=${product.id}" class="text-dark d-block mb-1">
-                        <p class="mb-0 text-truncate">${product.name}</p>
-                    </a>
-                    
-                    <small class="d-block text-primary">发货方式: ${deliveryType}</small>
-                    
-                    <small class="d-block text-muted">库存: ${totalStock} | 销量: ${totalSales}</small>
-                </div>
-
-                <div class="ms-auto text-end d-flex flex-column justify-content-center align-items-end product-action-area">
-                    <div class="product-price mb-2">
-                         <span class="text-danger">¥ ${productPrice}</span>
+            <div class="col-12">
+                <div class="product-card-item">
+                    <div class="product-img">
+                        <img src="${productImg}" alt="${product.name}" loading="lazy" />
                     </div>
                     
-                    <a href="${buttonAction}" class="btn btn-sm ${buttonClass}">
-                        ${buttonText}
-                    </a>
+                    <div class="product-info">
+                        <div class="product-title" title="${product.name}">
+                            <a href="/product?id=${product.id}" class="text-dark text-decoration-none">${product.name}</a>
+                        </div>
+                        <div class="product-meta">
+                            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill fw-normal px-2">
+                                <i class="fas fa-bolt me-1"></i>${deliveryType}
+                            </span>
+                            <span class="text-muted border-start ps-2 ms-1">库存: ${totalStock}</span>
+                            <span class="text-muted border-start ps-2">销量: ${totalSales}</span>
+                        </div>
+                    </div>
+
+                    <div class="product-action-area">
+                        <div class="product-price">
+                             ¥ ${productPrice}
+                        </div>
+                        <a href="${buttonAction}" class="btn btn-sm ${buttonClass} rounded-pill px-4 ms-md-3 mt-2 mt-md-0">
+                            ${buttonText}
+                        </a>
+                    </div>
                 </div>
             </div>
         `;
@@ -100,7 +112,8 @@ function renderProductList(products, categoryId) {
  */
 function loadProducts(categoryId = null) {
     const listContainer = $('#product-list');
-    listContainer.empty().append('<p class="text-center text-muted p-3">商品数据加载中...</p>');
+    // 加载时显示提示
+    listContainer.empty().append('<div class="col-12"><p class="text-center text-muted p-3">商品数据加载中...</p></div>');
 
     const api = categoryId ? `/api/shop/products?category_id=${categoryId}` : '/api/shop/products';
     
@@ -123,11 +136,11 @@ function loadProducts(categoryId = null) {
             if (isSuccess) {
                 renderProductList(products, categoryId);
             } else {
-                listContainer.empty().append(`<p class="text-center text-danger p-3">加载失败</p>`);
+                listContainer.empty().append(`<div class="col-12"><p class="text-center text-danger p-3">加载失败</p></div>`);
             }
         },
         error: function() {
-            listContainer.empty().append('<p class="text-center text-danger p-3">网络错误，无法加载商品数据</p>');
+            listContainer.empty().append('<div class="col-12"><p class="text-center text-danger p-3">网络错误，无法加载商品数据</p></div>');
         }
     });
 }
@@ -208,8 +221,15 @@ function loadGlobalConfig() {
                 if (typeof renderFooter === 'function') {
                     renderFooter(siteName);
                 }
+
+                // [新增] 3. 渲染公告 (如果页面有挂载点且后台配置了公告)
                 if (config.announce && $('#site-announcement').length > 0) {
-                    const announceHtml = `<div class="bg-white border rounded p-3" style="border-color: #dee2e6 !important; font-size: 14px; line-height: 1.6; color: #555;">${config.announce}</div>`;
+                    // 使用白底、灰边框、简洁样式
+                    const announceHtml = `
+                        <div class="bg-white border rounded p-3 mb-3" style="border-color: #dee2e6 !important; font-size: 14px; line-height: 1.6; color: #555;">
+                            ${config.announce}
+                        </div>
+                    `;
                     $('#site-announcement').html(announceHtml);
                 }
             }
