@@ -281,6 +281,11 @@ function loadProducts(categoryId = null) {
             }
             
             if (isSuccess) {
+                if (categoryId && categoryId !== 'all') {
+                    products = products.filter(function(p) {
+                        return p.category_id == categoryId;
+                    });
+                }
                 renderProductList(products, categoryId);
             } else {
                 listContainer.empty().append(`<div class="main-box"><p class="text-center text-danger p-3">加载失败</p></div>`);
