@@ -68,6 +68,14 @@ function renderProductList(products, categoryId) {
         const buttonClass = isAvailable ? 'btn-primary' : 'btn-secondary disabled';
         const buttonText = isAvailable ? '购买' : '缺货';
         const buttonAction = isAvailable ? `/product?id=${product.id}` : 'javascript:void(0)';
+        let tagsHtml = '';
+        if (product.tags) {
+            // 支持中英文逗号或空格分隔
+            const tagsArr = product.tags.split(/[,，\s]+/).filter(t => t);
+            tagsArr.forEach(tag => {
+                tagsHtml += `<span class="badge bg-light text-dark border fw-normal me-1">${tag}</span>`;
+            });
+        }
         
         // [修改] HTML结构：表格卡片式布局 (Table-Card)
         // 使用 col-12 占满整行，内部使用 Flex 布局
@@ -83,15 +91,17 @@ function renderProductList(products, categoryId) {
                             <a href="/product?id=${product.id}" class="text-dark text-decoration-none">${product.name}</a>
                         </div>
                         <div class="product-meta">
-                            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill fw-normal px-2">
-                                <i class="fas fa-bolt me-1"></i>${deliveryType}
-                            </span>
-                            <span class="text-muted border-start ps-2 ms-1">库存: ${totalStock}</span>
-                            <span class="text-muted border-start ps-2">销量: ${totalSales}</span>
+                            ${tagsHtml}
+                            <span class="text-muted small ${tagsHtml ? 'ms-1' : ''}">销量: ${totalSales}</span>
                         </div>
                     </div>
 
                     <div class="product-action-area">
+                        <div class="d-flex flex-column align-items-end me-md-3 me-0 mb-1 mb-md-0 text-muted" style="font-size: 12px;">
+                            <span>${deliveryType}</span>
+                            <span>库存: ${totalStock}</span>
+                        </div>
+
                         <div class="product-price">
                              ¥ ${productPrice}
                         </div>
