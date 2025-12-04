@@ -18,6 +18,18 @@
             transition: all 0.3s;
             font-size: 14px;
             padding: 6px 18px; /* 加宽点击区域 */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 分类图片样式 */
+        #category-list button img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            margin-right: 6px;
+            vertical-align: middle;
         }
 
         /* === 2. 商品区：表格卡片布局 (Table-Card Layout) === */
@@ -113,24 +125,19 @@
         
         <div class="main-box" id="site-announcement" style="box-shadow: 4px -1px 10px rgb(0 0 0 / 10%);"></div>
         <div class="main-box" style="background: none;box-shadow: none;">
-            <div class="category-bar" id="category-list" style="margin-bottom: 0px;">
+            <div class="category-bar justify-content-center" id="category-list" style="margin-bottom: 0px;">
                 <div class="text-muted p-2">加载分类中...</div>
             </div>
         </div>
-        <div class="main-box">
-            <div class="goods">
-                <p class="title-2">
-                    <i class="fas fa-gift" style="color:var(--luna-primary-blue)"></i>
-                    <span>热销商品</span>
-                </p>
-                <div id="product-list" class="row g-3">
-                    <div class="col-12">
-                         <p class="text-center text-muted p-3">商品数据加载中...</p>
-                    </div>
+        
+        <div id="goods-container">
+            <div class="main-box">
+                <div class="goods">
+                     <p class="text-center text-muted p-3">商品数据加载中...</p>
                 </div>
             </div>
-            
         </div>
+        
     </div>
 
     <div class="query-m d-block d-md-none">
@@ -147,3 +154,4 @@
     <script src="/themes/default/files/main-default-bs.js"></script>
 </body>
 </html>
+}
