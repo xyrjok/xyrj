@@ -8,8 +8,8 @@ function renderFooter(siteName = '我的商店') {
     
     // 使用传入的 siteName
     const footerHtml = `
-        <footer class="text-center text-muted py-3">
-            <div class="container">
+        <footer class="text-center text-muted py-4">
+            <div class="container" style="font-size: 12px;color: rgb(112 118 124 / 88%);">
                 <p class="mb-0">&copy; ${currentYear} ${siteName}. All rights reserved.</p>
                 <p class="mb-0">Powered by Luna. | <a href="admin/" class="text-muted">后台管理</a></p>
             </div>
