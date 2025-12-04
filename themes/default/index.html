@@ -5,83 +5,115 @@
     <meta name="renderer" content="webkit">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商店首页</title> <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+    <title>商店首页</title> 
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="/assets/css/all.min.css" rel="stylesheet">
     <link href="/themes/default/files/custom-default-bootstrap.css" rel="stylesheet">
     <style>
-        body { background: #f2f2f2; }
+        /* 页面背景调淡一点，突出白底卡片 */
+        body { background: #f4f6f9; }
         
-        /* 模拟 hyper-card 的行式卡片外观样式，实现【左图右文】效果 */
+        /* === 1. 分类栏胶囊样式微调 === */
+        #category-list button {
+            transition: all 0.3s;
+            font-size: 14px;
+            padding: 6px 18px; /* 加宽点击区域 */
+        }
+
+        /* === 2. 商品区：表格卡片布局 (Table-Card Layout) === */
         .product-card-item {
             display: flex;
-            align-items: center;
-            padding: 15px;
-            margin-bottom: 10px;
+            align-items: center; /* 垂直居中 */
             background-color: #fff;
-            
-            /* 【上一轮修改】：去除蓝边框，使用浅灰色边框和阴影保持结构分离 */
-            border: 1px solid #dee2e6; 
-            border-radius: 0.25rem; 
-            text-decoration: none;
-            color: inherit;
+            border: 1px solid #e9ecef; /* 很淡的边框 */
+            border-radius: 8px; /* 圆角 */
+            padding: 15px;
             transition: all 0.2s ease-in-out;
-        }
-        .product-card-item:hover {
-            box-shadow: 0 0.2rem 0.5rem rgba(0,0,0,0.08)!important;
-            border-color: #dee2e6;
+            position: relative;
+            height: 100%;
         }
         
-        /* 图片样式 */
+        .product-card-item:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-color: var(--luna-primary-blue, #007bff);
+            transform: translateX(2px); /* 悬浮时轻微右移 */
+            z-index: 1;
+        }
+        
+        /* 左侧图片：固定大小 */
         .product-card-item .product-img {
             width: 64px; 
             height: 64px; 
-            border-radius: 4px; 
+            border-radius: 6px; 
             overflow: hidden; 
-            flex-shrink: 0; 
+            flex-shrink: 0; /* 防止被挤压 */
+            background: #f8f9fa;
+            margin-right: 20px;
         }
         .product-card-item .product-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; 
+            width: 100%; height: 100%; object-fit: cover; 
         }
         
-        /* 【上一轮修改】：设置商品文字为 14px，并移除 font-weight */
+        /* 中间信息区：自动撑开 */
         .product-info {
-            flex-grow: 1; 
-            margin-left: 15px; 
-            margin-right: 15px;
-            /* 优化：消除 vertical-align 导致的额外间距 */
-            line-height: 1.3; 
+            flex-grow: 1;
+            margin-right: 20px;
+            min-width: 0; /* 防止文本溢出撑破 flex */
         }
-        .product-info p, .product-info small {
-            font-size: 14px !important; 
-            font-weight: normal !important; 
-            line-height: 1.3;
+        .product-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; /* 单行省略 */
         }
-        .product-info a {
-            text-decoration: none;
+        /* 移动端适配：手机上标题可以换行 */
+        @media (max-width: 576px) {
+            .product-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        }
+
+        .product-meta {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: #6c757d;
+            flex-wrap: wrap;
+            gap: 10px; /* 标签之间的间距 */
         }
         
-        /* 价格保持 1.25rem (约 20px) 和 bold */
-        .product-price {
-            font-size: 1.25rem !important;
-            font-weight: bold !important; 
-            white-space: nowrap; 
-            flex-shrink: 0; 
-            text-align: right;
-        }
-        .product-price .text-danger {
-             color: #dc3545!important;
-        }
-        /* 购买按钮/价格区域容器 */
+        /* 右侧操作区：价格和按钮 */
         .product-action-area {
-            min-width: 90px; /* 确保价格和按钮区域有足够空间 */
+            display: flex;
+            flex-direction: column; 
+            align-items: flex-end;
+            flex-shrink: 0;
+            min-width: 100px;
+        }
+        
+        /* 桌面端横向排列价格和按钮 */
+        @media (min-width: 768px) {
+            .product-action-area {
+                flex-direction: row;
+                align-items: center;
+                gap: 20px;
+            }
+        }
+
+        .product-price {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #dc3545;
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
     <div class="container my-4">
-        <div class="main-box" id="site-announcement"></div>
+        
+        <div id="site-announcement"></div>
+
         <div class="main-box">
             
             <div class="title">
@@ -97,26 +129,10 @@
                     <i class="fas fa-gift" style="color:var(--luna-primary-blue)"></i>
                     <span>热销商品</span>
                 </p>
-                <div id="product-list">
-                    <div class="product-card-item">
-                        <div class="product-img me-3">
-                            <img src="/assets/noimage.jpg" alt="商品图片占位" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" />
-                        </div>
-                        <div class="product-info">
-                            <a href="javascript:void(0);" class="text-dark d-block mb-1">
-                                <p class="mb-0 text-truncate">商品数据加载中...</p>
-                            </a>
-                            <small class="d-block text-primary">发货方式: 自动发货</small>
-                            <small class="d-block text-muted">库存: 0 | 销量: 0</small>
-                        </div>
-                        <div class="ms-auto text-end d-flex flex-column justify-content-center align-items-end product-action-area">
-                            <div class="product-price mb-2">
-                                <span class="text-muted">¥ 0.00</span>
-                            </div>
-                            <a href="javascript:void(0);" class="btn btn-sm btn-secondary disabled">缺货</a>
-                        </div>
+                <div id="product-list" class="row g-3">
+                    <div class="col-12">
+                         <p class="text-center text-muted p-3">商品数据加载中...</p>
                     </div>
-                    <p class="text-center text-muted p-3">商品数据加载中...</p>
                 </div>
             </div>
             
