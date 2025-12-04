@@ -1,18 +1,5 @@
-{
-type: uploaded file
-fileName: xyrjok/xyrj/xyrj-6641e0238cd7f0623c8fc71950d0eea40a505a60/themes/default/files/main-default-bs.js
-fullContent:
-/**
- * themes/default/files/main-default-bs.js
- * 默认主题的核心逻辑，负责商品加载、配置读取和页头渲染
- */
-
-// 全局分类缓存
 let g_categories = [];
-
-/**
- * 渲染分类列表 (页面中部的按钮栏)
- */
+/*渲染分类列表 (页面中部的按钮栏)*/
 function renderCategoryList(categories, currentId) {
     const listContainer = $('#category-list');
     listContainer.empty();
