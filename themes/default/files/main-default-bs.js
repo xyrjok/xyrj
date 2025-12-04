@@ -72,19 +72,17 @@ function renderProductList(products, categoryId) {
         let isManual = false;
         let deliveryLabel = "自动发货";
         
-        // 判断是否为手动发货 (根据 delivery_type: 1 为手动, 0 或其他为自动)
+        // 判断是否为手动发货
         if (product.delivery_type == 1) {
             isManual = true;
             deliveryLabel = "手动发货";
         }
         
         // 设置颜色类和图标
-        // 自动发货: 红色(#dc3545 -> text-danger), 闪电图标(fa-bolt)
-        // 手动发货: 蓝色(#0d6efd -> text-primary), 手动/时钟图标(fa-user-clock)
         const badgeColorClass = isManual ? 'text-primary border-primary' : 'text-danger border-danger';
         const badgeIconClass = isManual ? 'fa-user-clock' : 'fa-bolt';
         
-        // 生成徽章 HTML: 椭圆边框(rounded-pill), 背景透明, 带图标, 颜色根据类型变化
+        // 生成徽章 HTML
         const deliveryHtml = `
             <span class="badge rounded-pill bg-transparent border ${badgeColorClass} d-flex align-items-center justify-content-center" style="font-weight: normal; padding: 4px 10px; min-width: 85px;">
                 <i class="fas ${badgeIconClass} me-1"></i>${deliveryLabel}
@@ -92,10 +90,9 @@ function renderProductList(products, categoryId) {
         `;
         // === [修改结束] ===
         
-        // [修改] 解析标签 (格式: b1#色 b2#色 标签名#色)
+        // 解析标签 (格式: b1#色 b2#色 标签名#色)
         let tagsHtml = '';
         if (product.tags) {
-            // 1. 按逗号分隔标签
             const tagsArr = product.tags.split(/[,，]+/).filter(t => t && t.trim());
             
             tagsArr.forEach(tagStr => {
@@ -105,7 +102,6 @@ function renderProductList(products, categoryId) {
                 let textColor = null;
                 let labelText = tagStr;
 
-                // 2. 检查是否有自定义属性 (必须包含空格且含有 b1# 或 b2#)
                 if (tagStr.includes(' ') && (tagStr.includes('b1#') || tagStr.includes('b2#'))) {
                     const parts = tagStr.split(/\s+/);
                     parts.forEach(part => {
@@ -114,11 +110,9 @@ function renderProductList(products, categoryId) {
                         } else if (part.startsWith('b2#')) {
                             bgColor = part.replace('b2#', '');
                         } else {
-                            // 解析 标签名#文字色
                             if (part.includes('#')) {
                                 const txtParts = part.split('#');
                                 labelText = txtParts[0];
-                                // 如果后面有颜色码
                                 if (txtParts[1]) textColor = txtParts[1];
                             } else {
                                 labelText = part;
@@ -127,31 +121,26 @@ function renderProductList(products, categoryId) {
                     });
                 }
 
-                // 3. 生成 HTML
                 if (borderColor || bgColor || textColor) {
-                    // 自定义样式
                     let style = '';
-                    // 自动补齐 # 号
                     if (borderColor) style += `border-color: #${borderColor.replace(/^#/, '')} !important;`;
                     if (bgColor) style += `background-color: #${bgColor.replace(/^#/, '')} !important;`;
-                    
                     if (textColor) {
                         style += `color: #${textColor.replace(/^#/, '')} !important;`;
                     } else if (bgColor) {
-                        // 如果有背景色但没指定文字色，默认文字为白色，防止深色背景看不清
                         style += `color: #fff !important;`;
                     }
-
                     tagsHtml += `<span class="badge-tag" style="${style}">${labelText}</span>`;
                 } else {
-                    // 纯文字使用默认样式
                     tagsHtml += `<span class="badge-tag">${labelText}</span>`;
                 }
             });
         }
         
-        // [修改] HTML结构：表格卡片式布局 (Table-Card)
-        // 调整 product-action-area 内容，确保发货标签、库存、价格、按钮靠右对齐
+        // === [修改] HTML结构：表格化布局 ===
+        // 顺序：发货方式 | 库存 | 价格 | 购买
+        // 使用 min-width 和 text-end 来模拟表格列对齐
+        // gap-3 增加列间距
         const productHtml = `
             <div class="col-12">
                 <div class="product-card-item">
@@ -168,18 +157,24 @@ function renderProductList(products, categoryId) {
                         </div>
                     </div>
 
-                    <div class="product-action-area">
-                        <div class="d-flex flex-column align-items-end me-3 gap-1" style="font-size: 12px;">
+                    <div class="product-action-area d-flex align-items-center justify-content-end gap-3 flex-wrap flex-md-nowrap">
+                        <div class="text-end" style="min-width: 90px;">
                             ${deliveryHtml}
-                            <span class="text-muted mt-1">库存: ${totalStock}</span>
                         </div>
 
-                        <div class="product-price me-3">
+                        <div class="text-muted text-end" style="min-width: 70px; font-size: 13px;">
+                            库存: ${totalStock}
+                        </div>
+
+                        <div class="product-price text-end" style="min-width: 80px;">
                              ¥ ${productPrice}
                         </div>
-                        <a href="${buttonAction}" class="btn btn-sm ${buttonClass} rounded-pill px-4">
-                            ${buttonText}
-                        </a>
+                        
+                        <div class="text-end" style="min-width: 70px;">
+                            <a href="${buttonAction}" class="btn btn-sm ${buttonClass} rounded-pill px-3 w-100">
+                                ${buttonText}
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -194,7 +189,6 @@ function renderProductList(products, categoryId) {
  */
 function loadProducts(categoryId = null) {
     const listContainer = $('#product-list');
-    // 加载时显示提示
     listContainer.empty().append('<div class="col-12"><p class="text-center text-muted p-3">商品数据加载中...</p></div>');
 
     const api = categoryId ? `/api/shop/products?category_id=${categoryId}` : '/api/shop/products';
@@ -278,35 +272,27 @@ function updatePageTitle(siteName) {
 
 /**
  * 加载网站配置 (使用 /api/shop/config 接口)
- * 核心：这里负责获取配置并调用 renderHeader
  */
 function loadGlobalConfig() {
     $.ajax({
         url: '/api/shop/config',
         method: 'GET',
         success: function(config) {
-            // 确保配置数据是对象
             if (config && typeof config === 'object') {
                 const siteName = config.site_name || '夏雨店铺'; 
                 const siteLogo = config.site_logo || ''; 
-                // 获取显示开关，默认 undefined 也会在 renderHeader 中处理为显示
                 const showSiteName = config.show_site_name; 
                 
-                // 1. 更新页面标题
                 updatePageTitle(siteName);
                 
-                // 2. 渲染 Header 和 Footer，传入所有参数
                 if (typeof renderHeader === 'function') {
-                    // 传递 siteName, siteLogo, showSiteName
                     renderHeader(siteName, siteLogo, showSiteName);
                 }
                 if (typeof renderFooter === 'function') {
                     renderFooter(siteName);
                 }
 
-                // [新增] 3. 渲染公告 (如果页面有挂载点且后台配置了公告)
                 if (config.announce && $('#site-announcement').length > 0) {
-                    // 使用白底、灰边框、简洁样式
                     const announceHtml = `
                         <div class="bg-white border rounded p-3" style="border-color: #dee2e6 !important; font-size: 14px; line-height: 1.6; color: #555;">
                             ${config.announce}
@@ -331,9 +317,8 @@ function loadGlobalConfig() {
 
 // 页面加载完成后执行
 $(document).ready(function() {
-    loadGlobalConfig(); // 加载配置并渲染 Header/Footer
+    loadGlobalConfig();
     
-    // 只有首页才需要加载分类和商品列表
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
     if (currentPath === 'index.html' || currentPath === '') {
         loadCategories();
