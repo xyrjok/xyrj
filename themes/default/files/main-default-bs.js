@@ -145,15 +145,15 @@ function generateProductCardHtml(product) {
                 </div>
 
                 <div class="product-action-area d-flex align-items-center justify-content-end gap-4 flex-wrap flex-md-nowrap">
-                    <div class="d-flex align-items-center justify-content-end" style="min-width: 90px;">
+                    <div class="d-flex align-items-center justify-content-start" style="min-width: 90px;">
                         ${deliveryHtml}
                     </div>
 
-                    <div class="text-muted text-end" style="min-width: 70px; font-size: 12px;">
+                    <div class="text-muted text-start" style="min-width: 70px; font-size: 12px;">
                         库存: ${totalStock}
                     </div>
 
-                    <div class="product-price text-end" style="min-width: 80px;">
+                    <div class="product-price text-start" style="min-width: 80px;">
                          ¥ ${productPrice}
                     </div>
                     
