@@ -17,8 +17,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
         : '';
 
     // 2. 构建店铺名称 HTML
-    // 逻辑优化：默认显示，只有当明确设置为 '0' 或 false 时才隐藏
-    // 这样能防止参数未传时意外消失，也符合"后台设置不显示才不显示"的逻辑
+    // 逻辑：默认显示，只有当明确设置为 '0' 或 false 时才隐藏
     const shouldShowName = (showSiteName !== '0' && showSiteName !== 0 && showSiteName !== false && showSiteName !== 'false');
     
     let nameHtml = '';
