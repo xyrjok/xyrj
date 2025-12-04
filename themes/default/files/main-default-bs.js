@@ -209,7 +209,7 @@ function loadGlobalConfig() {
                     renderFooter(siteName);
                 }
                 if (config.announce && $('#site-announcement').length > 0) {
-                    const announceHtml = `<div class="bg-white border rounded p-3 mb-3" style="border-color: #dee2e6 !important; font-size: 14px; line-height: 1.6; color: #555;">${config.announce}</div>`;
+                    const announceHtml = `<div class="bg-white border rounded p-3" style="border-color: #dee2e6 !important; font-size: 14px; line-height: 1.6; color: #555;">${config.announce}</div>`;
                     $('#site-announcement').html(announceHtml);
                 }
             }
