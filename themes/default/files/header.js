@@ -4,16 +4,27 @@
  * 渲染页头
  * @param {string} siteName - 网站名称
  * @param {string} siteLogo - 网站Logo地址 (可选)
+ * @param {boolean|string} showSiteName - 是否显示网站名称 (true/'1' 显示, false/'0' 隐藏)
  */
-function renderHeader(siteName = '我的商店', siteLogo = '') {
+function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = true) {
     // 检查是否已渲染，防止重复
     if ($('header').length > 0) return;
     
-    // 构建 Logo 的 HTML
+    // 1. 构建 Logo 的 HTML
     // 要求：Logo高度47px
     const logoHtml = siteLogo 
         ? `<img src="${siteLogo}" alt="Logo" class="site-logo">` 
         : '';
+
+    // 2. 构建店铺名称 HTML
+    // 逻辑：如果 showSiteName 为 true 或 '1'，则显示，否则隐藏
+    let nameHtml = '';
+    // 简单的类型转换判断
+    const shouldShowName = (showSiteName === true || showSiteName === '1' || showSiteName === 1);
+    
+    if (shouldShowName) {
+        nameHtml = `<span>${siteName}</span>`;
+    }
 
     // 注入自定义 CSS 样式
     const styleHtml = `
@@ -60,6 +71,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '') {
                 padding-right: 12px !important;
                 height: 60px; /* 垂直居中 */
                 transition: color 0.2s;
+                position: relative; /* 为下拉菜单定位 */
             }
             header.custom-header .nav-link:hover,
             header.custom-header .nav-link.active {
@@ -106,6 +118,45 @@ function renderHeader(siteName = '我的商店', siteLogo = '') {
                 pointer-events: none;
             }
 
+            /* 7. 下拉菜单样式 (悬停滑出) */
+            header.custom-header .dropdown-menu {
+                display: none; /* 默认隐藏 */
+                margin-top: 0;
+                border: none;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                border-radius: 4px;
+                padding: 5px 0;
+                min-width: 160px;
+            }
+            /* 鼠标悬停在 li.nav-item.dropdown 上时显示菜单 */
+            header.custom-header .nav-item.dropdown:hover .dropdown-menu {
+                display: block;
+                animation: slideDown 0.2s ease forwards;
+            }
+            @keyframes slideDown {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            header.custom-header .dropdown-item {
+                font-size: 14px !important; /* 要求：下拉菜单字体 14px */
+                padding: 8px 15px;
+                color: #555;
+                display: flex;
+                align-items: center;
+            }
+            header.custom-header .dropdown-item:hover {
+                background-color: #f8f9fa;
+                color: var(--bs-primary);
+            }
+            header.custom-header .category-icon-sm {
+                width: 14px;  /* 要求：图片大小 14px */
+                height: 14px; /* 要求：图片大小 14px */
+                object-fit: cover;
+                margin-right: 8px;
+                border-radius: 2px;
+            }
+
             /* 移动端适配调整 */
             @media (max-width: 991px) {
                 header.custom-header { height: auto; min-height: 60px; }
@@ -118,6 +169,16 @@ function renderHeader(siteName = '我的商店', siteLogo = '') {
                 .header-search-form { margin: 10px 15px; width: auto; }
                 .header-search-input { width: 100%; }
                 .header-search-input:focus { width: 100%; }
+                /* 移动端取消悬停滑出，改为点击 (Bootstrap默认行为) 或者保持展开 */
+                header.custom-header .dropdown-menu {
+                    box-shadow: none;
+                    border: none;
+                    padding-left: 20px;
+                    display: none; /* 移动端交给点击事件处理，或者默认隐藏 */
+                }
+                 header.custom-header .nav-item.dropdown:hover .dropdown-menu {
+                    display: block; /* 移动端简单处理：保持悬停/点击显示 */
+                }
             }
         </style>
     `;
@@ -130,10 +191,10 @@ function renderHeader(siteName = '我的商店', siteLogo = '') {
             <nav class="navbar navbar-expand-lg navbar-light">
                 <div class="container">
                     
-                    <!-- Logo + 店铺名称 -->
+                    <!-- Logo + 店铺名称 (受控显示) -->
                     <a class="navbar-brand" href="index.html">
                         ${logoHtml}
-                        <span>${siteName}</span>
+                        ${nameHtml}
                     </a>
 
                     <!-- 移动端折叠按钮 -->
@@ -157,25 +218,31 @@ function renderHeader(siteName = '我的商店', siteLogo = '') {
                                     <i class="fas fa-list-ul"></i>所有商品
                                 </a>
                             </li>
-                            <!-- 3. 商品分类 -->
-                            <li class="nav-item">
-                                <a class="nav-link" href="index.html#category-list">
+                            
+                            <!-- 3. 商品分类 (改为下拉菜单) -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="index.html#category-list" id="categoryDropdown" role="button" aria-expanded="false">
                                     <i class="fas fa-th-large"></i>商品分类
                                 </a>
+                                <!-- 下拉菜单容器 (内容由 JS 动态填充) -->
+                                <ul class="dropdown-menu" aria-labelledby="categoryDropdown" id="header-category-menu">
+                                    <li><span class="dropdown-item text-muted">加载中...</span></li>
+                                </ul>
                             </li>
-                            <!-- 4. 订单查询 (移到左边) -->
+
+                            <!-- 4. 订单查询 -->
                             <li class="nav-item">
                                 <a class="nav-link" href="orders.html">
                                     <i class="fas fa-search"></i>订单查询
                                 </a>
                             </li>
-                            <!-- 5. 文章中心 (移到左边) -->
+                            <!-- 5. 文章中心 -->
                             <li class="nav-item">
                                 <a class="nav-link" href="articles.html">
                                     <i class="fas fa-book-open"></i>文章中心
                                 </a>
                             </li>
-                            <!-- 6. 关于我们 (新增) -->
+                            <!-- 6. 关于我们 -->
                             <li class="nav-item">
                                 <a class="nav-link" href="javascript:void(0);" onclick="alert('关于我们页面正在建设中...')">
                                     <i class="fas fa-info-circle"></i>关于我们
@@ -208,6 +275,9 @@ function renderHeader(siteName = '我的商店', siteLogo = '') {
     } else {
         $(`a[href="${currentPath}"]`).addClass('active');
     }
+
+    // --- 加载分类数据填充下拉菜单 ---
+    loadHeaderCategories();
 
     // 绑定搜索功能 (简易前端搜索)
     $('#top-search-input').on('keypress', function(e) {
@@ -243,3 +313,82 @@ function renderHeader(siteName = '我的商店', siteLogo = '') {
         }
     });
 }
+
+/**
+ * 内部辅助函数：加载分类并渲染到下拉菜单
+ */
+function loadHeaderCategories() {
+    $.ajax({
+        url: '/api/shop/categories',
+        method: 'GET',
+        success: function(response) {
+            let categories = [];
+            // 解析返回的数据结构
+            if (response && response.code === 0 && response.data && Array.isArray(response.data.categories)) {
+                categories = response.data.categories;
+            } else if (response && (Array.isArray(response) || Array.isArray(response.categories))) {
+                categories = Array.isArray(response) ? response : response.categories;
+            } else if (response && response.results && Array.isArray(response.results)) {
+                 categories = response.results; // 适配部分后端直接返回 {results: []}
+            }
+
+            const menuContainer = $('#header-category-menu');
+            menuContainer.empty();
+
+            if (categories.length === 0) {
+                menuContainer.append('<li><span class="dropdown-item text-muted">暂无分类</span></li>');
+                return;
+            }
+
+            // 添加 "全部商品" 选项
+            menuContainer.append(`
+                <li>
+                    <a class="dropdown-item" href="index.html#category-list" onclick="if(typeof loadProducts === 'function') loadProducts(null);">
+                        全部商品
+                    </a>
+                </li>
+            `);
+
+            // 遍历渲染分类
+            categories.forEach(cat => {
+                // 如果分类有图片，构建图片HTML (14px)
+                const imgHtml = (cat.image_url && cat.image_url !== '') 
+                    ? `<img src="${cat.image_url}" class="category-icon-sm" alt="icon">` 
+                    : '';
+                
+                // 构建菜单项 (点击后如果是在首页，则调用 loadProducts 筛选，否则跳转)
+                // 注意：这里简单的处理为跳转到首页并尝试触发筛选，或者直接由 main.js 处理
+                // 为了兼容性，使用 href 指向首页带参数，或者 onclick 调用全局函数
+                const itemHtml = `
+                    <li>
+                        <a class="dropdown-item" href="javascript:void(0);" onclick="handleCategoryClick(${cat.id})">
+                            ${imgHtml}${cat.name}
+                        </a>
+                    </li>
+                `;
+                menuContainer.append(itemHtml);
+            });
+        },
+        error: function() {
+            $('#header-category-menu').html('<li><span class="dropdown-item text-danger">加载失败</span></li>');
+        }
+    });
+}
+
+// 全局分类点击处理 (如果在首页，直接刷新列表)
+window.handleCategoryClick = function(catId) {
+    if (typeof loadProducts === 'function') {
+        // 如果 loadProducts 存在 (说明在首页)，直接调用
+        loadProducts(catId);
+        // 同时更新分类栏的高亮状态 (如果存在)
+        if ($('#category-list').length > 0) {
+             $('#category-list button').removeClass('btn-primary').addClass('btn-outline-primary');
+             $(`#category-list button[data-id="${catId}"]`).removeClass('btn-outline-primary').addClass('btn-primary');
+        }
+        // 滚动到商品区
+        $('html, body').animate({ scrollTop: $("#product-list").offset().top - 100 }, 300);
+    } else {
+        // 如果不在首页，跳转过去 (简易处理)
+        window.location.href = 'index.html'; 
+    }
+};
