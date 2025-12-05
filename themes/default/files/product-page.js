@@ -1,6 +1,6 @@
 /**
  * themes/default/files/product-page.js
- * 商品详情页专属逻辑 (修复版：完美支持批发价显示 + 二维码分享 + 蓝色风格)
+ * 商品详情页专属逻辑 (修复版：完美支持批发价显示 + 二维码分享 + 蓝色风格 + 购物车角标)
  */
 
 let currentProduct = null;
@@ -27,6 +27,9 @@ $(document).ready(function() {
             if (typeof renderFooter === 'function') renderFooter(siteName);
             
             if (document.title === '商品详情加载中...') document.title = siteName;
+
+            // === 新增：页面加载完成后更新角标 ===
+            updateAllCartBadges();
         },
         error: function() {
             if (typeof renderHeader === 'function') renderHeader();
@@ -239,7 +242,12 @@ function renderRightSidebar(product) {
 
         <div class="d-flex gap-2">
             <button class="btn btn-warning text-white flex-grow-1 fw-bold shadow-sm" onclick="addToCart()">
-                <i class="fas fa-cart-plus me-1"></i> 加购物车
+                <div class="position-relative d-inline-block me-1">
+                    <i class="fas fa-cart-plus"></i>
+                    <span id="btn-cart-badge" class="badge rounded-pill bg-danger" 
+                          style="position: absolute; top: -6px; right: -8px; font-size: 8px; padding: 2px 4px; display: none;">0</span>
+                </div>
+                加购物车
             </button>
             <button class="btn btn-primary flex-grow-1 fw-bold shadow-sm" onclick="buyNow()">
                 立即购买
@@ -260,6 +268,9 @@ function renderRightSidebar(product) {
     setTimeout(() => {
         initSpecPagination('#sku-btn-list', '.variant-btn', 6);
     }, 50);
+
+    // 渲染完毕后立即更新一次角标
+    updateAllCartBadges();
 }
 
 // =============================================
@@ -665,14 +676,45 @@ window.addToCart = function() {
     }
 
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
+    
+    // === 新增：更新所有角标（Header 和 按钮） ===
+    updateAllCartBadges();
+
     const btn = $(event.target).closest('button');
     const originalText = btn.html();
-    btn.html('<i class="fas fa-check"></i> 已加入').addClass('btn-success').removeClass('btn-warning');
+    
+    // 临时反馈状态
+    btn.addClass('btn-success').removeClass('btn-warning').html('<i class="fas fa-check"></i> 已加入');
+    
     setTimeout(() => {
         btn.html(originalText).removeClass('btn-success').addClass('btn-warning');
-        if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
+        // 恢复后再次更新角标，防止按钮重置导致角标消失
+        updateAllCartBadges();
     }, 1500);
 };
+
+// === 新增：统一更新页面所有角标的函数 ===
+function updateAllCartBadges() {
+    try {
+        const cart = JSON.parse(localStorage.getItem('tbShopCart') || '[]');
+        const count = cart.length;
+
+        // 1. 更新 Header 角标
+        if (typeof window.updateHeaderCartBadge === 'function') {
+            window.updateHeaderCartBadge();
+        }
+
+        // 2. 更新按钮内的角标
+        const btnBadge = $('#btn-cart-badge');
+        if (btnBadge.length > 0) {
+            if (count > 0) {
+                btnBadge.text(count > 99 ? '99+' : count).show();
+            } else {
+                btnBadge.hide();
+            }
+        }
+    } catch(e) { console.error(e); }
+}
 
 // 立即购买
 window.buyNow = async function() {
