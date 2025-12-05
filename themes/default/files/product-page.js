@@ -1,12 +1,3 @@
-{
-type: uploaded file
-fileName: xyrjok/xyrj/xyrj-7ef37353573d06a6e9042dea47891fc26000fb4c/themes/default/files/product-page.js
-fullContent:
-/**
- * themes/default/files/product-page.js
- * 商品详情页逻辑 (Revised for Default Theme with TBshop features)
- */
-
 // 全局变量
 let currentProduct = null;
 let currentVariant = null;
@@ -512,6 +503,4 @@ function parseWholesale(config) {
         }
     } catch(e) {}
     return rules.sort((a,b) => b.count - a.count);
-}
-
 }
