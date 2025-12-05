@@ -237,7 +237,12 @@ function renderRightSidebar(product) {
             </div>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <a href="/cart" class="text-secondary position-relative me-2 text-decoration-none" title="前往购物车" style="font-size: 22px;">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="common-cart-badge" id="product-page-cart-badge" style="top: -6px; right: -8px; display: none;">0</span>
+            </a>
+            
             <button class="btn btn-warning text-white flex-grow-1 fw-bold shadow-sm" onclick="addToCart()">
                 <i class="fas fa-cart-plus me-1"></i> 加购物车
             </button>
@@ -278,6 +283,8 @@ function initPageQrcode() {
             correctLevel : QRCode.CorrectLevel.L
         });
     }
+    // 更新详情页购物车角标
+    if (typeof window.updateCartBadge === 'function') window.updateCartBadge();
 }
 
 window.shareTo = function(platform) {
@@ -668,9 +675,14 @@ window.addToCart = function() {
     const btn = $(event.target).closest('button');
     const originalText = btn.html();
     btn.html('<i class="fas fa-check"></i> 已加入').addClass('btn-success').removeClass('btn-warning');
+    
+    // 更新角标
+    if (typeof window.updateCartBadge === 'function') {
+        window.updateCartBadge();
+    }
+
     setTimeout(() => {
         btn.html(originalText).removeClass('btn-success').addClass('btn-warning');
-        if (typeof updateCartBadge === 'function') updateCartBadge(cart.length);
     }, 1500);
 };
 
