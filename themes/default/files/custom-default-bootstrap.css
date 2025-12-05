@@ -76,8 +76,7 @@ body {
 }
 
 /* [修改] 侧边栏容器：恢复默认块级显示，不再强制归零 */
-#sidebar-wrapper {
-    height: 100%;       
+#sidebar-wrapper {      
     min-height: 1px;    
 }
 
