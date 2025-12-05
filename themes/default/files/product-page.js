@@ -772,7 +772,7 @@ function initStickySidebar() {
     // 2. 配置参数
     const options = {
         topSpacing: 80,             // 距离顶部 80px
-        bottomSpacing: 20,          // 距离底部 20px
+        bottomSpacing: 40,          // 距离底部 20px
         containerSelector: '.product-detail-grid', // 外层容器
         innerWrapperSelector: '.sidebar-inner'     // 内层移动元素
     };
