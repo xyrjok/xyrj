@@ -88,6 +88,9 @@ body {
     /* top: 80px; */
     min-width: 0;
 }
+.detail-right .sidebar-inner {
+    margin-bottom: 0 !important;
+}
 
 /* --- [修改] 图片容器 (16:9 + 留白) --- */
 .img-aspect-ratio-box {
