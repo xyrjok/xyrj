@@ -65,46 +65,28 @@ body {
 }
 
 /* =========================================
-   2. 商品详情页布局 (Product Detail) - [最终稳定版]
+   2. 商品详情页布局 (Product Detail) - [重构版]
    ========================================= */
 
 .product-detail-grid {
     display: flex; 
     flex-wrap: wrap;
-    margin-bottom: 30px; 
     position: relative;
-    align-items: stretch !important;
-    grid-template-columns: none !important;
+    /* [修改] 移除了 align-items: stretch，恢复自然高度 */
 }
 
-/* 2. 强制左侧盒子顶部和底部归零，直接贴合 Row */
-.product-detail-grid .detail-left.main-box {
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    /* 确保视觉风格一致 */
-    border-radius: 8px; 
+/* [修改] 侧边栏容器：恢复默认块级显示，不再强制归零 */
+#sidebar-wrapper {
+    height: 100%;       
+    min-height: 1px;    
 }
 
-/* 3. [关键修复] 强制右侧容器归零 */
-/* 解决"右边比左边高"和"滚动跳动"问题：确保右侧容器顶部没有任何隐形边距 */
-#sidebar-wrapper, 
-.detail-right {
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    height: auto !important; /* 禁止继承高度 */
-    display: block;
-    vertical-align: top;
-}
-
-/* 右侧白色卡片内部样式恢复 */
-.detail-right .sidebar-inner {
-    margin: 0 !important;
-    padding: 1rem !important; /* 恢复内部间距 */
+/* [修改] 内部卡片：保持样式，移除无用的强制属性 */
+.sidebar-inner {
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
-    min-height: 100px; /* 防止内容过少塌陷 */
+    width: 100% !important; /* 确保占满父容器 */
 }
 
 /* 左侧内容区容器 */
