@@ -239,7 +239,7 @@ function renderRightSidebar(product) {
 
         <div class="d-flex gap-2 align-items-center">
             <a href="/cart" class="text-secondary position-relative me-2 text-decoration-none" title="前往购物车" style="font-size: 22px;">
-                <i class="fas fa-shopping-cart"></i>
+                <i class="far fa-shopping-cart"></i>
                 <span class="common-cart-badge" id="product-page-cart-badge" style="top: -6px; right: -8px; display: none;">0</span>
             </a>
             
