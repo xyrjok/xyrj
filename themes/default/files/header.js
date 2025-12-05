@@ -157,6 +157,38 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                 border-radius: 2px;
             }
 
+            /* === 新增：购物车图标与角标样式 === */
+            .header-cart-wrap {
+                position: relative;
+                margin-left: 15px;
+                color: #6c757d; /* 灰色图标 */
+                font-size: 18px;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+                cursor: pointer;
+                transition: color 0.2s;
+            }
+            .header-cart-wrap:hover { color: #333; }
+            
+            .common-cart-badge {
+                position: absolute;
+                top: -8px;
+                right: -10px;
+                background-color: #dc3545; /* 红色背景 */
+                color: #fff;               /* 白字 */
+                border-radius: 50%;        /* 圆形 */
+                font-size: 10px;
+                min-width: 16px;
+                height: 16px;
+                line-height: 16px;
+                text-align: center;
+                font-weight: bold;
+                padding: 0 4px;
+                display: none;             /* 默认隐藏 */
+                box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            }
+
             /* 移动端适配 */
             @media (max-width: 991px) {
                 header.custom-header { height: auto; min-height: 60px; }
@@ -205,7 +237,6 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                                     <i class="fas fa-home"></i>首页
                                 </a>
                             </li>
-                            <!-- 下拉菜单分类 -->
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="/#category-list" id="categoryDropdown" role="button" aria-expanded="false">
                                     <i class="fas fa-list-ul"></i>商品分类
@@ -237,6 +268,11 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                             <input type="text" class="header-search-input" id="top-search-input" placeholder="搜索商品...">
                         </div>
 
+                        <a href="/cart" class="header-cart-wrap" title="购物车">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="common-cart-badge" id="header-cart-badge">0</span>
+                        </a>
+
                     </div>
                 </div>
             </nav>
@@ -255,6 +291,11 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
     }
 
     loadHeaderCategories();
+    
+    // 初始化购物车角标
+    if (typeof updateCartBadge === 'function') {
+        updateCartBadge();
+    }
 
     $('#top-search-input').on('keypress', function(e) {
         if (e.which == 13) {
@@ -354,3 +395,38 @@ window.handleCategoryClick = function(catId) {
         window.location.href = '/'; 
     }
 };
+
+/**
+ * 全局函数：更新购物车角标
+ * 读取 localStorage 中的 tbShopCart
+ */
+window.updateCartBadge = function() {
+    try {
+        const cartStr = localStorage.getItem('tbShopCart');
+        const cart = cartStr ? JSON.parse(cartStr) : [];
+        const count = cart.length; // 根据需求，显示商品种数（或者 quantity 之和）
+
+        const badgeDisplay = count > 0 ? 'block' : 'none';
+        const badgeText = count > 99 ? '99+' : count;
+
+        // 更新页头角标
+        const headerBadge = $('#header-cart-badge');
+        if(headerBadge.length) {
+            headerBadge.text(badgeText).css('display', badgeDisplay);
+        }
+        
+        // 更新详情页角标（如果在详情页）
+        const prodBadge = $('#product-page-cart-badge');
+        if(prodBadge.length) {
+            prodBadge.text(badgeText).css('display', badgeDisplay);
+        }
+
+        // 更新移动端底部导航角标（如果有）
+        const mobileBadge = $('#cart-badge-mobile');
+        if(mobileBadge.length) {
+             mobileBadge.text(badgeText).css('display', badgeDisplay);
+        }
+    } catch(e) {
+        console.error('Update cart badge failed:', e);
+    }
+}
