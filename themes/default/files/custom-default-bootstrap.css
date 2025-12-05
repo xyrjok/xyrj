@@ -71,7 +71,7 @@ body {
 .product-detail-grid {
     display: grid;
     grid-template-columns: 2.32fr 1fr; 
-    gap: 10px; 
+    gap: 15px; 
     margin-bottom: 30px;
     align-items: start;
 }
