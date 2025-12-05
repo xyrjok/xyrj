@@ -19,12 +19,11 @@ body {
 .main-box {
     background-color: #fff;
     padding: 20px;
-    margin-bottom: 20px; /* 全局默认下边距 */
+    margin-bottom: 20px;
     border-radius: 8px;
     box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
 }
 
-/* 首页分类标题 */
 .goods .title-2 {
     font-size: 16px;
     font-weight: 400;
@@ -34,11 +33,8 @@ body {
     display: flex;
     align-items: center;
 }
-.goods .title-2 i {
-    margin-right: 8px;
-}
+.goods .title-2 i { margin-right: 8px; }
 
-/* 标签样式 */
 .badge-tag {
     border: 1px solid #dc3545;
     background-color: #dc3545;
@@ -56,7 +52,6 @@ body {
     border-radius: 3em;
 }
 
-/* 分类栏容器 */
 .category-bar {
     display: flex;
     flex-wrap: wrap;
@@ -65,38 +60,37 @@ body {
 }
 
 /* =========================================
-   2. 商品详情页布局 (Product Detail) - [终极修复版]
+   2. 商品详情页布局 (Product Detail) - [修复版]
    ========================================= */
 
-/* 将原本的 Grid 布局重置，配合 Bootstrap Flex 系统 */
 .product-detail-grid {
     display: flex; 
     flex-wrap: wrap;
-    margin-bottom: 30px; /* 整体与页脚的距离 */
+    margin-bottom: 30px; 
+    /* [修复底部] 移除 align-items 设置，使用默认的 stretch，确保列等高 */
     
-    /* [关键] 顶部对齐：
-       防止右侧列被强制拉伸到和左侧一样高。
-       这样 sticky 插件才能准确计算页面高度，避免滚动到底部时出错。
-    */
-    align-items: flex-start !important;
-
-    /* 清除旧代码的 Grid 属性 */
     grid-template-columns: none !important;
-    gap: 0 !important; /* 间距现在完全由 Bootstrap 的 g-4 控制 */
+    gap: 0 !important; 
 }
 
-/* [核心对齐] 
-   去除详情页内部卡片的底部外边距。
-   因为布局改为了 Flex + Sticky，内部不需要 margin-bottom 来撑开空间，
-   这样左右两边的“物理底部”在视觉上就是对齐的。
-*/
+/* [修复底部] 清除内部卡片的底部外边距，让左右底线对齐 */
 .product-detail-grid .main-box {
     margin-bottom: 0 !important;
 }
 
-/* 确保右侧内部容器也没有干扰性边距 */
+/* [修复顶部] 强制右侧容器归零，防止顶部微小错位 */
+#sidebar-wrapper, 
+.detail-right {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    display: block; /* 防止 flex 干扰 */
+}
+
+/* 右侧内部卡片 */
 .detail-right .sidebar-inner {
     margin-bottom: 0 !important;
+    margin-top: 0 !important; /* 确保无顶部间距 */
 }
 
 /* 左侧内容区 */
@@ -104,16 +98,12 @@ body {
     min-width: 0;
 }
 
-/* 右侧购买栏 */
-.detail-right {
-    min-width: 0;
-}
+/* --- 其他原有样式保持不变 --- */
 
-/* --- 图片容器 (16:9 + 留白) --- */
 .img-aspect-ratio-box {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%;
+    padding-bottom: 56.25%; 
     height: 0;
     overflow: hidden;
     border-radius: 6px;
@@ -122,7 +112,6 @@ body {
     background-color: #f8f9fa;
 }
 
-/* --- 商品主图 --- */
 .detail-product-img {
     position: absolute !important;
     top: 50% !important;
@@ -136,7 +125,6 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
 }
 
-/* 详情页标题 */
 .product-page-title {
     font-size: 18px;
     font-weight: 700;
@@ -145,7 +133,6 @@ body {
     line-height: 1.4;
 }
 
-/* 详情描述内容 */
 .product-description-content {
     color: #555;
     line-height: 1.8;
@@ -158,7 +145,6 @@ body {
     margin: 10px 0;
 }
 
-/* 大号价格显示 */
 .detail-price-lg {
     font-size: 24px;
     color: var(--luna-primary-blue);
@@ -166,7 +152,6 @@ body {
     margin-right: 5px;
 }
 
-/* 规格选择按钮 */
 .variant-btn {
     position: relative;
     overflow: visible;
@@ -203,7 +188,6 @@ body {
     text-decoration: line-through;
 }
 
-/* 红色缺货角标 */
 .sku-oos-badge {
     position: absolute;
     top: -8px;
@@ -221,10 +205,9 @@ body {
 }
 
 /* =========================================
-   3. 功能组件样式 (TBshop 移植)
+   3. 功能组件样式
    ========================================= */
 
-/* 购买方式按钮 */
 .method-btn { font-size: 14px; }
 .method-btn.active-method {
     background-color: var(--luna-primary-blue);
@@ -232,7 +215,6 @@ body {
     border-color: var(--luna-primary-blue);
 }
 
-/* 自选号码弹窗 */
 .number-selector-overlay {
     display: none;
     flex-direction: column;
@@ -278,7 +260,6 @@ body {
     color: #fff;
 }
 
-/* 规格分页组件 */
 .spec-pagination-container {
     margin-top: 8px;
     text-align: left;
@@ -305,7 +286,6 @@ body {
 }
 .spec-pagination-btn.disabled { opacity: 0.5; cursor: not-allowed; background-color: #f9f9f9; }
 
-/* 支付方式图标 */
 .payment-option {
     position: relative; 
     display: inline-flex;
@@ -335,10 +315,6 @@ body {
 }
 .payment-option.active .payment-check-mark { opacity: 1; transform: scale(1); }
 
-/* =========================================
-   [修改] 输入框交互样式
-   ========================================= */
-
 .form-control:focus {
     border-color: var(--luna-primary-blue);
     box-shadow: none !important; 
@@ -350,10 +326,9 @@ body {
 .form-control:-ms-input-placeholder { color: #ccc !important; font-size: 12px; }
 
 /* =========================================
-   4. 移动端适配 & 工具类
+   4. 移动端适配
    ========================================= */
 
-/* 移动端右下角查询悬浮球 */
 .query-m {
     position: fixed;
     bottom: 20px;
@@ -371,20 +346,10 @@ body {
     box-shadow: 0 4px 10px rgba(60, 140, 231, 0.6);
     transition: all 0.2s;
 }
-.query-m a:hover {
-    background-color: #2b74d3;
-}
-.query-m i {
-    width: 24px;
-    height: 24px;
-    font-size: 18px;
-    margin-right: 5px;
-}
-.query-m span {
-    font-weight: 600;
-}
+.query-m a:hover { background-color: #2b74d3; }
+.query-m i { width: 24px; height: 24px; font-size: 18px; margin-right: 5px; }
+.query-m span { font-weight: 600; }
 
-/* 订单状态徽章 */
 .status-badge {
     font-size: 12px;
     font-weight: 600;
@@ -395,25 +360,16 @@ body {
 .bg-info { background-color: #0dcaf0!important; color: #333!important; }
 .bg-success { background-color: #198754!important; color: #fff!important; }
 
-/* [新增] 移动端详情页适配重构 
-   使用 Flex 的 order 属性来调整显示顺序，实现响应式布局
-*/
 @media (max-width: 991px) {
-    /* 移动端取消横向排列，改为上下垂直堆叠 */
     .product-detail-grid {
         flex-direction: column; 
     }
-
-    /* 移动端需要恢复卡片底部的间距，否则两张卡片会粘在一起 */
     .product-detail-grid .main-box {
         margin-bottom: 20px !important;
     }
-
-    /* 使用 order 属性，让右侧购买栏在移动端显示在最上方 */
     .product-detail-grid .col-lg-4 {
         order: -1; 
     }
-    
     .detail-right {
         position: static;
     }
