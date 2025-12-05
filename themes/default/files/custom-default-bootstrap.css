@@ -1,9 +1,3 @@
-{
-type: uploaded file
-fileName: xyrjok/xyrj/xyrj-7ef37353573d06a6e9042dea47891fc26000fb4c/themes/default/files/custom-default-bootstrap.css
-fullContent:
-/* themes/default/files/custom-default-bootstrap.css */
-
 :root {
     --luna-dark-blue: #2f4056;
     --luna-primary-blue: #3C8CE7;
@@ -311,5 +305,4 @@ body {
         width: 100% !important;
         border-radius: 12px 12px 0 0;
     }
-}
 }
