@@ -73,7 +73,7 @@ body {
     flex-wrap: wrap;
     margin-bottom: 30px; 
     position: relative;
-    align-items: flex-start !important; 
+    align-items: stretch !important;
     grid-template-columns: none !important;
 }
 
