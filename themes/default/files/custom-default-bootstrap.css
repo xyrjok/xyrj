@@ -1,4 +1,6 @@
-/* Custom Luna-Bootstrap Theme Styles */
+/* Custom Luna-Bootstrap Theme Styles 
+   基于 _worker.js 后端逻辑与 Bootstrap 5 前端适配整理
+*/
 
 :root {
     --luna-dark-blue: #2f4056;
@@ -10,7 +12,9 @@
     --luna-box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
-/* 1. Global/Body */
+/* =========================================
+   1. Global & Containers
+   ========================================= */
 body {
     background-color: var(--luna-light-gray);
     color: var(--luna-text-dark);
@@ -24,21 +28,7 @@ body {
     box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
 }
 
-/* 2. Titles/Headers (Luna Style) */
-.main-box .title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--luna-primary-blue);
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    align-items: center;
-}
-.main-box .title i {
-    margin-right: 8px;
-    font-size: 20px;
-}
+/* 标题样式 (配合 main-default-bs.js 渲染的分类标题) */
 .goods .title-2 {
     font-size: 16px;
     font-weight: 400;
@@ -52,6 +42,7 @@ body {
     margin-right: 8px;
 }
 
+/* 标签样式 (配合 _worker.js 返回的 tags 字段解析) */
 .badge-tag {
     border: 1px solid #dc3545;
     background-color: #dc3545;
@@ -68,168 +59,134 @@ body {
     border-radius: 3em;
 }
 
-/* 3. Category Bar (Mimic Luna's cate bar) */
+/* 分类栏容器 (子元素已改为 Bootstrap .btn 样式，此处保留容器布局) */
 .category-bar {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 20px;
 }
-.cate-box {
-    padding: 10px 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s;
-    text-align: center;
-}
-.cate-box:hover {
-    background-color: #f0f0f0;
-}
-.cate-box.active {
-    background-color: var(--luna-primary-blue);
-    color: var(--luna-text-light);
-    border-color: var(--luna-primary-blue);
-    box-shadow: 0 2px 5px rgba(60, 140, 231, 0.4);
-}
-.cate-box p {
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-.cate-box div {
-    font-size: 12px;
-    opacity: 0.8;
+
+/* =========================================
+   2. Product Detail Page Layout
+   对应 product.html 及 product-page.js
+   ========================================= */
+
+/* 自定义宽容器 (1296px) */
+.container-1296 {
+    max-width: 1296px;
+    margin: 0 auto;
+    padding: 0 15px;
 }
 
-/* 4. Product List (Grid style) */
-.goods-box {
-    display: block;
-    border: 1px solid #eee;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 15px;
-    background-color: #fff;
-    transition: all 0.2s;
-    text-decoration: none;
-    color: inherit;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+/* 详情页网格布局 (2.32:1 比例) */
+.product-detail-grid {
+    display: grid;
+    grid-template-columns: 2.32fr 1fr; 
+    gap: 10px; 
+    margin-bottom: 30px;
+    align-items: start;
 }
-.goods-box:hover {
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-    border-color: var(--luna-primary-blue);
+
+/* 左侧内容区 */
+.detail-left {
+    min-width: 0;
 }
-.goods-box .picture img {
+
+/* 右侧购买栏 (吸顶) */
+.detail-right {
+    position: sticky;
+    top: 80px; 
+    min-width: 0;
+}
+
+/* 图片容器 (16:9 比例锁定) */
+.img-aspect-ratio-box {
+    position: relative;
     width: 100%;
-    height: 150px;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+    border-radius: 6px;
+    border: 1px solid #eee;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+}
+
+/* 商品主图 */
+.detail-product-img {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
 }
-.goods-box .msg {
-    padding: 10px;
+
+/* 详情页标题 */
+.product-page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--luna-text-dark);
+    margin-bottom: 10px;
+    line-height: 1.4;
 }
-.goods-name {
-    font-size: 14px;
-    font-weight: 600;
-    height: 40px; /* 两行高度 */
-    overflow: hidden;
+
+/* 详情描述内容 */
+.product-description-content {
+    color: #555;
+    line-height: 1.8;
+    font-size: 15px;
 }
-.goods-price {
-    font-size: 18px;
+.product-description-content img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* 大号价格显示 */
+.detail-price-lg {
+    font-size: 28px;
     color: var(--luna-primary-blue);
     font-weight: 700;
-    margin-top: 5px;
-}
-.goods-num {
-    font-size: 12px;
-    color: #999;
-    margin-top: 5px;
+    margin-bottom: 15px;
+    display: block;
 }
 
-/* 5. Product Detail Page Specifics */
-.goods-img img {
-    max-width: 100%;
-    border-radius: 6px;
+/* 规格选择按钮 (JS生成) */
+.variant-btn {
     border: 1px solid #ddd;
-}
-.goods-msg .entry {
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-}
-.goods-msg .l-msg {
-    width: 80px;
-    font-weight: 500;
-    color: var(--luna-text-dark);
-    font-size: 14px;
-}
-.goods-msg .input {
-    flex-grow: 1;
-    display: flex;
-    align-items: center;
-}
-.goods-msg .price {
-    margin: 15px 0;
-    font-size: 24px;
-    color: var(--luna-primary-blue);
-}
-.pay-type {
-    padding: 10px;
-    border: 1px solid #eee;
-    border-radius: 6px;
+    background: #fff;
+    color: #555;
+    padding: 6px 12px;
+    margin-right: 5px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    font-size: 13px;
     cursor: pointer;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
     transition: all 0.2s;
 }
-.pay-type i, .pay-type svg {
-    margin-right: 10px;
-    width: 24px;
-    height: 24px;
-}
-.pay-type.pay-select {
+.variant-btn:hover {
     border-color: var(--luna-primary-blue);
-    background-color: #e0f0ff;
-}
-
-/* Stepper for Quantity */
-.input .sub, .input .add {
-    display: inline-block;
-    padding: 0 12px;
-    background-color: #f8f9fa;
-    border: 1px solid #ced4da;
-    cursor: pointer;
-    line-height: 36px;
-    height: 38px;
-    font-weight: bold;
     color: var(--luna-primary-blue);
 }
-.input .sub {
-    border-radius: 4px 0 0 4px;
+.variant-btn.active {
+    background-color: var(--luna-primary-blue);
+    color: #fff;
+    border-color: var(--luna-primary-blue);
 }
-.input .add {
-    border-radius: 0 4px 4px 0;
-}
-.input input.pay-num {
-    width: 60px;
-    text-align: center;
-    border: 1px solid #ced4da;
-    border-left: none;
-    border-right: none;
-    height: 38px;
-    display: inline-block;
-}
-.input .form-control {
-    border-radius: 0;
-}
-.input .form-control:first-child {
-    border-radius: 4px 0 0 4px;
-}
-.input .form-control:last-child {
-    border-radius: 0 4px 4px 0;
+.variant-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f9f9f9;
 }
 
-/* 6. Mobile/Utility (Query Button) */
+/* =========================================
+   3. Mobile & Utilities
+   ========================================= */
+
+/* 移动端查询悬浮球 */
 .query-m {
     position: fixed;
     bottom: 20px;
@@ -260,155 +217,26 @@ body {
     font-weight: 600;
 }
 
-/* Order Search Page */
+/* 订单状态徽章 (用于 orders.html 及查单结果) */
 .status-badge {
     font-size: 12px;
     font-weight: 600;
     padding: 3px 6px;
     border-radius: 4px;
 }
-.bg-warning { background-color: #ffc107!important; color: #333!important; } /* Pending */
-.bg-info { background-color: #0dcaf0!important; color: #333!important; } /* Paid/Waiting */
-.bg-success { background-color: #198754!important; color: #fff!important; } /* Completed */
-
-
-/* =========================================
-   Product Detail Page Layout (1296px, 2.32:1)
-   ========================================= */
-
-/* 自定义宽容器 */
-.container-1296 {
-    max-width: 1296px;
-    margin: 0 auto;
-    padding: 0 15px; /* 防止在小屏幕贴边 */
-}
-
-/* 详情页网格布局 */
-.product-detail-grid {
-    display: grid;
-    /* 核心比例 2.32 : 1 */
-    grid-template-columns: 2.32fr 1fr; 
-    gap: 10px; 
-    margin-bottom: 30px;
-    align-items: start; /* 顶部对齐 */
-}
-
-/* 左侧详情区 */
-.detail-left {
-    min-width: 0; /* 防止内容撑开 grid */
-}
-
-/* 右侧购买/参数区 (侧边栏) */
-.detail-right {
-    position: sticky;
-    top: 80px; /* 滚动时吸顶 */
-    min-width: 0;
-}
-
-/* 商品主图 (在右侧) */
-.detail-product-img {
-    width: 100%;
-    border-radius: 6px;
-    border: 1px solid #eee;
-    margin-bottom: 15px;
-    aspect-ratio: 16/9; /* 保持图片比例 */
-    object-fit: cover;
-}
-
-/* 详情页标题 */
-.product-page-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--luna-text-dark);
-    margin-bottom: 10px;
-    line-height: 1.4;
-}
-
-/* 详情内容排版优化 */
-.product-description-content {
-    color: #555;
-    line-height: 1.8;
-    font-size: 15px;
-}
-.product-description-content img {
-    max-width: 100% !important;
-    height: auto !important;
-    border-radius: 4px;
-    margin: 10px 0;
-}
-
-/* 价格大字体 */
-.detail-price-lg {
-    font-size: 28px;
-    color: var(--luna-primary-blue);
-    font-weight: 700;
-    margin-bottom: 15px;
-    display: block;
-}
-
-/* 规格按钮 */
-.variant-btn {
-    border: 1px solid #ddd;
-    background: #fff;
-    color: #555;
-    padding: 6px 12px;
-    margin-right: 5px;
-    margin-bottom: 8px;
-    border-radius: 4px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.variant-btn:hover {
-    border-color: var(--luna-primary-blue);
-    color: var(--luna-primary-blue);
-}
-.variant-btn.active {
-    background-color: var(--luna-primary-blue);
-    color: #fff;
-    border-color: var(--luna-primary-blue);
-}
-.variant-btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background-color: #f9f9f9;
-}
+.bg-warning { background-color: #ffc107!important; color: #333!important; } /* 未支付 */
+.bg-info { background-color: #0dcaf0!important; color: #333!important; }    /* 已支付/处理中 */
+.bg-success { background-color: #198754!important; color: #fff!important; } /* 已完成 */
 
 /* 移动端适配 */
 @media (max-width: 991px) {
+    /* 详情页改为单列 */
     .product-detail-grid {
-        grid-template-columns: 1fr; /* 变为单列 */
+        grid-template-columns: 1fr;
         gap: 20px;
     }
     .detail-right {
-        position: static; /* 移动端取消吸顶 */
-        order: -1; /* 移动端让购买框显示在上方 */
+        position: static;
+        order: -1; /* 购买框置顶 */
     }
-}
-/* 1. 新增：控制比例的外壳 (16:9) */
-.img-aspect-ratio-box {
-    position: relative;
-    width: 100%;
-    padding-bottom: 56.25%; /* 核心代码：9除以16=0.5625，强制撑开高度 */
-    height: 0;
-    overflow: hidden;
-    border-radius: 6px;
-    border: 1px solid #eee;
-    margin-bottom: 15px;
-    background-color: #f8f9fa; /* 图片未加载时的背景色 */
-}
-
-/* 2. 修改：图片本身改为绝对定位铺满 */
-.detail-product-img {
-    position: absolute !important; /* 强制绝对定位 */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    /* 重置旧样式，避免冲突 */
-    margin-bottom: 0 !important;
-    border: none !important;
-    border-radius: 0 !important;
-    aspect-ratio: auto !important; /* 禁用可能存在的兼容性属性 */
 }
