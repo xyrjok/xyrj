@@ -74,7 +74,7 @@ body {
     grid-template-columns: 1.8fr 1fr; 
     gap: 15px; 
     margin-bottom: 30px;
-    align-items: start;
+    /* align-items: start;  <-- 删除或注释掉这一行 */
 }
 
 /* 左侧内容区 */
@@ -84,9 +84,12 @@ body {
 
 /* 右侧购买栏 (吸顶) */
 .detail-right {
-    position: sticky;
-    top: 80px; 
+    /* position: sticky; */
+    /* top: 80px; */
     min-width: 0;
+}
+.detail-right .sidebar-inner {
+    margin-bottom: 0 !important;
 }
 
 /* --- [修改] 图片容器 (16:9 + 留白) --- */
