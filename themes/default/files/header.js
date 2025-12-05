@@ -183,8 +183,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                 height: 16px;
                 line-height: 16px;
                 text-align: center;
-                font-weight: bold;
-                padding: 0 4px;
+                padding: 1px 3px;
                 display: none;             /* 默认隐藏 */
                 box-shadow: 0 1px 2px rgba(0,0,0,0.2);
             }
@@ -269,7 +268,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                         </div>
 
                         <a href="/cart" class="header-cart-wrap" title="购物车">
-                            <i class="fas fa-shopping-cart"></i>
+                            <i class="far fa-shopping-cart"></i>
                             <span class="common-cart-badge" id="header-cart-badge">0</span>
                         </a>
 
