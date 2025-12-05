@@ -1,6 +1,6 @@
 /**
  * themes/default/files/product-page.js
- * 商品详情页专属逻辑 (修复完整版：包含分页、缺货角标、完整购买流程)
+ * 商品详情页专属逻辑 (已修改：集成TBshop动态信息展示风格 + 二维码/分享功能)
  */
 
 let currentProduct = null;
@@ -93,7 +93,7 @@ function renderProductPage(product) {
     renderRightSidebar(product);
 }
 
-// 渲染右侧侧边栏 (集成 TBshop 功能 + 分页 + 缺货角标)
+// 渲染右侧侧边栏
 function renderRightSidebar(product) {
     // 初始状态
     currentVariant = null;
@@ -117,7 +117,30 @@ function renderRightSidebar(product) {
     // 规格按钮 HTML (初始不选中)
     const variantsHtml = renderSkuButtonsLocal(product.variants, -1);
 
+    // 【修改点2】重构库存行，右侧增加二维码和分享图标
     const rightHtml = `
+        <style>
+            /* 局部样式：二维码弹窗 */
+            .action-icon-wrap { position: relative; cursor: pointer; color: #6c757d; transition: color 0.2s; }
+            .action-icon-wrap:hover { color: #1678ff; }
+            .qr-popup {
+                display: none;
+                position: absolute;
+                right: 0;
+                top: 100%;
+                margin-top: 8px;
+                padding: 10px;
+                background: #fff;
+                border: 1px solid #ddd;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                border-radius: 4px;
+                z-index: 100;
+                width: 130px;
+                text-align: center;
+            }
+            .action-icon-wrap:hover .qr-popup { display: block; }
+        </style>
+
         <div class="img-aspect-ratio-box">
             <img src="${displayImg}" id="main-product-img" class="detail-product-img" alt="${product.name}">
         </div>
@@ -126,17 +149,32 @@ function renderRightSidebar(product) {
         
         <div class="mb-2">${tagsHtml}</div>
 
-        <div class="d-flex text-muted mb-2" style="font-size: 13px;">
-            <span class="me-3">库存: <span id="p-stock">${totalStock}</span></span>
-            <span>销量: ${product.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
+        <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 13px;">
+            <div class="text-muted">
+                <span class="me-3">库存: <span id="p-stock">${totalStock}</span></span>
+                <span>销量: ${product.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
+            </div>
+            <div class="d-flex align-items-center">
+                 <div class="action-icon-wrap me-3" title="手机扫码购买">
+                    <i class="fas fa-qrcode fs-5"></i>
+                    <div class="qr-popup">
+                        <div id="sidebar-qrcode"></div>
+                        <div style="font-size:10px; color:#999; margin-top:5px;">手机扫码下单</div>
+                    </div>
+                 </div>
+                 <div class="action-icon-wrap" title="点击复制链接分享" onclick="shareTo('clipboard')">
+                    <i class="fas fa-share-alt fs-5"></i>
+                 </div>
+            </div>
         </div>
 
         <div class="bg-light p-3 rounded mb-3">
-            <div class="d-flex align-items-baseline" style="color: var(--luna-primary-blue);">
+            <div class="d-flex align-items-baseline" style="color: #1678ff;">
                 <span class="fw-bold me-1" style="font-size: 16px;">¥</span>
                 <span class="fw-bold" id="p-display-price" style="font-size: 24px; line-height: 1;">${priceDisplay}</span>
             </div>
-            <div id="dynamic-info-display" class="mt-2 pt-2 border-top border-muted small" style="display:block; min-height:20px;">
+            
+            <div id="dynamic-info-display" class="mt-2 pt-2 border-top border-muted small" style="display:block; min-height:28px;">
                 <span class="text-muted"><i class="fas fa-info-circle me-1"></i>请选择规格</span>
             </div>
         </div>
@@ -213,6 +251,10 @@ function renderRightSidebar(product) {
     
     $('#detail-right-content').html(rightHtml);
     initStickySidebar();
+    
+    // 初始化二维码
+    initPageQrcode();
+
     // 回显缓存信息
     const cachedContact = localStorage.getItem('userContact');
     const cachedPass = localStorage.getItem('userPassword');
@@ -223,6 +265,54 @@ function renderRightSidebar(product) {
     setTimeout(() => {
         initSpecPagination('#sku-btn-list', '.variant-btn', 6);
     }, 50);
+}
+
+// =============================================
+// === 辅助功能：二维码与分享
+// =============================================
+function initPageQrcode() {
+    const el = document.getElementById('sidebar-qrcode');
+    if (el && typeof QRCode !== 'undefined') {
+        el.innerHTML = '';
+        new QRCode(el, {
+            text: window.location.href,
+            width: 100,
+            height: 100,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.L
+        });
+    }
+}
+
+window.shareTo = function(platform) {
+    const url = window.location.href;
+    // 统一复制链接逻辑
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(() => {
+            alert('商品链接已复制，赶快分享给好友吧！');
+        }).catch(err => fallbackCopy(url));
+    } else {
+        fallbackCopy(url);
+    }
+};
+
+function fallbackCopy(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) alert('商品链接已复制，赶快分享给好友吧！');
+        else alert('复制失败，请手动复制浏览器地址栏。');
+    } catch (err) {
+        alert('复制失败，请手动复制浏览器地址栏。');
+    }
+    document.body.removeChild(textArea);
 }
 
 // =============================================
@@ -452,7 +542,7 @@ function updateRealTimePrice() {
     priceEl.html(displayHTML);
 }
 
-// 动态信息显示区
+// 【修改点1】 动态信息显示区 (逻辑来自 TBshop，但样式改为蓝色)
 function updateDynamicInfoDisplay() {
     const displayDiv = $('#dynamic-info-display');
     
@@ -463,19 +553,21 @@ function updateDynamicInfoDisplay() {
 
     const specName = currentVariant.name || currentVariant.specs || '默认规格';
     let leftHtml = '';
-    const activeColor = 'var(--luna-primary-blue)';
+    // 保持 Default 主题的蓝色风格
+    const activeColor = '#1678ff';
+    const activeStyle = `color:${activeColor}; font-weight:500; font-size:13px;`;
     
     if (buyMethod === 'random') {
         const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
         if (promoText) {
-            leftHtml = `<span style="color:${activeColor};"><i class="fas fa-tags me-1"></i>批发优惠: ${promoText}</span>`;
+            leftHtml = `<span style="${activeStyle}"><i class="fas fa-tags me-1"></i>批发优惠: ${promoText}</span>`;
         } else {
-            leftHtml = `<span style="color:${activeColor};"><i class="fas fa-check-circle me-1"></i>默认随机</span>`;
+            leftHtml = `<span style="${activeStyle}"><i class="fas fa-check-circle me-1"></i>默认随机</span>`;
         }
     } else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
         let label = currentVariant.selection_label || '自选';
-        leftHtml = `<span style="color:${activeColor};"><i class="fas fa-mouse-pointer me-1"></i>${label} (加价 ${markup}元)</span>`;
+        leftHtml = `<span style="${activeStyle}"><i class="fas fa-mouse-pointer me-1"></i>${label} (加价 ${markup}元)</span>`;
     }
 
     let rightInfo = specName;
@@ -483,7 +575,7 @@ function updateDynamicInfoDisplay() {
         rightInfo += ` + ${selectedSpecificCardInfo}`;
     }
 
-    displayDiv.html(`${leftHtml} <div class="text-dark mt-1">已选: ${rightInfo}</div>`);
+    displayDiv.html(`${leftHtml} <span style="color:#666; font-size:12px; margin-left:12px;">已选: ${rightInfo}</span>`);
 }
 
 // 选号弹窗逻辑
@@ -674,7 +766,7 @@ function saveContactInfo() {
     if(p) localStorage.setItem('userPassword', p);
 }
 
-// [修正版] 渲染规格按钮（包含缺货角标）
+// 渲染规格按钮（包含缺货角标）
 function renderSkuButtonsLocal(variants, selectedIdx) {
     if (!variants || variants.length === 0) return '<span class="text-muted small">默认规格</span>';
     
@@ -744,6 +836,7 @@ function parseWholesaleDataForCalc(config) {
     return rules.sort((a,b) => b.count - a.count);
 }
 
+// 移植的辅助函数：解析批发信息文本
 function parseWholesaleInfo(config) {
     if (!config) return null;
     let rules = [];
@@ -766,38 +859,24 @@ function parseWholesaleInfo(config) {
 
 let sidebar = null;
 function initStickySidebar() {
-    // 1. 检查插件是否加载
     if (typeof StickySidebar === 'undefined') return;
-
-    // 2. 配置参数
     const options = {
-        topSpacing: 50,             // 距离顶部 80px
-        bottomSpacing: 30,          // 距离底部 20px
-        containerSelector: '.product-detail-grid', // 外层容器
-        innerWrapperSelector: '.sidebar-inner'     // 内层移动元素
+        topSpacing: 50,
+        bottomSpacing: 30,
+        containerSelector: '.product-detail-grid',
+        innerWrapperSelector: '.sidebar-inner'
     };
-
-    // 3. 定义检查逻辑 (移动端或高度不够时不启用)
     const checkSidebar = () => {
         const isMobile = window.innerWidth < 992;
         const leftHeight = $('.detail-left').outerHeight();
         const rightHeight = $('.sidebar-inner').outerHeight();
-
         if (isMobile || leftHeight <= rightHeight) {
-            if (sidebar) {
-                sidebar.destroy();
-                sidebar = null;
-            }
+            if (sidebar) { sidebar.destroy(); sidebar = null; }
         } else {
-            if (!sidebar) {
-                sidebar = new StickySidebar('#sidebar-wrapper', options);
-            } else {
-                sidebar.updateSticky();
-            }
+            if (!sidebar) { sidebar = new StickySidebar('#sidebar-wrapper', options); } 
+            else { sidebar.updateSticky(); }
         }
     };
-
-    // 4. 执行 (延迟执行确保图片加载撑开高度)
     setTimeout(checkSidebar, 500);
     window.addEventListener('resize', checkSidebar);
 }
