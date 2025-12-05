@@ -71,7 +71,7 @@ body {
 /* 网格布局 (左2.32 : 右1) */
 .product-detail-grid {
     display: grid;
-    grid-template-columns: 2.32fr 1fr; 
+    grid-template-columns: 1.8fr 1fr; 
     gap: 15px; 
     margin-bottom: 30px;
     align-items: start;
@@ -105,12 +105,18 @@ body {
 /* --- [修改] 商品主图 (完整显示不裁切 + 5px边距) --- */
 .detail-product-img {
     position: absolute !important;
-    top: 5px;   /* 距离顶部 5px */
-    left: 5px;  /* 距离左侧 5px */
-    width: calc(100% - 10px) !important; /* 减去左右各5px */
-    height: calc(100% - 10px) !important; /* 减去上下各5px */
-    object-fit: contain !important; /* 完整显示，不裁切 */
-    border-radius: 4px;
+    /* 1. 改为绝对定位居中 */
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    /* 2. 让图片尺寸自适应内容，但最大不超过容器 (留出5px边距) */
+    width: auto !important;
+    height: auto !important;
+    max-width: calc(100% - 10px) !important;
+    max-height: calc(100% - 10px) !important;
+    /* 3. 设置圆角和阴影 */
+    border-radius: 8px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
 }
 
 /* 详情页标题 */
