@@ -112,9 +112,8 @@ body {
     /* 2. 让图片尺寸自适应内容，但最大不超过容器 (留出5px边距) */
     width: auto !important;
     height: auto !important;
-    max-width: calc(100% - 10px) !important;
-    max-height: calc(100% - 10px) !important;
-    /* 3. 设置圆角和阴影 */
+    max-width: calc(100% - 35px) !important;
+    max-height: calc(100% - 35px) !important;
     border-radius: 8px; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
 }
