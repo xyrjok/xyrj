@@ -1,6 +1,6 @@
 /**
  * themes/default/files/product-page.js
- * 商品详情页专属逻辑 (已修改：集成TBshop动态信息展示风格 + 二维码/分享功能)
+ * 商品详情页专属逻辑 (修复版：完美支持批发价显示 + 二维码分享 + 蓝色风格)
  */
 
 let currentProduct = null;
@@ -117,10 +117,8 @@ function renderRightSidebar(product) {
     // 规格按钮 HTML (初始不选中)
     const variantsHtml = renderSkuButtonsLocal(product.variants, -1);
 
-    // 【修改点2】重构库存行，右侧增加二维码和分享图标
     const rightHtml = `
         <style>
-            /* 局部样式：二维码弹窗 */
             .action-icon-wrap { position: relative; cursor: pointer; color: #6c757d; transition: color 0.2s; }
             .action-icon-wrap:hover { color: #1678ff; }
             .qr-popup {
@@ -251,8 +249,6 @@ function renderRightSidebar(product) {
     
     $('#detail-right-content').html(rightHtml);
     initStickySidebar();
-    
-    // 初始化二维码
     initPageQrcode();
 
     // 回显缓存信息
@@ -261,14 +257,13 @@ function renderRightSidebar(product) {
     if(cachedContact) $('#p-contact').val(cachedContact);
     if(cachedPass) $('#p-password').val(cachedPass);
 
-    // 初始化规格分页 (6行一页)
     setTimeout(() => {
         initSpecPagination('#sku-btn-list', '.variant-btn', 6);
     }, 50);
 }
 
 // =============================================
-// === 辅助功能：二维码与分享
+// === 工具函数：二维码与分享
 // =============================================
 function initPageQrcode() {
     const el = document.getElementById('sidebar-qrcode');
@@ -287,7 +282,6 @@ function initPageQrcode() {
 
 window.shareTo = function(platform) {
     const url = window.location.href;
-    // 统一复制链接逻辑
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(url).then(() => {
             alert('商品链接已复制，赶快分享给好友吧！');
@@ -316,7 +310,7 @@ function fallbackCopy(text) {
 }
 
 // =============================================
-// === 规格分页逻辑
+// === 规格分页
 // =============================================
 function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
     const container = document.querySelector(containerSelector);
@@ -329,14 +323,13 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
     let totalPages = 1;
     
     function calculatePages() {
-        items.forEach(item => item.style.display = ''); // 先全部显示以计算位置
+        items.forEach(item => item.style.display = '');
         let rows = [];
         let lastTop = -1;
         let currentRow = [];
         
         items.forEach(item => {
             let currentTop = item.offsetTop;
-            // 如果 top 值变化超过 5px，视为新的一行
             if (lastTop !== -1 && Math.abs(currentTop - lastTop) > 5) {
                 rows.push(currentRow);
                 currentRow = [];
@@ -377,7 +370,6 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
         html += `<span class="spec-pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToSpecPage(${totalPages})">尾页</span>`;
         
         paginationArea.innerHTML = html;
-        
         window.goToSpecPage = function(page) {
             if (page >= 1 && page <= totalPages) {
                 currentPage = page;
@@ -396,14 +388,12 @@ function initSpecPagination(containerSelector, itemSelector, rowsPerPage = 6) {
 }
 
 // =============================================
-// === 核心交互逻辑
+// === 核心逻辑
 // =============================================
 
-// 选择规格
 window.selectSku = function(index, btn) {
     if (!currentProduct) return;
 
-    // 反选逻辑
     if (currentVariant && currentVariant.id === currentProduct.variants[index].id) {
         currentVariant = null;
         buyMethod = null;
@@ -412,8 +402,6 @@ window.selectSku = function(index, btn) {
         closeNumberSelector();
 
         $('.variant-btn').removeClass('active');
-        
-        // 恢复默认展示
         $('#main-product-img').attr('src', currentProduct.image_url || '/assets/noimage.jpg');
         const totalStock = currentProduct.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
         $('#p-stock').text(totalStock);
@@ -424,19 +412,16 @@ window.selectSku = function(index, btn) {
         return;
     }
     
-    // 选中逻辑
     $('.variant-btn').removeClass('active');
     $(btn).addClass('active');
 
     const variant = currentProduct.variants[index];
     currentVariant = variant;
     
-    // 更新图片和库存
     const imgUrl = variant.image_url || currentProduct.image_url || '/assets/noimage.jpg';
     $('#main-product-img').attr('src', imgUrl);
     $('#p-stock').text(variant.stock);
 
-    // 重置购买方式
     buyMethod = null;
     selectedSpecificCardId = null;
     selectedSpecificCardInfo = '';
@@ -447,7 +432,6 @@ window.selectSku = function(index, btn) {
     updateRealTimePrice();
 };
 
-// 更新购买方式按钮
 function updateBuyMethodButtons() {
     const container = $('#buy-method-container');
     if (!currentVariant) {
@@ -462,7 +446,6 @@ function updateBuyMethodButtons() {
     if (buyMethod === 'select' && !showSelect) buyMethod = null;
 
     let html = '';
-    // 使用 Default 主题的 active-method 样式
     const randomClass = buyMethod === 'random' ? 'active-method' : '';
     html += `<button class="btn btn-outline-secondary btn-sm me-2 mb-1 method-btn ${randomClass}" onclick="selectBuyMethod('random', this)">默认随机</button>`;
 
@@ -493,7 +476,6 @@ window.selectBuyMethod = function(type, btn) {
     updateRealTimePrice();
 };
 
-// 更新价格显示 (含批发价逻辑)
 function updateRealTimePrice() {
     const priceEl = $('#p-display-price');
     if (priceEl.length === 0) return;
@@ -542,7 +524,7 @@ function updateRealTimePrice() {
     priceEl.html(displayHTML);
 }
 
-// 【修改点1】 动态信息显示区 (逻辑来自 TBshop，但样式改为蓝色)
+// 动态信息显示 (修正了批发价解析)
 function updateDynamicInfoDisplay() {
     const displayDiv = $('#dynamic-info-display');
     
@@ -553,11 +535,11 @@ function updateDynamicInfoDisplay() {
 
     const specName = currentVariant.name || currentVariant.specs || '默认规格';
     let leftHtml = '';
-    // 保持 Default 主题的蓝色风格
-    const activeColor = '#1678ff';
+    const activeColor = '#1678ff'; // 蓝色风格
     const activeStyle = `color:${activeColor}; font-weight:500; font-size:13px;`;
     
     if (buyMethod === 'random') {
+        // 使用增强版解析函数
         const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
         if (promoText) {
             leftHtml = `<span style="${activeStyle}"><i class="fas fa-tags me-1"></i>批发优惠: ${promoText}</span>`;
@@ -578,7 +560,7 @@ function updateDynamicInfoDisplay() {
     displayDiv.html(`${leftHtml} <span style="color:#666; font-size:12px; margin-left:12px;">已选: ${rightInfo}</span>`);
 }
 
-// 选号弹窗逻辑
+// 选号弹窗
 window.openNumberSelector = async function() {
     const modal = $('#number-selector-modal');
     const listContainer = $('#ns-list-container');
@@ -613,10 +595,8 @@ window.closeNumberSelector = function() {
 window.selectNumberItem = function(id, note, el) {
     selectedSpecificCardId = id;
     selectedSpecificCardInfo = note;
-    
     $('.ns-item').removeClass('selected');
     $(el).addClass('selected');
-    
     updateDynamicInfoDisplay();
     updateRealTimePrice();
     setTimeout(closeNumberSelector, 200);
@@ -685,8 +665,6 @@ window.addToCart = function() {
     }
 
     localStorage.setItem('tbShopCart', JSON.stringify(cart));
-    
-    // UI 反馈
     const btn = $(event.target).closest('button');
     const originalText = btn.html();
     btn.html('<i class="fas fa-check"></i> 已加入').addClass('btn-success').removeClass('btn-warning');
@@ -733,7 +711,6 @@ window.buyNow = async function() {
             }
             btn.prop('disabled', false).html(originalContent);
         } else {
-            // 跳转支付
             window.location.href = `/pay?order_id=${data.order_id}&method=${paymentMethod}`;
         }
     } catch (e) {
@@ -742,7 +719,6 @@ window.buyNow = async function() {
     }
 };
 
-// 辅助函数
 function validateBuy() {
     if (!currentVariant) { alert('请先选择规格'); return false; }
     if (currentVariant.stock <= 0) { alert('该规格缺货'); return false; }
@@ -766,7 +742,7 @@ function saveContactInfo() {
     if(p) localStorage.setItem('userPassword', p);
 }
 
-// 渲染规格按钮（包含缺货角标）
+// 规格按钮渲染
 function renderSkuButtonsLocal(variants, selectedIdx) {
     if (!variants || variants.length === 0) return '<span class="text-muted small">默认规格</span>';
     
@@ -775,8 +751,6 @@ function renderSkuButtonsLocal(variants, selectedIdx) {
         const priceStr = parseFloat(v.price).toFixed(2);
         const name = v.name || v.specs || `规格${index+1}`;
         let btnClass = isOOS ? 'no-stock' : '';
-        
-        // 如果缺货，生成角标 HTML
         const badgeHtml = isOOS ? '<span class="sku-oos-badge">缺货</span>' : '';
         
         return `<button class="variant-btn ${btnClass}" onclick="${isOOS ? '' : `selectSku(${index}, this)`}" ${isOOS ? 'disabled' : ''}>
@@ -808,6 +782,9 @@ function renderTagsLocal(tags) {
     }).join('');
 }
 
+// =============================================
+// === 批发价解析逻辑 (修复：支持 Object/String/JSON 等多种格式) ===
+// =============================================
 function parseWholesaleDataForCalc(config) {
     let rules = [];
     if (!config) return rules;
@@ -836,25 +813,44 @@ function parseWholesaleDataForCalc(config) {
     return rules.sort((a,b) => b.count - a.count);
 }
 
-// 移植的辅助函数：解析批发信息文本
+// 核心修复函数
 function parseWholesaleInfo(config) {
     if (!config) return null;
     let rules = [];
     let data = config;
-    try {
-        if (typeof data === 'string') {
-            if (data.startsWith('[') || data.startsWith('{')) data = JSON.parse(data);
-        }
-    } catch(e){}
     
+    // 1. 尝试解析字符串（JSON或逗号分隔）
+    if (typeof data === 'string') {
+        data = data.trim();
+        if (data.startsWith('[') || data.startsWith('{')) {
+            try { data = JSON.parse(data); } catch (e) { /* 解析失败则忽略 */ }
+        } else {
+            // 尝试解析 5=3,10=2.5 这种简写格式
+            data.split(/[,，]/).forEach(p => {
+                const [k, v] = p.split('=');
+                if (k && v) rules.push(`${k}个起${v}元/个`);
+            });
+            // 如果成功解析出简写规则，直接返回
+            if (rules.length > 0) return rules.join('，');
+        }
+    }
+
+    // 2. 解析 Array 格式
     if (Array.isArray(data)) {
         data.forEach(item => {
-            const n = item.num || item.count;
-            const p = item.price || item.amount;
+            const n = item.num || item.number || item.count || item.qty || item.n;
+            const p = item.price || item.money || item.amount || item.p;
             if (n && p) rules.push(`${n}个起${p}元/个`);
         });
+    } 
+    // 3. 解析 Object 格式 (例如 {"5": 3, "10": 2.5})
+    else if (typeof data === 'object' && data !== null) {
+        Object.entries(data).forEach(([k, v]) => { 
+            if(!isNaN(k)) rules.push(`${k}个起${v}元/个`); 
+        });
     }
-    return rules.join('，');
+    
+    return rules.length > 0 ? rules.join('，') : null;
 }
 
 let sidebar = null;
