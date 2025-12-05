@@ -126,8 +126,8 @@ function renderRightSidebar(product) {
         
         <div class="mb-2">${tagsHtml}</div>
 
-        <div class="d-flex justify-content-between text-muted small mb-2">
-            <span>库存: <span id="p-stock" class="fw-bold">${totalStock}</span></span>
+        <div class="d-flex text-muted mb-2" style="font-size: 13px;">
+            <span class="me-3">库存: <span id="p-stock">${totalStock}</span></span>
             <span>销量: ${product.variants.reduce((a,b)=>a+(b.sales_count||0), 0)}</span>
         </div>
 
