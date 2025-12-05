@@ -42,7 +42,8 @@ body {
 .badge-tag {
     border: 1px solid #dc3545;
     background-color: #dc3545;
-    margin-right: .01rem;
+    margin-right: 4px;
+    margin-bottom: 4px;
     display: inline-block;
     padding: 0.25em 0.6em;
     font-size: 11px;
@@ -55,7 +56,7 @@ body {
     border-radius: 3em;
 }
 
-/* 分类栏容器 (按钮本身样式由JS控制) */
+/* 分类栏容器 */
 .category-bar {
     display: flex;
     flex-wrap: wrap;
@@ -88,7 +89,7 @@ body {
     min-width: 0;
 }
 
-/* 图片容器 (强制保持16:9比例) */
+/* --- [修改] 图片容器 (16:9 + 留白) --- */
 .img-aspect-ratio-box {
     position: relative;
     width: 100%;
@@ -101,22 +102,23 @@ body {
     background-color: #f8f9fa;
 }
 
-/* 商品主图 */
+/* --- [修改] 商品主图 (完整显示不裁切 + 5px边距) --- */
 .detail-product-img {
     position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    top: 5px;   /* 距离顶部 5px */
+    left: 5px;  /* 距离左侧 5px */
+    width: calc(100% - 10px) !important; /* 减去左右各5px */
+    height: calc(100% - 10px) !important; /* 减去上下各5px */
+    object-fit: contain !important; /* 完整显示，不裁切 */
+    border-radius: 4px;
 }
 
 /* 详情页标题 */
 .product-page-title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--luna-text-dark);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     line-height: 1.4;
 }
 
@@ -135,15 +137,16 @@ body {
 
 /* 大号价格显示 */
 .detail-price-lg {
-    font-size: 28px;
+    font-size: 24px;
     color: var(--luna-primary-blue);
     font-weight: 700;
-    margin-bottom: 15px;
-    display: block;
+    margin-right: 5px;
 }
 
 /* 规格选择按钮 */
 .variant-btn {
+    position: relative; /* [新增] 支持角标定位 */
+    overflow: visible;  /* [新增] 允许角标溢出 */
     border: 1px solid #ddd;
     background: #fff;
     color: #555;
@@ -165,13 +168,168 @@ body {
     border-color: var(--luna-primary-blue);
 }
 .variant-btn.disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
     background-color: #f9f9f9;
 }
+.variant-btn.no-stock {
+    background-color: #f5f5f5;
+    color: #999;
+    border-color: #eee;
+    text-decoration: line-through; /* 缺货时增加删除线 */
+}
+
+/* [新增] 红色缺货角标 */
+.sku-oos-badge {
+    position: absolute;
+    top: -8px;
+    right: -5px;
+    background-color: #dc3545;
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+    z-index: 10;
+    text-decoration: none; /* 防止继承删除线 */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-weight: normal;
+}
 
 /* =========================================
-   3. 移动端适配 & 工具类
+   3. [新增] 移植自 TBshop 的功能组件样式
+   ========================================= */
+
+/* 购买方式按钮 */
+.method-btn { font-size: 12px; }
+.method-btn.active-method {
+    background-color: var(--luna-primary-blue);
+    color: #fff;
+    border-color: var(--luna-primary-blue);
+}
+
+/* 自选号码弹窗 */
+.number-selector-overlay {
+    display: none;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    z-index: 100;
+    overflow: hidden;
+}
+.ns-header {
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.ns-close { cursor: pointer; padding: 0 5px; font-size: 16px; color: #999; }
+.ns-body { flex: 1; overflow-y: auto; padding: 10px; }
+.ns-footer {
+    text-align: center; padding: 8px 0; border-top: 1px solid #eee;
+    cursor: pointer; color: #666; font-size: 12px; background: #fff;
+}
+.ns-item {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-right: 6px; margin-bottom: 6px;
+    transition: all 0.2s;
+    font-family: Arial, sans-serif;
+}
+.ns-item:hover { border-color: var(--luna-primary-blue); color: var(--luna-primary-blue); }
+.ns-item.selected {
+    background-color: var(--luna-primary-blue);
+    border-color: var(--luna-primary-blue);
+    color: #fff;
+}
+
+/* 规格分页组件 */
+.spec-pagination-container {
+    margin-top: 8px;
+    text-align: left;
+    display: none;
+    padding-top: 8px;
+    border-top: 1px dashed #eee;
+}
+.spec-pagination-btn {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 0 3px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    color: #555;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 12px;
+    user-select: none;
+    transition: all 0.2s;
+}
+.spec-pagination-btn:hover { background-color: #f0f0f0; border-color: #ccc; }
+.spec-pagination-btn.active {
+    background-color: var(--luna-primary-blue); color: #fff; border-color: var(--luna-primary-blue);
+}
+.spec-pagination-btn.disabled { opacity: 0.5; cursor: not-allowed; background-color: #f9f9f9; }
+
+/* 支付方式图标 */
+.payment-option {
+    position: relative; 
+    display: inline-flex;
+    align-items: center; 
+    justify-content: center;
+    padding: 4px 8px; 
+    height: 36px; 
+    min-width: 36px;
+    font-size: 20px; 
+    border: 1px solid #ddd; 
+    border-radius: 4px;
+    margin-right: 10px; 
+    cursor: pointer; 
+    background: #fff; 
+    transition: all 0.2s;
+}
+.payment-option:hover { border-color: var(--luna-primary-blue); }
+.payment-option.active { border-color: var(--luna-primary-blue); color: var(--luna-primary-blue); }
+.payment-check-mark {
+    position: absolute; top: -6px; right: -6px;
+    width: 14px; height: 14px; 
+    background-color: var(--luna-primary-blue); 
+    color: #fff;
+    border-radius: 50%; font-size: 9px; 
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(0); transition: all 0.2s; z-index: 1;
+}
+.payment-option.active .payment-check-mark { opacity: 1; transform: scale(1); }
+
+/* =========================================
+   [修改] 输入框交互样式
+   ========================================= */
+
+/* 去除点击输入时的聚焦粗边 */
+.form-control:focus {
+    border-color: var(--luna-primary-blue);
+    box-shadow: none !important; 
+    outline: none;
+}
+
+/* 提示字体 (Placeholder) 改小、浅灰色 */
+.form-control::placeholder { color: #ccc !important; font-size: 12px; opacity: 1; }
+.form-control::-webkit-input-placeholder { color: #ccc !important; font-size: 12px; }
+.form-control::-moz-placeholder { color: #ccc !important; font-size: 12px; opacity: 1; }
+.form-control:-ms-input-placeholder { color: #ccc !important; font-size: 12px; }
+
+/* =========================================
+   4. 移动端适配 & 工具类
    ========================================= */
 
 /* 移动端右下角查询悬浮球 */
@@ -218,13 +376,12 @@ body {
 
 /* 移动端详情页适配 */
 @media (max-width: 991px) {
-    /* 详情页改为单列 */
     .product-detail-grid {
         grid-template-columns: 1fr;
         gap: 20px;
     }
     .detail-right {
         position: static;
-        order: -1; /* 移动端让购买框显示在上方 */
+        order: -1; 
     }
 }
