@@ -1,19 +1,15 @@
-/* Custom Luna-Bootstrap Theme Styles 
-   基于 _worker.js 后端逻辑与 Bootstrap 5 前端适配整理
-*/
+/* themes/default/files/custom-default-bootstrap.css */
 
 :root {
     --luna-dark-blue: #2f4056;
     --luna-primary-blue: #3C8CE7;
-    --luna-secondary-blue: #00EAFF;
     --luna-light-gray: #f2f2f2;
     --luna-text-dark: #333;
-    --luna-text-light: #fff;
     --luna-box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* =========================================
-   1. Global & Containers
+   1. 全局样式 & 通用容器
    ========================================= */
 body {
     background-color: var(--luna-light-gray);
@@ -28,7 +24,7 @@ body {
     box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
 }
 
-/* 标题样式 (配合 main-default-bs.js 渲染的分类标题) */
+/* 首页分类标题 */
 .goods .title-2 {
     font-size: 16px;
     font-weight: 400;
@@ -42,7 +38,7 @@ body {
     margin-right: 8px;
 }
 
-/* 标签样式 (配合 _worker.js 返回的 tags 字段解析) */
+/* 标签样式 (用于渲染 tags) */
 .badge-tag {
     border: 1px solid #dc3545;
     background-color: #dc3545;
@@ -59,7 +55,7 @@ body {
     border-radius: 3em;
 }
 
-/* 分类栏容器 (子元素已改为 Bootstrap .btn 样式，此处保留容器布局) */
+/* 分类栏容器 (按钮本身样式由JS控制) */
 .category-bar {
     display: flex;
     flex-wrap: wrap;
@@ -68,18 +64,10 @@ body {
 }
 
 /* =========================================
-   2. Product Detail Page Layout
-   对应 product.html 及 product-page.js
+   2. 商品详情页布局 (Product Detail)
    ========================================= */
 
-/* 自定义宽容器 (1296px) */
-.container-1296 {
-    max-width: 1296px;
-    margin: 0 auto;
-    padding: 0 15px;
-}
-
-/* 详情页网格布局 (2.32:1 比例) */
+/* 网格布局 (左2.32 : 右1) */
 .product-detail-grid {
     display: grid;
     grid-template-columns: 2.32fr 1fr; 
@@ -100,11 +88,11 @@ body {
     min-width: 0;
 }
 
-/* 图片容器 (16:9 比例锁定) */
+/* 图片容器 (强制保持16:9比例) */
 .img-aspect-ratio-box {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    padding-bottom: 56.25%; /* 16:9 比例 */
     height: 0;
     overflow: hidden;
     border-radius: 6px;
@@ -154,7 +142,7 @@ body {
     display: block;
 }
 
-/* 规格选择按钮 (JS生成) */
+/* 规格选择按钮 */
 .variant-btn {
     border: 1px solid #ddd;
     background: #fff;
@@ -183,10 +171,10 @@ body {
 }
 
 /* =========================================
-   3. Mobile & Utilities
+   3. 移动端适配 & 工具类
    ========================================= */
 
-/* 移动端查询悬浮球 */
+/* 移动端右下角查询悬浮球 */
 .query-m {
     position: fixed;
     bottom: 20px;
@@ -217,18 +205,18 @@ body {
     font-weight: 600;
 }
 
-/* 订单状态徽章 (用于 orders.html 及查单结果) */
+/* 订单状态徽章 */
 .status-badge {
     font-size: 12px;
     font-weight: 600;
     padding: 3px 6px;
     border-radius: 4px;
 }
-.bg-warning { background-color: #ffc107!important; color: #333!important; } /* 未支付 */
-.bg-info { background-color: #0dcaf0!important; color: #333!important; }    /* 已支付/处理中 */
-.bg-success { background-color: #198754!important; color: #fff!important; } /* 已完成 */
+.bg-warning { background-color: #ffc107!important; color: #333!important; }
+.bg-info { background-color: #0dcaf0!important; color: #333!important; }
+.bg-success { background-color: #198754!important; color: #fff!important; }
 
-/* 移动端适配 */
+/* 移动端详情页适配 */
 @media (max-width: 991px) {
     /* 详情页改为单列 */
     .product-detail-grid {
@@ -237,6 +225,6 @@ body {
     }
     .detail-right {
         position: static;
-        order: -1; /* 购买框置顶 */
+        order: -1; /* 移动端让购买框显示在上方 */
     }
 }
