@@ -468,14 +468,14 @@ function updateDynamicInfoDisplay() {
     if (buyMethod === 'random') {
         const promoText = parseWholesaleInfo(currentVariant.wholesale_config);
         if (promoText) {
-            leftHtml = `<span style="color:${activeColor}; font-weight:bold;"><i class="fas fa-tags me-1"></i>批发优惠: ${promoText}</span>`;
+            leftHtml = `<span style="color:${activeColor};"><i class="fas fa-tags me-1"></i>批发优惠: ${promoText}</span>`;
         } else {
-            leftHtml = `<span style="color:${activeColor}; font-weight:bold;"><i class="fas fa-check-circle me-1"></i>默认随机</span>`;
+            leftHtml = `<span style="color:${activeColor};"><i class="fas fa-check-circle me-1"></i>默认随机</span>`;
         }
     } else if (buyMethod === 'select') {
         const markup = parseFloat(currentVariant.custom_markup || 0).toFixed(2);
         let label = currentVariant.selection_label || '自选';
-        leftHtml = `<span style="color:${activeColor}; font-weight:bold;"><i class="fas fa-mouse-pointer me-1"></i>${label} (加价 ${markup}元)</span>`;
+        leftHtml = `<span style="color:${activeColor};"><i class="fas fa-mouse-pointer me-1"></i>${label} (加价 ${markup}元)</span>`;
     }
 
     let rightInfo = specName;
