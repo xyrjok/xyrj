@@ -89,7 +89,7 @@ body {
     min-width: 0;
 }
 .detail-right .sidebar-inner {
-    margin-bottom: 20px !important;
+    margin-bottom: 0px !important;
 }
 
 /* --- [修改] 图片容器 (16:9 + 留白) --- */
