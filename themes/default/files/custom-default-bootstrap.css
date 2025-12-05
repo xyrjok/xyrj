@@ -156,11 +156,12 @@ body {
     border: 1px solid #ddd;
     background: #fff;
     color: #555;
-    padding: 6px 12px;
+    padding: 3px 8px;
     margin-right: 5px;
     margin-bottom: 8px;
     border-radius: 4px;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 400;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -207,7 +208,7 @@ body {
    ========================================= */
 
 /* 购买方式按钮 */
-.method-btn { font-size: 12px; }
+.method-btn { font-size: 14px; }
 .method-btn.active-method {
     background-color: var(--luna-primary-blue);
     color: #fff;
