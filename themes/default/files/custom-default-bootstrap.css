@@ -73,12 +73,8 @@ body {
     flex-wrap: wrap;
     margin-bottom: 30px; 
     position: relative;
-    /* 1. 核心：拉伸对齐，保证左右列物理高度一致，解决底部对齐问题 */
-    align-items: stretch !important;
-    
-    /* 清理旧代码 */
+    align-items: flex-start !important; 
     grid-template-columns: none !important;
-    gap: 0 !important; 
 }
 
 /* 2. 强制左侧盒子顶部和底部归零，直接贴合 Row */
