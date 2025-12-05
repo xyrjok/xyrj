@@ -19,7 +19,7 @@ body {
 .main-box {
     background-color: #fff;
     padding: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 20px; /* 全局默认下边距 */
     border-radius: 8px;
     box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
 }
@@ -60,37 +60,51 @@ body {
 }
 
 /* =========================================
-   2. 商品详情页布局 (Product Detail) - [修复版]
+   2. 商品详情页布局 (Product Detail) - [最终修正版]
    ========================================= */
 
 .product-detail-grid {
     display: flex; 
     flex-wrap: wrap;
     margin-bottom: 30px; 
-    /* [修复底部] 移除 align-items 设置，使用默认的 stretch，确保列等高 */
     
+    /* [关键] 保持 stretch (拉伸) 对齐
+       让左侧列的高度决定整个 Row 的高度，这是底部对齐的物理基础 */
+    align-items: stretch;
+
+    /* 清理旧代码 */
     grid-template-columns: none !important;
     gap: 0 !important; 
 }
 
-/* [修复底部] 清除内部卡片的底部外边距，让左右底线对齐 */
-.product-detail-grid .main-box {
+/* [修复底部对齐] 
+   去除左侧盒子的底部外边距，让它直接贴合 Row 的底部 
+*/
+.product-detail-grid .detail-left.main-box {
     margin-bottom: 0 !important;
 }
 
-/* [修复顶部] 强制右侧容器归零，防止顶部微小错位 */
+/* [修复顶部跳动] 
+   强制清除右侧所有中间容器的 Margin/Padding 和 Height
+   防止 Sticky 切换定位模式时发生位移 
+*/
 #sidebar-wrapper, 
 .detail-right {
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
-    display: block; /* 防止 flex 干扰 */
+    height: auto !important; /* 禁止继承高度，由内容决定 */
+    display: block;
 }
 
-/* 右侧内部卡片 */
+/* 恢复右侧卡片的视觉样式 */
 .detail-right .sidebar-inner {
-    margin-bottom: 0 !important;
-    margin-top: 0 !important; /* 确保无顶部间距 */
+    margin: 0 !important; /* 清除外边距 */
+    /* 保持原来的内边距和圆角阴影 */
+    background-color: #fff;
+    padding: 1rem !important; 
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
 }
 
 /* 左侧内容区 */
@@ -98,8 +112,7 @@ body {
     min-width: 0;
 }
 
-/* --- 其他原有样式保持不变 --- */
-
+/* --- 图片容器 --- */
 .img-aspect-ratio-box {
     position: relative;
     width: 100%;
@@ -125,6 +138,7 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
 }
 
+/* 详情页标题 */
 .product-page-title {
     font-size: 18px;
     font-weight: 700;
@@ -133,6 +147,7 @@ body {
     line-height: 1.4;
 }
 
+/* 详情描述内容 */
 .product-description-content {
     color: #555;
     line-height: 1.8;
@@ -328,7 +343,6 @@ body {
 /* =========================================
    4. 移动端适配
    ========================================= */
-
 .query-m {
     position: fixed;
     bottom: 20px;
@@ -360,15 +374,16 @@ body {
 .bg-info { background-color: #0dcaf0!important; color: #333!important; }
 .bg-success { background-color: #198754!important; color: #fff!important; }
 
+/* 移动端详情页适配 */
 @media (max-width: 991px) {
     .product-detail-grid {
         flex-direction: column; 
     }
-    .product-detail-grid .main-box {
-        margin-bottom: 20px !important;
+    .product-detail-grid .detail-left.main-box {
+        margin-bottom: 20px !important; /* 恢复移动端间距 */
     }
     .product-detail-grid .col-lg-4 {
-        order: -1; 
+        order: -1; /* 购买栏置顶 */
     }
     .detail-right {
         position: static;
