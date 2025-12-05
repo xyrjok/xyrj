@@ -38,7 +38,7 @@ body {
     margin-right: 8px;
 }
 
-/* 标签样式 (用于渲染 tags) */
+/* 标签样式 */
 .badge-tag {
     border: 1px solid #dc3545;
     background-color: #dc3545;
@@ -65,27 +65,37 @@ body {
 }
 
 /* =========================================
-   2. 商品详情页布局 (Product Detail) - [重构版]
+   2. 商品详情页布局 (Product Detail) - [终极修复版]
    ========================================= */
 
-/* 重置 Grid 为 Flex (配合 Bootstrap .row) 
-   并处理底部对齐问题 
-*/
+/* 将原本的 Grid 布局重置，配合 Bootstrap Flex 系统 */
 .product-detail-grid {
-    /* 覆盖掉旧版可能存在的 grid 属性，或者保持默认 flex 行为 */
     display: flex; 
     flex-wrap: wrap;
     margin-bottom: 30px; /* 整体与页脚的距离 */
     
-    /* 移除旧版 Grid 特有属性 */
+    /* [关键] 顶部对齐：
+       防止右侧列被强制拉伸到和左侧一样高。
+       这样 sticky 插件才能准确计算页面高度，避免滚动到底部时出错。
+    */
+    align-items: flex-start !important;
+
+    /* 清除旧代码的 Grid 属性 */
     grid-template-columns: none !important;
-    gap: 0 !important; /* 间距由 Bootstrap class "g-4" 控制 */
+    gap: 0 !important; /* 间距现在完全由 Bootstrap 的 g-4 控制 */
 }
 
-/* [核心修复] 去除详情页内部卡片的底部外边距 
-   让左右两列的“物理底部”对齐，以便 sticky 插件正确吸附
+/* [核心对齐] 
+   去除详情页内部卡片的底部外边距。
+   因为布局改为了 Flex + Sticky，内部不需要 margin-bottom 来撑开空间，
+   这样左右两边的“物理底部”在视觉上就是对齐的。
 */
 .product-detail-grid .main-box {
+    margin-bottom: 0 !important;
+}
+
+/* 确保右侧内部容器也没有干扰性边距 */
+.detail-right .sidebar-inner {
     margin-bottom: 0 !important;
 }
 
@@ -98,16 +108,12 @@ body {
 .detail-right {
     min-width: 0;
 }
-/* 修复右侧内部容器边距 */
-.detail-right .sidebar-inner {
-    margin-bottom: 0 !important;
-}
 
 /* --- 图片容器 (16:9 + 留白) --- */
 .img-aspect-ratio-box {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%; /* 16:9 比例 */
+    padding-bottom: 56.25%;
     height: 0;
     overflow: hidden;
     border-radius: 6px;
@@ -194,7 +200,7 @@ body {
     background-color: #f5f5f5;
     color: #999;
     border-color: #eee;
-    text-decoration: line-through; 
+    text-decoration: line-through;
 }
 
 /* 红色缺货角标 */
@@ -209,13 +215,13 @@ body {
     border-radius: 4px;
     line-height: 1;
     z-index: 10;
-    text-decoration: none; 
+    text-decoration: none;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     font-weight: normal;
 }
 
 /* =========================================
-   3. 功能组件样式 (移植自 TBshop)
+   3. 功能组件样式 (TBshop 移植)
    ========================================= */
 
 /* 购买方式按钮 */
@@ -338,7 +344,6 @@ body {
     box-shadow: none !important; 
     outline: none;
 }
-
 .form-control::placeholder { color: #ccc !important; font-size: 12px; opacity: 1; }
 .form-control::-webkit-input-placeholder { color: #ccc !important; font-size: 12px; }
 .form-control::-moz-placeholder { color: #ccc !important; font-size: 12px; opacity: 1; }
@@ -391,20 +396,20 @@ body {
 .bg-success { background-color: #198754!important; color: #fff!important; }
 
 /* [新增] 移动端详情页适配重构 
-   使用 Flex 的 order 属性来调整显示顺序 
+   使用 Flex 的 order 属性来调整显示顺序，实现响应式布局
 */
 @media (max-width: 991px) {
-    /* 移动端改为上下堆叠，不再是 Grid */
+    /* 移动端取消横向排列，改为上下垂直堆叠 */
     .product-detail-grid {
         flex-direction: column; 
     }
 
-    /* 恢复移动端卡片间的间距 */
+    /* 移动端需要恢复卡片底部的间距，否则两张卡片会粘在一起 */
     .product-detail-grid .main-box {
         margin-bottom: 20px !important;
     }
 
-    /* 让右侧购买栏显示在最上方 */
+    /* 使用 order 属性，让右侧购买栏在移动端显示在最上方 */
     .product-detail-grid .col-lg-4 {
         order: -1; 
     }
