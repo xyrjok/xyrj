@@ -19,11 +19,12 @@ body {
 .main-box {
     background-color: #fff;
     padding: 20px;
-    margin-bottom: 20px; /* 全局默认下边距 */
+    margin-bottom: 20px;
     border-radius: 8px;
     box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
 }
 
+/* 首页分类标题 */
 .goods .title-2 {
     font-size: 16px;
     font-weight: 400;
@@ -33,8 +34,11 @@ body {
     display: flex;
     align-items: center;
 }
-.goods .title-2 i { margin-right: 8px; }
+.goods .title-2 i {
+    margin-right: 8px;
+}
 
+/* 标签样式 (用于渲染 tags) */
 .badge-tag {
     border: 1px solid #dc3545;
     background-color: #dc3545;
@@ -52,6 +56,7 @@ body {
     border-radius: 3em;
 }
 
+/* 分类栏容器 */
 .category-bar {
     display: flex;
     flex-wrap: wrap;
@@ -60,63 +65,62 @@ body {
 }
 
 /* =========================================
-   2. 商品详情页布局 (Product Detail) - [最终修正版]
+   2. 商品详情页布局 (Product Detail) - [最终稳定版]
    ========================================= */
 
 .product-detail-grid {
     display: flex; 
     flex-wrap: wrap;
     margin-bottom: 30px; 
+    position: relative;
+    /* 1. 核心：拉伸对齐，保证左右列物理高度一致，解决底部对齐问题 */
+    align-items: stretch !important;
     
-    /* [关键] 保持 stretch (拉伸) 对齐
-       让左侧列的高度决定整个 Row 的高度，这是底部对齐的物理基础 */
-    align-items: stretch;
-
     /* 清理旧代码 */
     grid-template-columns: none !important;
     gap: 0 !important; 
 }
 
-/* [修复底部对齐] 
-   去除左侧盒子的底部外边距，让它直接贴合 Row 的底部 
-*/
+/* 2. 强制左侧盒子顶部和底部归零，直接贴合 Row */
 .product-detail-grid .detail-left.main-box {
+    margin-top: 0 !important;
     margin-bottom: 0 !important;
+    /* 确保视觉风格一致 */
+    border-radius: 8px; 
 }
 
-/* [修复顶部跳动] 
-   强制清除右侧所有中间容器的 Margin/Padding 和 Height
-   防止 Sticky 切换定位模式时发生位移 
-*/
+/* 3. [关键修复] 强制右侧容器归零 */
+/* 解决"右边比左边高"和"滚动跳动"问题：确保右侧容器顶部没有任何隐形边距 */
 #sidebar-wrapper, 
 .detail-right {
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
-    height: auto !important; /* 禁止继承高度，由内容决定 */
+    height: auto !important; /* 禁止继承高度 */
     display: block;
+    vertical-align: top;
 }
 
-/* 恢复右侧卡片的视觉样式 */
+/* 右侧白色卡片内部样式恢复 */
 .detail-right .sidebar-inner {
-    margin: 0 !important; /* 清除外边距 */
-    /* 保持原来的内边距和圆角阴影 */
+    margin: 0 !important;
+    padding: 1rem !important; /* 恢复内部间距 */
     background-color: #fff;
-    padding: 1rem !important; 
     border-radius: 8px;
     box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
+    min-height: 100px; /* 防止内容过少塌陷 */
 }
 
-/* 左侧内容区 */
+/* 左侧内容区容器 */
 .detail-left {
     min-width: 0;
 }
 
-/* --- 图片容器 --- */
+/* --- 图片容器 (16:9 + 留白) --- */
 .img-aspect-ratio-box {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%; 
+    padding-bottom: 56.25%; /* 16:9 比例 */
     height: 0;
     overflow: hidden;
     border-radius: 6px;
@@ -125,6 +129,7 @@ body {
     background-color: #f8f9fa;
 }
 
+/* --- 商品主图 --- */
 .detail-product-img {
     position: absolute !important;
     top: 50% !important;
@@ -160,6 +165,7 @@ body {
     margin: 10px 0;
 }
 
+/* 大号价格显示 */
 .detail-price-lg {
     font-size: 24px;
     color: var(--luna-primary-blue);
@@ -167,9 +173,10 @@ body {
     margin-right: 5px;
 }
 
+/* 规格选择按钮 */
 .variant-btn {
-    position: relative;
-    overflow: visible;
+    position: relative; /* [新增] 支持角标定位 */
+    overflow: visible;  /* [新增] 允许角标溢出 */
     border: 1px solid #ddd;
     background: #fff;
     color: #555;
@@ -200,9 +207,10 @@ body {
     background-color: #f5f5f5;
     color: #999;
     border-color: #eee;
-    text-decoration: line-through;
+    text-decoration: line-through; /* 缺货时增加删除线 */
 }
 
+/* [新增] 红色缺货角标 */
 .sku-oos-badge {
     position: absolute;
     top: -8px;
@@ -214,15 +222,16 @@ body {
     border-radius: 4px;
     line-height: 1;
     z-index: 10;
-    text-decoration: none;
+    text-decoration: none; /* 防止继承删除线 */
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     font-weight: normal;
 }
 
 /* =========================================
-   3. 功能组件样式
+   3. [新增] 移植自 TBshop 的功能组件样式
    ========================================= */
 
+/* 购买方式按钮 */
 .method-btn { font-size: 14px; }
 .method-btn.active-method {
     background-color: var(--luna-primary-blue);
@@ -230,6 +239,7 @@ body {
     border-color: var(--luna-primary-blue);
 }
 
+/* 自选号码弹窗 */
 .number-selector-overlay {
     display: none;
     flex-direction: column;
@@ -275,6 +285,7 @@ body {
     color: #fff;
 }
 
+/* 规格分页组件 */
 .spec-pagination-container {
     margin-top: 8px;
     text-align: left;
@@ -301,6 +312,7 @@ body {
 }
 .spec-pagination-btn.disabled { opacity: 0.5; cursor: not-allowed; background-color: #f9f9f9; }
 
+/* 支付方式图标 */
 .payment-option {
     position: relative; 
     display: inline-flex;
@@ -330,19 +342,28 @@ body {
 }
 .payment-option.active .payment-check-mark { opacity: 1; transform: scale(1); }
 
+/* =========================================
+   [修改] 输入框交互样式
+   ========================================= */
+
+/* 去除点击输入时的聚焦粗边 */
 .form-control:focus {
     border-color: var(--luna-primary-blue);
     box-shadow: none !important; 
     outline: none;
 }
+
+/* 提示字体 (Placeholder) 改小、浅灰色 */
 .form-control::placeholder { color: #ccc !important; font-size: 12px; opacity: 1; }
 .form-control::-webkit-input-placeholder { color: #ccc !important; font-size: 12px; }
 .form-control::-moz-placeholder { color: #ccc !important; font-size: 12px; opacity: 1; }
 .form-control:-ms-input-placeholder { color: #ccc !important; font-size: 12px; }
 
 /* =========================================
-   4. 移动端适配
+   4. 移动端适配 & 工具类
    ========================================= */
+
+/* 移动端右下角查询悬浮球 */
 .query-m {
     position: fixed;
     bottom: 20px;
@@ -360,10 +381,20 @@ body {
     box-shadow: 0 4px 10px rgba(60, 140, 231, 0.6);
     transition: all 0.2s;
 }
-.query-m a:hover { background-color: #2b74d3; }
-.query-m i { width: 24px; height: 24px; font-size: 18px; margin-right: 5px; }
-.query-m span { font-weight: 600; }
+.query-m a:hover {
+    background-color: #2b74d3;
+}
+.query-m i {
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    margin-right: 5px;
+}
+.query-m span {
+    font-weight: 600;
+}
 
+/* 订单状态徽章 */
 .status-badge {
     font-size: 12px;
     font-weight: 600;
@@ -374,18 +405,25 @@ body {
 .bg-info { background-color: #0dcaf0!important; color: #333!important; }
 .bg-success { background-color: #198754!important; color: #fff!important; }
 
-/* 移动端详情页适配 */
+/* 移动端详情页适配 [关键修正] */
 @media (max-width: 991px) {
     .product-detail-grid {
-        flex-direction: column; 
+        flex-direction: column;
+        /* 移动端不需要 stretch */
+        align-items: flex-start !important;
     }
+    
+    /* 移动端：手动恢复被 gy-0 去掉的垂直间距 */
+    /* 详情在下，购买在上，所以给左侧（详情）加 margin-top */
     .product-detail-grid .detail-left.main-box {
-        margin-bottom: 20px !important; /* 恢复移动端间距 */
+        margin-top: 20px !important;
     }
-    .product-detail-grid .col-lg-4 {
-        order: -1; /* 购买栏置顶 */
-    }
+
     .detail-right {
         position: static;
+    }
+    
+    .product-detail-grid .col-lg-4 {
+        order: -1; 
     }
 }
