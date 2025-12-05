@@ -125,8 +125,9 @@ function renderRightSidebar(product) {
     }
 
     const rightHtml = `
+    <div class="img-aspect-ratio-box">
         <img src="${displayImg}" id="main-product-img" class="detail-product-img" alt="${product.name}">
-        
+    </div>
         <div class="mb-2">
             <span class="detail-price-lg" id="price-display">¥ ${parseFloat(currentVariant.price).toFixed(2)}</span>
         </div>
