@@ -212,7 +212,7 @@ function renderRightSidebar(product) {
     `;
     
     $('#detail-right-content').html(rightHtml);
-
+    initStickySidebar();
     // 回显缓存信息
     const cachedContact = localStorage.getItem('userContact');
     const cachedPass = localStorage.getItem('userPassword');
@@ -762,4 +762,42 @@ function parseWholesaleInfo(config) {
         });
     }
     return rules.join('，');
+}
+
+let sidebar = null;
+function initStickySidebar() {
+    // 1. 检查插件是否加载
+    if (typeof StickySidebar === 'undefined') return;
+
+    // 2. 配置参数
+    const options = {
+        topSpacing: 80,             // 距离顶部 80px
+        bottomSpacing: 20,          // 距离底部 20px
+        containerSelector: '.product-detail-grid', // 外层容器
+        innerWrapperSelector: '.sidebar-inner'     // 内层移动元素
+    };
+
+    // 3. 定义检查逻辑 (移动端或高度不够时不启用)
+    const checkSidebar = () => {
+        const isMobile = window.innerWidth < 992;
+        const leftHeight = $('.detail-left').outerHeight();
+        const rightHeight = $('.sidebar-inner').outerHeight();
+
+        if (isMobile || leftHeight <= rightHeight) {
+            if (sidebar) {
+                sidebar.destroy();
+                sidebar = null;
+            }
+        } else {
+            if (!sidebar) {
+                sidebar = new StickySidebar('#sidebar-wrapper', options);
+            } else {
+                sidebar.updateSticky();
+            }
+        }
+    };
+
+    // 4. 执行 (延迟执行确保图片加载撑开高度)
+    setTimeout(checkSidebar, 500);
+    window.addEventListener('resize', checkSidebar);
 }
