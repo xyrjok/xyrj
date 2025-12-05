@@ -65,35 +65,31 @@ body {
 }
 
 /* =========================================
-   2. 商品详情页布局 (Product Detail) - [重构版]
+   2. 商品详情页布局 (Product Detail)
    ========================================= */
 
+/* 网格布局 (左2.32 : 右1) */
 .product-detail-grid {
-    display: flex; 
-    flex-wrap: wrap;
-    position: relative;
-    /* [修改] 移除了 align-items: stretch，恢复自然高度 */
+    display: grid;
+    grid-template-columns: 1.8fr 1fr; 
+    gap: 15px; 
+    margin-bottom: 30px;
+    align-items: start;
 }
 
-/* [修改] 侧边栏容器：恢复默认块级显示，不再强制归零 */
-#sidebar-wrapper {      
-    min-height: 1px;    
-}
-
-/* [修改] 内部卡片：保持样式，移除无用的强制属性 */
-.sidebar-inner {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
-    width: 100% !important; /* 确保占满父容器 */
-}
-
-/* 左侧内容区容器 */
+/* 左侧内容区 */
 .detail-left {
     min-width: 0;
 }
 
-/* --- 图片容器 (16:9 + 留白) --- */
+/* 右侧购买栏 (吸顶) */
+.detail-right {
+    position: sticky;
+    top: 80px; 
+    min-width: 0;
+}
+
+/* --- [修改] 图片容器 (16:9 + 留白) --- */
 .img-aspect-ratio-box {
     position: relative;
     width: 100%;
@@ -106,12 +102,14 @@ body {
     background-color: #f8f9fa;
 }
 
-/* --- 商品主图 --- */
+/* --- [修改] 商品主图 (完整显示不裁切 + 5px边距) --- */
 .detail-product-img {
     position: absolute !important;
+    /* 1. 改为绝对定位居中 */
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
+    /* 2. 让图片尺寸自适应内容，但最大不超过容器 (留出5px边距) */
     width: auto !important;
     height: auto !important;
     max-width: calc(100% - 35px) !important;
@@ -382,25 +380,14 @@ body {
 .bg-info { background-color: #0dcaf0!important; color: #333!important; }
 .bg-success { background-color: #198754!important; color: #fff!important; }
 
-/* 移动端详情页适配 [关键修正] */
+/* 移动端详情页适配 */
 @media (max-width: 991px) {
     .product-detail-grid {
-        flex-direction: column;
-        /* 移动端不需要 stretch */
-        align-items: flex-start !important;
+        grid-template-columns: 1fr;
+        gap: 20px;
     }
-    
-    /* 移动端：手动恢复被 gy-0 去掉的垂直间距 */
-    /* 详情在下，购买在上，所以给左侧（详情）加 margin-top */
-    .product-detail-grid .detail-left.main-box {
-        margin-top: 20px !important;
-    }
-
     .detail-right {
         position: static;
-    }
-    
-    .product-detail-grid .col-lg-4 {
         order: -1; 
     }
 }
