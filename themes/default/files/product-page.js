@@ -136,7 +136,7 @@ function renderRightSidebar(product) {
                 <span class="fw-bold me-1" style="font-size: 16px;">¥</span>
                 <span class="fw-bold" id="p-display-price" style="font-size: 24px; line-height: 1;">${priceDisplay}</span>
             </div>
-            <div id="dynamic-info-display" class="mt-2 pt-2 border-top border-white small" style="display:block; min-height:20px;">
+            <div id="dynamic-info-display" class="mt-2 pt-2 border-top border-light small" style="display:block; min-height:20px;">
                 <span class="text-muted"><i class="fas fa-info-circle me-1"></i>请选择规格</span>
             </div>
         </div>
