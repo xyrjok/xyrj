@@ -19,7 +19,7 @@ body {
 .main-box {
     background-color: #fff;
     padding: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 20px; /* 全局默认下边距 */
     border-radius: 8px;
     box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
 }
@@ -65,16 +65,28 @@ body {
 }
 
 /* =========================================
-   2. 商品详情页布局 (Product Detail)
+   2. 商品详情页布局 (Product Detail) - [重构版]
    ========================================= */
 
-/* 网格布局 (左2.32 : 右1) */
+/* 重置 Grid 为 Flex (配合 Bootstrap .row) 
+   并处理底部对齐问题 
+*/
 .product-detail-grid {
-    display: grid;
-    grid-template-columns: 1.8fr 1fr; 
-    gap: 15px; 
-    margin-bottom: 30px;
-    /* align-items: start;  <-- 删除或注释掉这一行 */
+    /* 覆盖掉旧版可能存在的 grid 属性，或者保持默认 flex 行为 */
+    display: flex; 
+    flex-wrap: wrap;
+    margin-bottom: 30px; /* 整体与页脚的距离 */
+    
+    /* 移除旧版 Grid 特有属性 */
+    grid-template-columns: none !important;
+    gap: 0 !important; /* 间距由 Bootstrap class "g-4" 控制 */
+}
+
+/* [核心修复] 去除详情页内部卡片的底部外边距 
+   让左右两列的“物理底部”对齐，以便 sticky 插件正确吸附
+*/
+.product-detail-grid .main-box {
+    margin-bottom: 0 !important;
 }
 
 /* 左侧内容区 */
@@ -82,17 +94,16 @@ body {
     min-width: 0;
 }
 
-/* 右侧购买栏 (吸顶) */
+/* 右侧购买栏 */
 .detail-right {
-    /* position: sticky; */
-    /* top: 80px; */
     min-width: 0;
 }
+/* 修复右侧内部容器边距 */
 .detail-right .sidebar-inner {
-    margin-bottom: 0px !important;
+    margin-bottom: 0 !important;
 }
 
-/* --- [修改] 图片容器 (16:9 + 留白) --- */
+/* --- 图片容器 (16:9 + 留白) --- */
 .img-aspect-ratio-box {
     position: relative;
     width: 100%;
@@ -105,14 +116,12 @@ body {
     background-color: #f8f9fa;
 }
 
-/* --- [修改] 商品主图 (完整显示不裁切 + 5px边距) --- */
+/* --- 商品主图 --- */
 .detail-product-img {
     position: absolute !important;
-    /* 1. 改为绝对定位居中 */
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
-    /* 2. 让图片尺寸自适应内容，但最大不超过容器 (留出5px边距) */
     width: auto !important;
     height: auto !important;
     max-width: calc(100% - 35px) !important;
@@ -153,8 +162,8 @@ body {
 
 /* 规格选择按钮 */
 .variant-btn {
-    position: relative; /* [新增] 支持角标定位 */
-    overflow: visible;  /* [新增] 允许角标溢出 */
+    position: relative;
+    overflow: visible;
     border: 1px solid #ddd;
     background: #fff;
     color: #555;
@@ -185,10 +194,10 @@ body {
     background-color: #f5f5f5;
     color: #999;
     border-color: #eee;
-    text-decoration: line-through; /* 缺货时增加删除线 */
+    text-decoration: line-through; 
 }
 
-/* [新增] 红色缺货角标 */
+/* 红色缺货角标 */
 .sku-oos-badge {
     position: absolute;
     top: -8px;
@@ -200,13 +209,13 @@ body {
     border-radius: 4px;
     line-height: 1;
     z-index: 10;
-    text-decoration: none; /* 防止继承删除线 */
+    text-decoration: none; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     font-weight: normal;
 }
 
 /* =========================================
-   3. [新增] 移植自 TBshop 的功能组件样式
+   3. 功能组件样式 (移植自 TBshop)
    ========================================= */
 
 /* 购买方式按钮 */
@@ -324,14 +333,12 @@ body {
    [修改] 输入框交互样式
    ========================================= */
 
-/* 去除点击输入时的聚焦粗边 */
 .form-control:focus {
     border-color: var(--luna-primary-blue);
     box-shadow: none !important; 
     outline: none;
 }
 
-/* 提示字体 (Placeholder) 改小、浅灰色 */
 .form-control::placeholder { color: #ccc !important; font-size: 12px; opacity: 1; }
 .form-control::-webkit-input-placeholder { color: #ccc !important; font-size: 12px; }
 .form-control::-moz-placeholder { color: #ccc !important; font-size: 12px; opacity: 1; }
@@ -383,14 +390,26 @@ body {
 .bg-info { background-color: #0dcaf0!important; color: #333!important; }
 .bg-success { background-color: #198754!important; color: #fff!important; }
 
-/* 移动端详情页适配 */
+/* [新增] 移动端详情页适配重构 
+   使用 Flex 的 order 属性来调整显示顺序 
+*/
 @media (max-width: 991px) {
+    /* 移动端改为上下堆叠，不再是 Grid */
     .product-detail-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
+        flex-direction: column; 
     }
+
+    /* 恢复移动端卡片间的间距 */
+    .product-detail-grid .main-box {
+        margin-bottom: 20px !important;
+    }
+
+    /* 让右侧购买栏显示在最上方 */
+    .product-detail-grid .col-lg-4 {
+        order: -1; 
+    }
+    
     .detail-right {
         position: static;
-        order: -1; 
     }
 }
