@@ -260,7 +260,32 @@ export default {
 
             return response;
         }
+        // ====== [新增] GitHub 图片代理 (支持私有仓库) ======
+        if (path.startsWith('/gh_image/')) {
+            const filename = path.replace('/gh_image/', '');
+            let conf = {};
+            try {
+                const db = env.MY_XYRJ;
+                (await db.prepare("SELECT key, value FROM site_config WHERE key IN ('gh_user','gh_repo','gh_token')").all()).results.forEach(r => conf[r.key] = r.value);
+            } catch(e) {}
 
+            if (!conf.gh_user || !conf.gh_repo) return new Response('Config missing', { status: 404 });
+
+            // 构造 GitHub Raw URL (私有仓库需 Token)
+            const rawUrl = `https://raw.githubusercontent.com/${conf.gh_user}/${conf.gh_repo}/main/${filename}`;
+            const headers = { 'User-Agent': 'Cloudflare-Worker' };
+            if (conf.gh_token) headers['Authorization'] = `token ${conf.gh_token}`;
+
+            const imgRes = await fetch(rawUrl, { headers });
+            if (!imgRes.ok) return new Response('Image not found', { status: 404 });
+
+            const newHeaders = new Headers(imgRes.headers);
+            newHeaders.set('Access-Control-Allow-Origin', '*');
+            newHeaders.set('Cache-Control', 'public, max-age=2592000'); // 缓存30天
+            newHeaders.delete('Authorization'); // 移除敏感头
+
+            return new Response(imgRes.body, { status: imgRes.status, headers: newHeaders });
+        }
         // === 3. 默认回退 ===
         return env.ASSETS.fetch(request);
     }
@@ -945,8 +970,7 @@ async function handleApi(request, env, url, ctx) {
                     });
                     const ghData = await ghRes.json();
                     if (ghRes.status !== 201 && ghRes.status !== 200) return errRes(ghData.message || '上传失败');
-
-                    const downloadUrl = `https://cdn.jsdelivr.net/gh/${conf.gh_user}/${conf.gh_repo}@main/${filename}`;
+                    const downloadUrl = `/gh_image/${filename}`;
                     // 顺便入库 image 表以便管理
                     try { await db.prepare("INSERT INTO images (category_id, url, name, created_at) VALUES (1, ?, ?, ?)").bind(downloadUrl, file.name, time()).run(); } catch(e){}
                     
