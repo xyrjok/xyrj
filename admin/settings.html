@@ -144,6 +144,9 @@
                             </li>
                             <li class="nav-item">
                                 <button class="nav-link" id="customer-notify-tab" data-bs-toggle="tab" data-bs-target="#customer-notify" type="button">客户订单推送</button>
+                            </li> 
+                            <li class="nav-item">
+                                <button class="nav-link" id="github-tab" data-bs-toggle="tab" data-bs-target="#github" type="button"><i class="fab fa-github"></i> 图床设置</button>
                             </li>
                         </ul>
                     </div>
@@ -266,7 +269,41 @@
                                     <div class="form-text text-muted" style="font-size: 12px;">建议单独使用一个邮箱账户，确保该 Token 拥有 Mail.Send 和 offline_access 权限。</div>
                                 </div>
                             </div>
+							<div class="tab-pane fade" id="github" role="tabpanel">
+                                <div class="alert alert-info py-2 small">
+                                    <i class="fas fa-info-circle"></i> 配置 GitHub 仓库作为免费图床。配置完成后，可在商品/文章编辑时直接上传图片。
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">GitHub 用户名 (User)</label>
+                                    <input type="text" class="form-control" id="gh_user" placeholder="例如：xyrjok">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">仓库名称 (Repo)</label>
+                                    <input type="text" class="form-control" id="gh_repo" placeholder="例如：my-images">
+                                    <div class="form-text text-muted" style="font-size: 12px;">请确保该仓库是 <b>Public (公开)</b> 的，否则无法生成图片链接。</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Personal Access Token (Classic)</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="gh_token" placeholder="ghp_xxxxxxxxxxxx...">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePass('gh_token')"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                    <div class="form-text text-muted" style="font-size: 12px;">
+                                        需要去 GitHub Settings -> Developer settings -> Personal access tokens (Classic) 生成。<br>
+                                        <b>权限要求：</b> 必须勾选 <code>repo</code> (Full control of private repositories) 权限。
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">CDN 加速域名 (可选)</label>
+                                    <input type="text" class="form-control" value="https://cdn.jsdelivr.net/gh/" disabled readonly>
+                                    <div class="form-text text-muted">默认使用 jsDelivr 全球加速，无需配置。</div>
+                                </div>
                             </div>
+                        </div>
 
                         <div class="mt-4 pt-3 border-top">
                             <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> 保存所有设置</button>
@@ -333,6 +370,10 @@
             document.getElementById('customer_outlook_client_id').value = config.customer_outlook_client_id || '';
             document.getElementById('customer_outlook_client_secret').value = config.customer_outlook_client_secret || '';
             document.getElementById('customer_outlook_refresh_token').value = config.customer_outlook_refresh_token || '';
+			// --- [新增] GitHub 图床回显 ---
+            document.getElementById('gh_user').value = config.gh_user || '';
+            document.getElementById('gh_repo').value = config.gh_repo || '';
+            document.getElementById('gh_token').value = config.gh_token || '';
             
             // Power Automate 已删除
             // document.getElementById('pa_active').checked = (config.pa_active === '1');
@@ -381,6 +422,10 @@
             customer_outlook_client_id: document.getElementById('customer_outlook_client_id').value,
             customer_outlook_client_secret: document.getElementById('customer_outlook_client_secret').value,
             customer_outlook_refresh_token: document.getElementById('customer_outlook_refresh_token').value,
+			// --- [新增] GitHub 图床保存 ---
+            gh_user: document.getElementById('gh_user').value.trim(),
+            gh_repo: document.getElementById('gh_repo').value.trim(),
+            gh_token: document.getElementById('gh_token').value.trim(),
         };
         const res = await api('settings/save', { method: 'POST', body: JSON.stringify(data) });
         if (res.success) {
@@ -389,7 +434,20 @@
             alert('保存失败: ' + (res.error || '未知错误'));
         }
     }
-
+// [新增] 切换密码框显示状态
+    function togglePass(id) {
+        const input = document.getElementById(id);
+        const icon = event.currentTarget.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
     init();
 
     // 移动端菜单
