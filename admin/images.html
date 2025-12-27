@@ -190,7 +190,8 @@
             <div>
                 <button class="btn btn-outline-secondary btn-sm me-2" onclick="scanImages()"><i class="fas fa-sync"></i> 扫描全站已有图片</button>
                 <button class="btn btn-danger btn-sm me-2" onclick="batchDelete()" id="btn-del" style="display:none;"><i class="fas fa-trash"></i> 删除选中 (<span id="sel-count">0</span>)</button>
-                <button class="btn btn-primary btn-sm" onclick="showAddModal()"><i class="fas fa-plus"></i> 添加图片</button>
+                <button class="btn btn-success btn-sm me-2" onclick="uploadToGithub()"><i class="fas fa-cloud-upload-alt"></i> 上传文件</button>
+                <button class="btn btn-primary btn-sm" onclick="showAddModal()"><i class="fas fa-link"></i> 添加链接</button>
             </div>
         </div>
 
@@ -401,6 +402,29 @@
     const addModal = new bootstrap.Modal(document.getElementById('addModal'));
     function showAddModal() { addModal.show(); }
     
+    // [新增] 简单的单张图片上传 (上传到 GitHub 并自动刷新列表)
+    async function uploadToGithub() {
+        const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
+        input.onchange = async e => {
+            if(!e.target.files[0]) return;
+            const formData = new FormData(); formData.append('file', e.target.files[0]);
+            
+            const btn = document.querySelector('.btn-primary'); // 获取添加按钮临时变态
+            const oldText = btn.innerHTML; btn.innerHTML = '上传中...'; btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/admin/gh/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${TOKEN}` }, body: formData }).then(r=>r.json());
+                if(res.location) {
+                    alert('上传成功'); loadImages(1);
+                } else {
+                    alert(res.error || '上传失败，请检查系统设置中的 GitHub 配置');
+                }
+            } catch(e) { alert('上传错误'); } 
+            finally { btn.innerHTML = oldText; btn.disabled = false; }
+        };
+        input.click();
+    }
+
     async function saveImages() {
         const urls = document.getElementById('add-urls').value;
         const catId = document.getElementById('add-cat-id').value;
