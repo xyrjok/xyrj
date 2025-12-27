@@ -533,6 +533,36 @@
         const res = await api('product/save', { method: 'POST', body: JSON.stringify(data) });
         if (res.success) { modal.hide(); loadData(); } else { alert('保存失败: ' + (res.error || '未知错误')); }
     }
+    // [新增] 简单的图片上传函数
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        // 注意：这里手动 fetch 避免通用 api() 函数强制 JSON 格式
+        const res = await fetch('/api/admin/gh/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${TOKEN}` }, body: formData });
+        return await res.json();
+    }
+    
+    // [新增] 主图上传绑定
+    document.addEventListener('DOMContentLoaded', () => {
+        const imgInput = document.getElementById('p-image');
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'btn btn-outline-secondary'; btn.innerHTML = '<i class="fas fa-upload"></i>';
+        btn.onclick = () => {
+            const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
+            input.onchange = async e => {
+                if(!e.target.files[0]) return;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+                const res = await uploadFile(e.target.files[0]);
+                if(res.location) { imgInput.value = res.location; } else { alert(res.error || '上传失败'); }
+                btn.innerHTML = '<i class="fas fa-upload"></i>'; btn.disabled = false;
+            };
+            input.click();
+        };
+        // 将上传按钮插入到输入框作为一个 Input Group
+        const wrapper = document.createElement('div'); wrapper.className = 'input-group';
+        imgInput.parentNode.insertBefore(wrapper, imgInput);
+        wrapper.appendChild(imgInput); wrapper.appendChild(btn);
+    });
     loadData();
 
     // 移动端菜单
@@ -571,9 +601,24 @@
         },
         branding: false,
         promotion: false,
+        branding: false,
+        promotion: false,
+
+        // [新增] 图片上传处理逻辑
+        images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', blobInfo.blob(), blobInfo.filename());
+            fetch('/api/admin/gh/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('ADMIN_TOKEN')}` },
+                body: formData
+            }).then(r => r.json()).then(res => {
+                if (res.location) resolve(res.location); else reject(res.error || '上传失败');
+            }).catch(e => reject(e));
+        }),
+        paste_data_images: true, // 允许粘贴图片
 
         setup: function (editor) {
-
             editor.on('change', function () {
                 editor.save();
             });
