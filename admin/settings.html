@@ -282,7 +282,7 @@
                                 <div class="mb-3">
                                     <label class="form-label">仓库名称 (Repo)</label>
                                     <input type="text" class="form-control" id="gh_repo" placeholder="例如：my-images">
-                                    <div class="form-text text-muted" style="font-size: 12px;">请确保该仓库是 <b>Public (公开)</b> 的，否则无法生成图片链接。</div>
+                                    <div class="form-text text-muted" style="font-size: 12px;">支持 <b>Private (私有)</b> 仓库。图片将通过本站后端代理访问，安全且无需公开仓库。</div>
                                 </div>
 
                                 <div class="mb-3">
@@ -298,9 +298,9 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">CDN 加速域名 (可选)</label>
-                                    <input type="text" class="form-control" value="https://cdn.jsdelivr.net/gh/" disabled readonly>
-                                    <div class="form-text text-muted">默认使用 jsDelivr 全球加速，无需配置。</div>
+                                    <label class="form-label">图片访问方式</label>
+                                    <input type="text" class="form-control" value="本站代理 /gh_image/ (自动适配域名)" disabled readonly>
+                                    <div class="form-text text-muted">已启用后端代理模式，图片链接将自动生成为 /gh_image/xxx 格式，无需配置 CDN。</div>
                                 </div>
                             </div>
                         </div>
