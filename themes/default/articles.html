@@ -11,54 +11,56 @@
     <link href="/themes/default/files/custom-default-bootstrap.css" rel="stylesheet">
 
     <style>
-        /* === 移植的专用样式 === */
         body { background: #f4f6f9; }
 
+        /* === 您要求的特定样式 === */
         .avatar-sm {
             width: 220px;
             height: 138px;
-            border-radius: 0.6rem; /* 微调圆角以适应主题 */
+            border-radius: 0.9rem;
             object-fit: cover;
             float: left;
-            margin-right: 20px; /* 增加右侧间距 */
-            background-color: #f0f0f0;
+            margin-right: 20px; /* 补充间距，替代 mr-2 */
         }
-
+        .blog-post-meta {
+            font-size: .75rem;
+            color: #999;
+            margin-top: 5px;
+            margin-bottom: 0;
+        }
         .blog-post-header {
-            margin-bottom: 8px; /* 调整间距 */
+            margin-bottom: -8px;
         }
-
         .blog-post-title {
-            font-size: 1.15rem;
-            font-weight: 600;
+            font-size: 1.1rem;
+            font-weight: 500;
             text-decoration: none;
             color: #333;
-            display: block; /* 确保标题块级显示 */
-            margin-bottom: 5px;
-            transition: color 0.2s;
+            display: inline-block; /* 配合图片浮动 */
         }
         .blog-post-title:hover {
             color: var(--luna-primary-blue);
         }
-
-        .blog-post-meta {
-            font-size: 0.8rem;
-            color: #999;
-            margin-bottom: 8px;
-            display: block;
-        }
-
         .article-summary {
             font-size: 14px;
             line-height: 1.7;
             color: #666;
-            margin-bottom: 0;
-            /* 限制摘要高度，防止过长 */
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            min-height: 4.5em; /* 保持高度一致性 */
+            margin-top: 10px;
+            /* 防止摘要环绕图片太紧 */
+            min-height: 100px; 
+        }
+
+        /* 移动端适配：取消浮动 */
+        @media (max-width: 768px) {
+            .avatar-sm {
+                float: none;
+                width: 100%;
+                height: auto;
+                margin-bottom: 10px;
+            }
+            .blog-post-title {
+                display: block;
+            }
         }
 
         .page-title {
@@ -69,21 +71,7 @@
             text-align: center;
         }
         
-        /* 移动端适配 */
-        @media (max-width: 768px) {
-            .avatar-sm {
-                float: none;
-                width: 100%;
-                height: 180px;
-                margin-bottom: 15px;
-                margin-right: 0;
-            }
-            .article-summary {
-                -webkit-line-clamp: 4;
-            }
-        }
-
-        /* 修复卡片样式适配主题 */
+        /* 卡片样式适配主题 */
         .card {
             border: none;
             box-shadow: 0 2px 15px rgb(0 0 0 / 5%);
@@ -94,7 +82,7 @@
             padding: 25px;
         }
 
-        /* 分类导航样式优化 */
+        /* 分类导航样式 */
         .nav-link-custom {
             color: #6c757d;
             padding: 8px 16px;
@@ -113,6 +101,13 @@
             color: #fff;
             box-shadow: 0 4px 10px rgba(60, 140, 231, 0.4);
         }
+
+        /* 清除浮动 */
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
     </style>
 </head>
 <body>
@@ -123,8 +118,8 @@
             <a>资讯中心</a>
         </div>
 
-        <div class="row justify-content-center">
-            <div class="col-lg-10 col-12">
+        <div class="row">
+            <div class="col-12">
                 <div class="card mt-3">
                     <div class="card-body">
                         
@@ -160,7 +155,7 @@
     <script>
         // 全局变量存储所有文章，用于前端筛选
         let g_allArticles = [];
-        // 【修复】重命名变量，避免与 main-default-bs.js 中的 g_categories 冲突
+        // 避免变量冲突
         let g_articleCategories = [];
 
         $(document).ready(function() {
@@ -178,7 +173,7 @@
                     const nav = $('#article-category-nav');
                     
                     if (res && Array.isArray(res)) {
-                        g_articleCategories = res; // 使用新变量名
+                        g_articleCategories = res;
                         res.forEach(cat => {
                             const html = `<a class="nav-link-custom" href="javascript:void(0);" onclick="filterArticles(${cat.id}, this)">${cat.name}</a>`;
                             nav.append(html);
@@ -210,7 +205,7 @@
             });
         }
 
-        // 3. 渲染文章列表
+        // 3. 渲染文章列表 (完全匹配您要求的结构)
         function renderArticles(articles) {
             const container = $('#article-list-container');
             container.empty();
@@ -225,7 +220,7 @@
                 const coverImg = article.cover_image || '/assets/noimage.jpg';
                 // 格式化时间
                 const date = new Date(article.created_at * 1000).toLocaleString('zh-CN', { hour12: false }); 
-                // 摘要处理：如果有 snippet 则使用，否则截取 content
+                // 摘要处理
                 const summary = article.snippet || '暂无摘要';
                 // 标题链接
                 const link = `/article?id=${article.id}`;
@@ -234,22 +229,20 @@
                     <div class="row mb-5 article-item-row" style="animation: fadeIn 0.5s;">
                         <div class="col-12">
                             <div class="clearfix">
-                                <a href="${link}" class="d-block">
-                                    <img src="${coverImg}" class="avatar-sm shadow-sm" alt="${article.title}" loading="lazy">
-                                </a>
-                                
                                 <div class="blog-post-header">
                                     <a class="blog-post-title" href="${link}">
+                                        <img src="${coverImg}" class="avatar-sm shadow-sm" alt="${escapeHtml(article.title)}" loading="lazy">
                                         ${article.is_notice ? '<span class="badge bg-danger me-1" style="font-size:12px;vertical-align:text-bottom;">置顶</span>' : ''}
                                         ${escapeHtml(article.title)}
                                     </a>
-                                    <div class="blog-post-meta">
-                                        <i class="far fa-clock me-1"></i> ${date}
-                                        <span class="mx-2">|</span>
-                                        <i class="far fa-eye me-1"></i> ${article.view_count || 0} 阅读
-                                    </div>
+                                    <p class="blog-post-meta">
+                                        <a href="${link}" class="blog-post-meta text-decoration-none">
+                                            <i class="far fa-clock me-1"></i> ${date}
+                                            <span class="mx-2">|</span>
+                                            <i class="far fa-eye me-1"></i> ${article.view_count || 0} 阅读
+                                        </a>
+                                    </p>
                                 </div>
-                                
                                 <p class="article-summary">
                                     ${escapeHtml(summary)}
                                 </p>
