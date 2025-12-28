@@ -352,14 +352,6 @@ function loadHeaderCategories() {
                 return;
             }
 
-            menuContainer.append(`
-                <li>
-                    <a class="dropdown-item" href="/#category-list" onclick="if(typeof loadProducts === 'function') loadProducts(null);">
-                        全部商品
-                    </a>
-                </li>
-            `);
-
             categories.forEach(cat => {
                 const imgHtml = (cat.image_url && cat.image_url !== '') 
                     ? `<img src="${cat.image_url}" class="category-icon-sm" alt="icon">` 
@@ -383,13 +375,15 @@ function loadHeaderCategories() {
 
 // 全局分类点击处理
 window.handleCategoryClick = function(catId) {
-    if (typeof loadProducts === 'function') {
+    if (typeof loadProducts === 'function' && $('#goods-container').length > 0) {
         loadProducts(catId);
         if ($('#category-list').length > 0) {
              $('#category-list button').removeClass('btn-primary').addClass('btn-outline-primary');
              $(`#category-list button[data-id="${catId}"]`).removeClass('btn-outline-primary').addClass('btn-primary');
         }
-        $('html, body').animate({ scrollTop: $("#product-list").offset().top - 100 }, 300);
+        if ($("#product-list").length > 0) {
+            $('html, body').animate({ scrollTop: $("#product-list").offset().top - 100 }, 300);
+        }
     } else {
         window.location.href = '/'; 
     }
