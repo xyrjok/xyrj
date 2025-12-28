@@ -88,6 +88,7 @@
             border: none;
             box-shadow: 0 2px 15px rgb(0 0 0 / 5%);
             border-radius: 8px;
+            background: #fff;
         }
         .card-body {
             padding: 25px;
@@ -159,7 +160,8 @@
     <script>
         // 全局变量存储所有文章，用于前端筛选
         let g_allArticles = [];
-        let g_categories = [];
+        // 【修复】重命名变量，避免与 main-default-bs.js 中的 g_categories 冲突
+        let g_articleCategories = [];
 
         $(document).ready(function() {
             loadArticleCategories();
@@ -176,7 +178,7 @@
                     const nav = $('#article-category-nav');
                     
                     if (res && Array.isArray(res)) {
-                        g_categories = res;
+                        g_articleCategories = res; // 使用新变量名
                         res.forEach(cat => {
                             const html = `<a class="nav-link-custom" href="javascript:void(0);" onclick="filterArticles(${cat.id}, this)">${cat.name}</a>`;
                             nav.append(html);
@@ -208,7 +210,7 @@
             });
         }
 
-        // 3. 渲染文章列表 (核心复刻部分)
+        // 3. 渲染文章列表
         function renderArticles(articles) {
             const container = $('#article-list-container');
             container.empty();
@@ -268,6 +270,7 @@
             if (catId === 'all') {
                 renderArticles(g_allArticles);
             } else {
+                // 使用弱等于 (==) 以兼容字符串和数字类型的 ID
                 const filtered = g_allArticles.filter(item => item.category_id == catId);
                 renderArticles(filtered);
             }
