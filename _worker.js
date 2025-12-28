@@ -959,10 +959,13 @@ async function handleApi(request, env, url, ctx) {
                     const formData = await request.formData();
                     const file = formData.get('file');
                     if (!file) return errRes('未选择文件');
-                    
                     const filename = 'image/' + Date.now() + '_' + file.name.replace(/[^\w\.-]/g, '');
-                    const contentBase64 = btoa(String.fromCharCode(...new Uint8Array(await file.arrayBuffer())));
-
+                    const u8 = new Uint8Array(await file.arrayBuffer());
+                    let binary = '';
+                    for (let i = 0; i < u8.length; i += 32768) {
+                        binary += String.fromCharCode(...u8.subarray(i, i + 32768));
+                    }
+                    const contentBase64 = btoa(binary);
                     const ghRes = await fetch(`https://api.github.com/repos/${conf.gh_user}/${conf.gh_repo}/contents/${filename}`, {
                         method: 'PUT',
                         headers: { 'Authorization': `Bearer ${conf.gh_token}`, 'User-Agent': 'Cloudflare-Worker', 'Content-Type': 'application/json' },
