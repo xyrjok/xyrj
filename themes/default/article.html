@@ -31,14 +31,24 @@
             margin-bottom: 30px;
         }
 
-        /* 1. 顶部元信息栏 (Header) */
-        /* 修改：CSS 适配 div */
+        /* 1. 顶部区域 (包含标题和元信息) */
         .article-header {
-            padding: 0 1rem;
+            padding: 2rem 1rem 0 1rem; /* 顶部增加内边距给标题 */
             position: relative;
         }
-        @media (min-width: 640px) { .article-header { padding: 0 2rem; } }
+        @media (min-width: 640px) { .article-header { padding: 2.5rem 2rem 0 2rem; } }
         
+        /* === 修改：文章标题样式 === */
+        .article-title-h1 {
+            font-size: 1.5rem !important; /* 要求：1.5rem */
+            font-weight: 700;
+            color: #1e293b; /* slate-800 */
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+            text-align: center; /* 要求：中间位置 */
+        }
+
+        /* 元信息栏 (灰色线条区域) */
         .article-meta-bar {
             display: flex;
             align-items: center;
@@ -47,7 +57,7 @@
             color: #64748b; /* slate-500 */
             border-top: 1px solid rgba(226, 232, 240, 0.6); /* border-slate-200/60 */
             padding-top: 0.75rem;
-            margin-top: 1rem;
+            margin-top: 0; 
             margin-bottom: 1rem;
         }
         .meta-left {
@@ -63,72 +73,46 @@
         }
         @media (min-width: 640px) { .article-main { padding: 1rem 2rem; } }
 
-        /* 3. Prose 排版风格 (核心移植) */
+        /* 3. Prose 排版风格 */
         .prose {
             max-width: none;
             font-size: 1rem;
             line-height: 1.75;
         }
-        
-        /* 标题样式 */
-        .article-title-h1 {
-            font-size: 1.5rem; /* text-2xl */
-            font-weight: 700;
-            color: #1e293b; /* slate-800 */
-            margin-bottom: 1.5rem;
-            line-height: 1.3;
-        }
-        @media (min-width: 640px) { .article-title-h1 { font-size: 1.75rem; } }
 
-        /* 内容中的标题 */
+        /* 内容中的标题 (h2/h3) */
         #article-content h1, #article-content h2, #article-content h3 {
-            color: #1e293b; /* slate-800 */
+            color: #1e293b; 
             font-weight: 700;
             margin-top: 2rem;
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid #e2e8f0; /* border-slate-200 */
+            border-bottom: 1px solid #e2e8f0;
         }
-        #article-content h2 { font-size: 1.5rem; }
+        #article-content h1 { font-size: 1.5rem; display: none; /* 隐藏正文内可能重复的H1 */ } 
+        #article-content h2 { font-size: 1.4rem; }
         #article-content h3 { font-size: 1.25rem; }
 
-        /* 段落与文本 */
         #article-content p {
             margin-bottom: 1.25rem;
-            color: #475569; /* slate-600 */
+            color: #475569;
         }
-        #article-content strong {
-            color: #1e293b; /* slate-800 */
-            font-weight: 600;
-        }
-
-        /* 图片样式 */
         #article-content img {
             max-width: 100%;
             height: auto;
-            border-radius: 0.5rem; /* rounded-lg */
+            border-radius: 0.5rem;
             margin: 1.5rem 0;
             display: block;
         }
-
-        /* 列表样式 */
-        #article-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; }
-        #article-content ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1.25rem; }
-        #article-content li { margin-bottom: 0.5rem; color: #475569; }
-
-        /* 链接样式 */
         #article-content a {
-            color: #4f46e5; /* indigo-600 */
+            color: #4f46e5;
             text-decoration: none;
             word-break: break-all;
-            transition: color 0.2s;
         }
         #article-content a:hover {
-            color: #4338ca; /* indigo-700 */
+            color: #4338ca;
             text-decoration: underline;
         }
-
-        /* 引用块 */
         #article-content blockquote {
             font-style: italic;
             border-left: 4px solid #e2e8f0;
@@ -137,10 +121,10 @@
             color: #64748b;
         }
 
-        /* 5. 底部返回栏 */
+        /* 4. 底部返回栏 */
         .article-footer {
             margin-top: 3rem;
-            border-top: 1px solid rgba(226, 232, 240, 0.6); /* border-slate-200/60 */
+            border-top: 1px solid rgba(226, 232, 240, 0.6);
             padding: 1.5rem 1rem;
         }
         @media (min-width: 640px) { .article-footer { padding: 1.5rem 2rem; } }
@@ -148,13 +132,13 @@
         .back-link {
             display: inline-flex;
             align-items: center;
-            font-size: 0.875rem; /* text-sm */
-            color: #475569; /* slate-600 */
+            font-size: 0.875rem;
+            color: #475569;
             text-decoration: none;
             transition: color 0.2s;
         }
         .back-link:hover {
-            color: #4f46e5; /* hover:text-indigo-600 */
+            color: #4f46e5;
         }
         .back-link i {
             margin-right: 0.5rem;
@@ -164,7 +148,6 @@
             transform: translateX(-2px);
         }
         
-        /* 加载状态动画 */
         .loading-skeleton {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
@@ -181,6 +164,11 @@
         <article class="article-container flex-1 w-full">
             
             <div class="article-header mx-auto max-w-4xl">
+                
+                <h1 class="article-title-h1" id="article-title">
+                    <span class="loading-skeleton">正在加载文章...</span>
+                </h1>
+
                 <div class="article-meta-bar">
                     <div class="meta-left">
                         <span id="article-category">分类加载中...</span>
@@ -196,10 +184,6 @@
             <main class="article-main relative mx-auto max-w-4xl">
                 <div class="prose prose-slate max-w-none">
                     
-                    <h1 class="article-title-h1" id="article-title">
-                        <span class="loading-skeleton">正在加载文章...</span>
-                    </h1>
-
                     <div id="article-content">
                         <div class="loading-skeleton">
                             <p style="height: 16px; background: #f1f5f9; margin-bottom: 12px; width: 100%; border-radius: 4px;"></p>
@@ -233,19 +217,49 @@
 
     <script>
         $(document).ready(function() {
-            // 1. 强制检查并渲染 Header/Footer
-            // 防止 main-default-bs.js 的自动加载逻辑因网络或变量冲突而失效
-            // 现在把 header 标签改为了 div，$('header').length 应该为 0，renderHeader 就能正常工作了
-            if (typeof renderHeader === 'function' && $('header.custom-header').length === 0) {
-                renderHeader('我的商店');
-            }
+            // 1. 初始化页头 (主动获取后台配置)
+            initGlobalConfigAndHeader();
+
+            // 2. 确保页尾显示
             if (typeof renderFooter === 'function' && $('footer').length === 0) {
-                renderFooter('我的商店');
+                renderFooter();
             }
 
-            // 2. 加载文章内容
+            // 3. 加载文章内容
             loadArticle();
         });
+
+        // 新增：主动获取全局配置并渲染 Header
+        function initGlobalConfigAndHeader() {
+            // 如果 Header 已经存在，就不处理了
+            if ($('header.custom-header').length > 0) return;
+
+            $.ajax({
+                url: '/api/shop/config',
+                method: 'GET',
+                success: function(res) {
+                    // 解析 API 返回的配置
+                    let config = {};
+                    if (res && res.data) config = res.data; // 适配不同 API 结构
+                    else config = res || {};
+
+                    const siteName = config.site_name || '我的商店';
+                    const siteLogo = config.site_logo || '';
+                    const showName = config.show_site_name;
+
+                    // 调用 header.js 中的渲染函数
+                    if (typeof renderHeader === 'function') {
+                        renderHeader(siteName, siteLogo, showName);
+                    }
+                },
+                error: function() {
+                    // 获取失败时的兜底显示
+                    if (typeof renderHeader === 'function') {
+                        renderHeader('我的商店');
+                    }
+                }
+            });
+        }
 
         async function loadArticle() {
             const params = new URLSearchParams(window.location.search);
@@ -287,6 +301,9 @@
             $('#article-views-wrap').show();
 
             $('#article-content').html(data.content);
+
+            // 移除正文内容中的 H1 标题，避免重复
+            $('#article-content h1').remove();
 
             $('#article-content img').each(function() {
                 $(this).removeAttr('width').removeAttr('height').css({
