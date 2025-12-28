@@ -32,8 +32,10 @@
         }
 
         /* 1. 顶部元信息栏 (Header) */
+        /* 修改：CSS 适配 div */
         .article-header {
             padding: 0 1rem;
+            position: relative;
         }
         @media (min-width: 640px) { .article-header { padding: 0 2rem; } }
         
@@ -178,7 +180,7 @@
         
         <article class="article-container flex-1 w-full">
             
-            <header class="article-header relative mx-auto max-w-4xl">
+            <div class="article-header mx-auto max-w-4xl">
                 <div class="article-meta-bar">
                     <div class="meta-left">
                         <span id="article-category">分类加载中...</span>
@@ -189,7 +191,7 @@
                     </div>
                     <time id="article-time">----年--月--日</time>
                 </div>
-            </header>
+            </div>
 
             <main class="article-main relative mx-auto max-w-4xl">
                 <div class="prose prose-slate max-w-none">
@@ -233,10 +235,9 @@
         $(document).ready(function() {
             // 1. 强制检查并渲染 Header/Footer
             // 防止 main-default-bs.js 的自动加载逻辑因网络或变量冲突而失效
+            // 现在把 header 标签改为了 div，$('header').length 应该为 0，renderHeader 就能正常工作了
             if (typeof renderHeader === 'function' && $('header.custom-header').length === 0) {
-                // 使用默认参数先渲染出来，确保页面不为空
                 renderHeader('我的商店');
-                // 如果后续 config 加载成功，UI 会自动更新（如果逻辑支持）或保持现状
             }
             if (typeof renderFooter === 'function' && $('footer').length === 0) {
                 renderFooter('我的商店');
@@ -247,7 +248,6 @@
         });
 
         async function loadArticle() {
-            // 获取 URL 参数 id
             const params = new URLSearchParams(window.location.search);
             const id = params.get('id');
 
@@ -257,7 +257,6 @@
             }
 
             try {
-                // 调用 API
                 const res = await fetch(`/api/shop/article/get?id=${id}`);
                 const data = await res.json();
 
@@ -265,8 +264,6 @@
                     showError(data.error);
                     return;
                 }
-
-                // 渲染数据
                 renderArticle(data);
 
             } catch (e) {
@@ -276,11 +273,9 @@
         }
 
         function renderArticle(data) {
-            // 1. 设置标题
             document.title = data.title + ' - 资讯中心';
             $('#article-title').text(data.title);
 
-            // 2. 设置元信息
             const catName = data.category_name || '默认分类';
             $('#article-category').text(catName);
             
@@ -291,12 +286,9 @@
             $('#article-views').text(data.view_count || 0);
             $('#article-views-wrap').show();
 
-            // 3. 注入内容
             $('#article-content').html(data.content);
 
-            // 4. 图片样式修正
             $('#article-content img').each(function() {
-                // 移除内联样式，确保 CSS 响应式生效
                 $(this).removeAttr('width').removeAttr('height').css({
                     'width': '',
                     'height': '',
