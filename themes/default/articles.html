@@ -1,1 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资讯中心</title>
+    
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/css/all.min.css" rel="stylesheet">
+    <link href="/themes/default/files/custom-default-bootstrap.css" rel="stylesheet">
 
+    <style>
+        /* === 移植的专用样式 === */
+        body { background: #f4f6f9; }
+
+        .avatar-sm {
+            width: 220px;
+            height: 138px;
+            border-radius: 0.6rem; /* 微调圆角以适应主题 */
+            object-fit: cover;
+            float: left;
+            margin-right: 20px; /* 增加右侧间距 */
+            background-color: #f0f0f0;
+        }
+
+        .blog-post-header {
+            margin-bottom: 8px; /* 调整间距 */
+        }
+
+        .blog-post-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            text-decoration: none;
+            color: #333;
+            display: block; /* 确保标题块级显示 */
+            margin-bottom: 5px;
+            transition: color 0.2s;
+        }
+        .blog-post-title:hover {
+            color: var(--luna-primary-blue);
+        }
+
+        .blog-post-meta {
+            font-size: 0.8rem;
+            color: #999;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .article-summary {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #666;
+            margin-bottom: 0;
+            /* 限制摘要高度，防止过长 */
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            min-height: 4.5em; /* 保持高度一致性 */
+        }
+
+        .page-title {
+            padding: 20px 0 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .avatar-sm {
+                float: none;
+                width: 100%;
+                height: 180px;
+                margin-bottom: 15px;
+                margin-right: 0;
+            }
+            .article-summary {
+                -webkit-line-clamp: 4;
+            }
+        }
+
+        /* 修复卡片样式适配主题 */
+        .card {
+            border: none;
+            box-shadow: 0 2px 15px rgb(0 0 0 / 5%);
+            border-radius: 8px;
+        }
+        .card-body {
+            padding: 25px;
+        }
+
+        /* 分类导航样式优化 */
+        .nav-link-custom {
+            color: #6c757d;
+            padding: 8px 16px;
+            font-weight: 500;
+            border-radius: 50px;
+            transition: all 0.2s;
+            text-decoration: none;
+            margin-right: 5px;
+        }
+        .nav-link-custom:hover {
+            background-color: #e9ecef;
+            color: #333;
+        }
+        .nav-link-custom.active {
+            background-color: var(--luna-primary-blue);
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(60, 140, 231, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container my-4" style="min-height: 60vh;">
+        
+        <div class="page-title">
+            <a>资讯中心</a>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-12">
+                <div class="card mt-3">
+                    <div class="card-body">
+                        
+                        <nav class="nav d-flex flex-wrap" id="article-category-nav">
+                            <a class="nav-link-custom active" href="javascript:void(0);" onclick="filterArticles('all', this)">全部</a>
+                            <span class="p-2 text-muted small" id="cat-loading">加载分类...</span>
+                        </nav>
+                        
+                        <hr class="my-4" style="opacity: 0.1;">
+                        
+                        <div class="blog-content" id="article-list-container">
+                            <div class="text-center py-5">
+                                <i class="fas fa-spinner fa-spin text-muted fa-2x"></i>
+                                <p class="text-muted mt-2">正在加载文章...</p>
+                            </div>
+                        </div>
+
+                        <div class="pagination justify-content-center mt-4" id="pagination-container"></div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/assets/jquery-3.6.0.min.js"></script>
+    <script src="/assets/bootstrap.bundle.min.js"></script>
+    <script src="/themes/default/files/header.js"></script>
+    <script src="/themes/default/files/footer.js"></script>
+    <script src="/themes/default/files/main-default-bs.js"></script>
+
+    <script>
+        // 全局变量存储所有文章，用于前端筛选
+        let g_allArticles = [];
+        let g_categories = [];
+
+        $(document).ready(function() {
+            loadArticleCategories();
+            loadArticles();
+        });
+
+        // 1. 加载文章分类
+        function loadArticleCategories() {
+            $.ajax({
+                url: '/api/shop/article/categories',
+                method: 'GET',
+                success: function(res) {
+                    $('#cat-loading').remove();
+                    const nav = $('#article-category-nav');
+                    
+                    if (res && Array.isArray(res)) {
+                        g_categories = res;
+                        res.forEach(cat => {
+                            const html = `<a class="nav-link-custom" href="javascript:void(0);" onclick="filterArticles(${cat.id}, this)">${cat.name}</a>`;
+                            nav.append(html);
+                        });
+                    }
+                },
+                error: function() {
+                    $('#cat-loading').text('分类加载失败');
+                }
+            });
+        }
+
+        // 2. 加载文章列表
+        function loadArticles() {
+            $.ajax({
+                url: '/api/shop/articles/list',
+                method: 'GET',
+                success: function(res) {
+                    if (res && Array.isArray(res)) {
+                        g_allArticles = res;
+                        renderArticles(g_allArticles);
+                    } else {
+                        $('#article-list-container').html('<div class="text-center py-5 text-muted">暂无文章数据</div>');
+                    }
+                },
+                error: function() {
+                    $('#article-list-container').html('<div class="text-center py-5 text-danger">加载失败，请刷新重试</div>');
+                }
+            });
+        }
+
+        // 3. 渲染文章列表 (核心复刻部分)
+        function renderArticles(articles) {
+            const container = $('#article-list-container');
+            container.empty();
+
+            if (articles.length === 0) {
+                container.html('<div class="text-center py-5 text-muted">该分类下暂无文章</div>');
+                return;
+            }
+
+            articles.forEach(article => {
+                // 处理图片：如果没有封面图，使用默认图
+                const coverImg = article.cover_image || '/assets/noimage.jpg';
+                // 格式化时间
+                const date = new Date(article.created_at * 1000).toLocaleString('zh-CN', { hour12: false }); 
+                // 摘要处理：如果有 snippet 则使用，否则截取 content
+                const summary = article.snippet || '暂无摘要';
+                // 标题链接
+                const link = `/article?id=${article.id}`;
+
+                const itemHtml = `
+                    <div class="row mb-5 article-item-row" style="animation: fadeIn 0.5s;">
+                        <div class="col-12">
+                            <div class="clearfix">
+                                <a href="${link}" class="d-block">
+                                    <img src="${coverImg}" class="avatar-sm shadow-sm" alt="${article.title}" loading="lazy">
+                                </a>
+                                
+                                <div class="blog-post-header">
+                                    <a class="blog-post-title" href="${link}">
+                                        ${article.is_notice ? '<span class="badge bg-danger me-1" style="font-size:12px;vertical-align:text-bottom;">置顶</span>' : ''}
+                                        ${escapeHtml(article.title)}
+                                    </a>
+                                    <div class="blog-post-meta">
+                                        <i class="far fa-clock me-1"></i> ${date}
+                                        <span class="mx-2">|</span>
+                                        <i class="far fa-eye me-1"></i> ${article.view_count || 0} 阅读
+                                    </div>
+                                </div>
+                                
+                                <p class="article-summary">
+                                    ${escapeHtml(summary)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.append(itemHtml);
+            });
+        }
+
+        // 4. 前端筛选逻辑
+        window.filterArticles = function(catId, btn) {
+            // 切换按钮样式
+            $('.nav-link-custom').removeClass('active');
+            $(btn).addClass('active');
+
+            if (catId === 'all') {
+                renderArticles(g_allArticles);
+            } else {
+                const filtered = g_allArticles.filter(item => item.category_id == catId);
+                renderArticles(filtered);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+    </script>
+    
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</body>
+</html>
