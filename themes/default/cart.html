@@ -224,8 +224,22 @@
     
     <script src="files/header.js"></script>
     <script src="files/footer.js"></script>
+    <script src="files/main-default-bs.js"></script>
     
     <script src="files/cart-page.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // 强制检查并渲染 Header/Footer (兜底逻辑)
+            // 防止 main-default-bs.js 加载延迟导致页头不显示
+            if (typeof renderHeader === 'function' && $('header.custom-header').length === 0) {
+                renderHeader('我的商店');
+            }
+            if (typeof renderFooter === 'function' && $('footer').length === 0) {
+                renderFooter('我的商店');
+            }
+        });
+    </script>
 
 </body>
 </html>
