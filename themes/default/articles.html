@@ -13,100 +13,93 @@
     <style>
         body { background: #f4f6f9; }
 
-        /* === 您要求的特定样式 === */
+        /* === 移植并优化后的样式 === */
+        
+        /* 1. 图片样式 */
         .avatar-sm {
             width: 220px;
             height: 138px;
             border-radius: 0.9rem;
             object-fit: cover;
-            float: left;
-            margin-right: 20px; /* 补充间距，替代 mr-2 */
+            /* 关键修改：移除 float，改用 flex 布局控制位置 */
+            display: block;
+            transition: transform 0.3s ease;
         }
-        .blog-post-meta {
-            font-size: .75rem;
-            color: #999;
-            margin-top: 5px;
-            margin-bottom: 0;
+        /* 鼠标悬停微效 */
+        .article-item:hover .avatar-sm {
+            transform: scale(1.02);
         }
-        .blog-post-header {
-            margin-bottom: -8px;
-        }
+
+        /* 2. 标题样式 */
         .blog-post-title {
             font-size: 1.1rem;
-            font-weight: 500;
+            font-weight: 600; /* 加粗一点更清晰 */
             text-decoration: none;
             color: #333;
-            display: inline-block; /* 配合图片浮动 */
+            display: block;
+            margin-bottom: 6px;
+            line-height: 1.4;
+            transition: color 0.2s;
         }
         .blog-post-title:hover {
             color: var(--luna-primary-blue);
         }
+
+        /* 3. 元数据样式 (日期/阅读量) */
+        .blog-post-meta {
+            font-size: 0.8rem;
+            color: #999;
+            margin-bottom: 10px;
+        }
+
+        /* 4. 摘要样式 */
         .article-summary {
             font-size: 14px;
             line-height: 1.7;
             color: #666;
-            margin-top: 10px;
-            /* 防止摘要环绕图片太紧 */
-            min-height: 100px; 
+            margin-bottom: 0;
+            /* 多行省略号，防止太长 */
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3; /* 最多显示3行 */
+            overflow: hidden;
         }
 
-        /* 移动端适配：取消浮动 */
-        @media (max-width: 768px) {
-            .avatar-sm {
-                float: none;
-                width: 100%;
-                height: auto;
-                margin-bottom: 10px;
-            }
-            .blog-post-title {
-                display: block;
-            }
-        }
-
-        .page-title {
-            padding: 20px 0 10px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            text-align: center;
-        }
-        
-        /* 卡片样式适配主题 */
-        .card {
-            border: none;
-            box-shadow: 0 2px 15px rgb(0 0 0 / 5%);
-            border-radius: 8px;
-            background: #fff;
-        }
-        .card-body {
-            padding: 25px;
-        }
-
-        /* 分类导航样式 */
-        .nav-link-custom {
+        /* 5. 分类导航样式 */
+        .category-nav-link {
+            padding: 8px 15px;
             color: #6c757d;
-            padding: 8px 16px;
             font-weight: 500;
-            border-radius: 50px;
-            transition: all 0.2s;
             text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s;
             margin-right: 5px;
+            font-size: 15px;
         }
-        .nav-link-custom:hover {
-            background-color: #e9ecef;
+        .category-nav-link:hover {
             color: #333;
+            background-color: #f8f9fa;
         }
-        .nav-link-custom.active {
-            background-color: var(--luna-primary-blue);
-            color: #fff;
-            box-shadow: 0 4px 10px rgba(60, 140, 231, 0.4);
+        /* 选中状态：加粗 + 深色 */
+        .category-nav-link.active {
+            color: #333;
+            font-weight: bold;
+            background-color: rgba(0,0,0,0.05);
         }
 
-        /* 清除浮动 */
-        .clearfix::after {
-            content: "";
-            clear: both;
-            display: table;
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .article-item {
+                flex-direction: column; /* 上下排列 */
+            }
+            .avatar-sm {
+                width: 100%;
+                height: 180px;
+                margin-bottom: 15px;
+            }
+            .article-content {
+                padding-left: 0 !important;
+            }
         }
     </style>
 </head>
@@ -114,33 +107,31 @@
 
     <div class="container my-4" style="min-height: 60vh;">
         
-        <div class="page-title">
-            <a>资讯中心</a>
+        <div class="main-box mb-3">
+            <h5 class="mb-0" style="font-weight: 600;">
+                <i class="far fa-newspaper me-2" style="color: var(--luna-primary-blue);"></i>资讯中心
+            </h5>
         </div>
 
-        <div class="row">
-            <div class="col-12">
-                <div class="card mt-3">
-                    <div class="card-body">
-                        
-                        <nav class="nav d-flex flex-wrap" id="article-category-nav">
-                            <a class="nav-link-custom active" href="javascript:void(0);" onclick="filterArticles('all', this)">全部</a>
-                            <span class="p-2 text-muted small" id="cat-loading">加载分类...</span>
-                        </nav>
-                        
-                        <hr class="my-4" style="opacity: 0.1;">
-                        
-                        <div class="blog-content" id="article-list-container">
-                            <div class="text-center py-5">
-                                <i class="fas fa-spinner fa-spin text-muted fa-2x"></i>
-                                <p class="text-muted mt-2">正在加载文章...</p>
-                            </div>
-                        </div>
-
-                        <div class="pagination justify-content-center mt-4" id="pagination-container"></div>
-
+        <div class="main-box">
+            <div class="card-body p-0">
+                
+                <nav class="nav d-flex flex-wrap align-items-center mb-3" id="article-category-nav">
+                    <a class="category-nav-link active" href="javascript:void(0);" onclick="filterArticles('all', this)">全部</a>
+                    <span class="p-2 text-muted small" id="cat-loading">加载分类...</span>
+                </nav>
+                
+                <hr class="my-4" style="border-top: 1px solid #eee;">
+                
+                <div class="blog-content" id="article-list-container">
+                    <div class="text-center py-5">
+                        <i class="fas fa-spinner fa-spin text-muted fa-2x"></i>
+                        <p class="text-muted mt-2">正在加载文章...</p>
                     </div>
                 </div>
+
+                <div class="pagination justify-content-center mt-4" id="pagination-container"></div>
+
             </div>
         </div>
 
@@ -153,9 +144,9 @@
     <script src="/themes/default/files/main-default-bs.js"></script>
 
     <script>
-        // 全局变量存储所有文章，用于前端筛选
+        // 全局变量存储数据
         let g_allArticles = [];
-        // 避免变量冲突
+        // 【关键】使用不同于首页的变量名，防止冲突
         let g_articleCategories = [];
 
         $(document).ready(function() {
@@ -163,7 +154,7 @@
             loadArticles();
         });
 
-        // 1. 加载文章分类
+        // 1. 加载分类
         function loadArticleCategories() {
             $.ajax({
                 url: '/api/shop/article/categories',
@@ -175,7 +166,7 @@
                     if (res && Array.isArray(res)) {
                         g_articleCategories = res;
                         res.forEach(cat => {
-                            const html = `<a class="nav-link-custom" href="javascript:void(0);" onclick="filterArticles(${cat.id}, this)">${cat.name}</a>`;
+                            const html = `<a class="category-nav-link" href="javascript:void(0);" onclick="filterArticles(${cat.id}, this)">${cat.name}</a>`;
                             nav.append(html);
                         });
                     }
@@ -186,7 +177,7 @@
             });
         }
 
-        // 2. 加载文章列表
+        // 2. 加载文章
         function loadArticles() {
             $.ajax({
                 url: '/api/shop/articles/list',
@@ -205,7 +196,7 @@
             });
         }
 
-        // 3. 渲染文章列表 (完全匹配您要求的结构)
+        // 3. 渲染文章列表 (使用 Flex 布局解决错位问题)
         function renderArticles(articles) {
             const container = $('#article-list-container');
             container.empty();
@@ -216,54 +207,57 @@
             }
 
             articles.forEach(article => {
-                // 处理图片：如果没有封面图，使用默认图
                 const coverImg = article.cover_image || '/assets/noimage.jpg';
-                // 格式化时间
                 const date = new Date(article.created_at * 1000).toLocaleString('zh-CN', { hour12: false }); 
-                // 摘要处理
                 const summary = article.snippet || '暂无摘要';
-                // 标题链接
                 const link = `/article?id=${article.id}`;
 
+                // --- 核心 HTML 结构修改 ---
+                // 使用 d-flex (Flexbox) 确保左右分栏，左图右文，永不错位
                 const itemHtml = `
-                    <div class="row mb-5 article-item-row" style="animation: fadeIn 0.5s;">
-                        <div class="col-12">
-                            <div class="clearfix">
-                                <div class="blog-post-header">
-                                    <a class="blog-post-title" href="${link}">
-                                        <img src="${coverImg}" class="avatar-sm shadow-sm" alt="${escapeHtml(article.title)}" loading="lazy">
-                                        ${article.is_notice ? '<span class="badge bg-danger me-1" style="font-size:12px;vertical-align:text-bottom;">置顶</span>' : ''}
-                                        ${escapeHtml(article.title)}
-                                    </a>
-                                    <p class="blog-post-meta">
-                                        <a href="${link}" class="blog-post-meta text-decoration-none">
-                                            <i class="far fa-clock me-1"></i> ${date}
-                                            <span class="mx-2">|</span>
-                                            <i class="far fa-eye me-1"></i> ${article.view_count || 0} 阅读
-                                        </a>
-                                    </p>
-                                </div>
-                                <p class="article-summary">
-                                    ${escapeHtml(summary)}
-                                </p>
-                            </div>
+                    <div class="article-item d-flex mb-4 pb-4 border-bottom" style="animation: fadeIn 0.5s;">
+                        
+                        <div class="flex-shrink-0">
+                            <a href="${link}" class="d-block">
+                                <img src="${coverImg}" class="avatar-sm shadow-sm" alt="${escapeHtml(article.title)}" loading="lazy">
+                            </a>
                         </div>
+                        
+                        <div class="article-content flex-grow-1 ps-4">
+                            <div class="blog-post-header">
+                                <a class="blog-post-title" href="${link}">
+                                    ${article.is_notice ? '<span class="badge bg-danger me-1" style="font-size:12px;vertical-align:text-bottom;">置顶</span>' : ''}
+                                    ${escapeHtml(article.title)}
+                                </a>
+                                <div class="blog-post-meta">
+                                    <i class="far fa-clock me-1"></i> ${date}
+                                    <span class="mx-2">|</span>
+                                    <i class="far fa-eye me-1"></i> ${article.view_count || 0} 阅读
+                                </div>
+                            </div>
+                            
+                            <p class="article-summary">
+                                ${escapeHtml(summary)}
+                            </p>
+                        </div>
+
                     </div>
                 `;
                 container.append(itemHtml);
             });
+            
+            // 移除最后一个元素的边框
+            container.find('.article-item:last').removeClass('border-bottom pb-4');
         }
 
-        // 4. 前端筛选逻辑
+        // 4. 分类筛选
         window.filterArticles = function(catId, btn) {
-            // 切换按钮样式
-            $('.nav-link-custom').removeClass('active');
+            $('.category-nav-link').removeClass('active');
             $(btn).addClass('active');
 
             if (catId === 'all') {
                 renderArticles(g_allArticles);
             } else {
-                // 使用弱等于 (==) 以兼容字符串和数字类型的 ID
                 const filtered = g_allArticles.filter(item => item.category_id == catId);
                 renderArticles(filtered);
             }
