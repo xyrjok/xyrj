@@ -375,15 +375,13 @@ function loadHeaderCategories() {
 
 // 全局分类点击处理
 window.handleCategoryClick = function(catId) {
-    if (typeof loadProducts === 'function' && $('#goods-container').length > 0) {
+    if (typeof loadProducts === 'function') {
         loadProducts(catId);
         if ($('#category-list').length > 0) {
              $('#category-list button').removeClass('btn-primary').addClass('btn-outline-primary');
              $(`#category-list button[data-id="${catId}"]`).removeClass('btn-outline-primary').addClass('btn-primary');
         }
-        if ($("#product-list").length > 0) {
-            $('html, body').animate({ scrollTop: $("#product-list").offset().top - 100 }, 300);
-        }
+        $('html, body').animate({ scrollTop: $("#product-list").offset().top - 100 }, 300);
     } else {
         window.location.href = '/'; 
     }
