@@ -24,9 +24,11 @@
             background: #fff;
             min-height: 80vh;
             box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-            border-radius: 0.75rem; /* rounded-xl (可选) */
+            border-radius: 0.75rem; /* rounded-xl */
             padding: 0;
             overflow: hidden;
+            margin-top: 30px;
+            margin-bottom: 30px;
         }
 
         /* 1. 顶部元信息栏 (Header) */
@@ -133,27 +135,6 @@
             color: #64748b;
         }
 
-        /* 4. 标签区域 */
-        .article-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 2rem;
-        }
-        .tag-badge {
-            padding: 0.125rem 0.625rem;
-            font-size: 0.75rem; /* text-xs */
-            color: #475569; /* slate-600 */
-            background-color: #f1f5f9; /* bg-slate-100 */
-            border-radius: 9999px; /* rounded-full */
-            text-decoration: none;
-            transition: background-color 0.2s;
-        }
-        .tag-badge:hover {
-            background-color: #e2e8f0; /* hover:bg-slate-200 */
-            color: #334155;
-        }
-
         /* 5. 底部返回栏 */
         .article-footer {
             margin-top: 3rem;
@@ -181,7 +162,7 @@
             transform: translateX(-2px);
         }
         
-        /* 加载状态 */
+        /* 加载状态动画 */
         .loading-skeleton {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
@@ -193,14 +174,14 @@
 </head>
 <body>
 
-    <div class="container my-4">
+    <div class="container">
         
         <article class="article-container flex-1 w-full">
             
             <header class="article-header relative mx-auto max-w-4xl">
                 <div class="article-meta-bar">
                     <div class="meta-left">
-                        <span id="article-category">加载中...</span>
+                        <span id="article-category">分类加载中...</span>
                         <span>·</span>
                         <span id="article-views-wrap" style="display:none;">
                             <i class="far fa-eye ms-1 me-1"></i> <span id="article-views">0</span>
@@ -214,20 +195,19 @@
                 <div class="prose prose-slate max-w-none">
                     
                     <h1 class="article-title-h1" id="article-title">
-                        <span class="loading-skeleton">正在加载文章内容...</span>
+                        <span class="loading-skeleton">正在加载文章...</span>
                     </h1>
 
                     <div id="article-content">
                         <div class="loading-skeleton">
-                            <p style="height: 16px; background: #f1f5f9; margin-bottom: 12px; width: 100%;"></p>
-                            <p style="height: 16px; background: #f1f5f9; margin-bottom: 12px; width: 90%;"></p>
-                            <p style="height: 16px; background: #f1f5f9; margin-bottom: 12px; width: 95%;"></p>
+                            <p style="height: 16px; background: #f1f5f9; margin-bottom: 12px; width: 100%; border-radius: 4px;"></p>
+                            <p style="height: 16px; background: #f1f5f9; margin-bottom: 12px; width: 90%; border-radius: 4px;"></p>
+                            <p style="height: 16px; background: #f1f5f9; margin-bottom: 12px; width: 95%; border-radius: 4px;"></p>
                         </div>
                     </div>
 
                 </div>
-
-                </main>
+            </main>
 
             <div class="article-footer">
                 <div class="relative mx-auto max-w-4xl">
@@ -244,12 +224,25 @@
 
     <script src="/assets/jquery-3.6.0.min.js"></script>
     <script src="/assets/bootstrap.bundle.min.js"></script>
+    
     <script src="/themes/default/files/header.js"></script>
     <script src="/themes/default/files/footer.js"></script>
     <script src="/themes/default/files/main-default-bs.js"></script>
 
     <script>
         $(document).ready(function() {
+            // 1. 强制检查并渲染 Header/Footer
+            // 防止 main-default-bs.js 的自动加载逻辑因网络或变量冲突而失效
+            if (typeof renderHeader === 'function' && $('header.custom-header').length === 0) {
+                // 使用默认参数先渲染出来，确保页面不为空
+                renderHeader('我的商店');
+                // 如果后续 config 加载成功，UI 会自动更新（如果逻辑支持）或保持现状
+            }
+            if (typeof renderFooter === 'function' && $('footer').length === 0) {
+                renderFooter('我的商店');
+            }
+
+            // 2. 加载文章内容
             loadArticle();
         });
 
@@ -292,7 +285,6 @@
             $('#article-category').text(catName);
             
             const date = new Date(data.created_at * 1000);
-            // 格式化为 "2025年11月30日" 风格
             const dateStr = date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
             $('#article-time').text(dateStr);
 
@@ -300,16 +292,15 @@
             $('#article-views-wrap').show();
 
             // 3. 注入内容
-            // 简单的 XSS 处理 (视 API 返回内容安全性而定，通常富文本由后台清洗)
-            // 这里假设 data.content 是可信的 HTML
             $('#article-content').html(data.content);
 
-            // 4. 图片自适应处理
+            // 4. 图片样式修正
             $('#article-content img').each(function() {
-                // 移除内联宽高，确保 CSS 响应式生效
+                // 移除内联样式，确保 CSS 响应式生效
                 $(this).removeAttr('width').removeAttr('height').css({
                     'width': '',
-                    'height': ''
+                    'height': '',
+                    'max-width': '100%'
                 });
             });
         }
