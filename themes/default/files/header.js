@@ -383,7 +383,7 @@ window.handleCategoryClick = function(catId) {
         }
         $('html, body').animate({ scrollTop: $("#product-list").offset().top - 100 }, 300);
     } else {
-        window.location.href = '/'; 
+        window.location.href = '/?category_id=' + catId;
     }
 };
 
