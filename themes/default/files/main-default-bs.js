@@ -402,7 +402,24 @@ $(document).ready(function() {
     if (currentPath === '/' || currentPath === '') {
         // [修改] 确保分类加载完成后再加载商品，以便正确获取分类名称和排序
         loadCategories(function() {
-            loadProducts();
+            // === 新增：检查 URL 是否带有 category_id 参数 ===
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('category_id');
+
+            if (targetId) {
+                // 如果有参数，加载特定分类商品
+                loadProducts(targetId);
+                // 手动触发布局更新：选中对应的分类按钮
+                $('#category-list button').removeClass('btn-primary shadow-sm').addClass('btn-light text-dark');
+                $(`#category-list button[data-id="${targetId}"]`).removeClass('btn-light text-dark').addClass('btn-primary shadow-sm');
+                
+                // 可选：滚动到商品列表位置
+                $('html, body').animate({ scrollTop: $("#goods-container").offset().top - 100 }, 500);
+            } else {
+                // 否则加载全部
+                loadProducts();
+            }
+            // === 结束 ===
         });
     }
 });
