@@ -375,7 +375,7 @@ function loadHeaderCategories() {
 
 // 全局分类点击处理
 window.handleCategoryClick = function(catId) {
-    if (typeof loadProducts === 'function') {
+    if (typeof loadProducts === 'function' && $('#goods-container').length > 0) {
         loadProducts(catId);
         if ($('#category-list').length > 0) {
              $('#category-list button').removeClass('btn-primary').addClass('btn-outline-primary');
