@@ -321,7 +321,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                     }, 500);
                 }
             } else {
-                window.location.href = '/';
+                window.location.href = '/?search=' + encodeURIComponent(kw);
             }
         }
     });
