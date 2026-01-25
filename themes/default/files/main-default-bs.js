@@ -424,23 +424,45 @@ $(document).ready(function() {
                     $('#top-search-input').val(searchKw); // 回填搜索框
                     
                     let found = 0;
+                    
+                    // 2.1 筛选商品
                     $('.product-card-item').each(function() {
                         const text = $(this).text().toLowerCase();
+                        // 找到该卡片所在的列容器 (.col-12)，将其一并隐藏，避免布局留白
+                        const colContainer = $(this).closest('.col-12'); 
+                        
                         if (text.includes(kw)) {
                             $(this).show();
+                            if(colContainer.length) colContainer.show();
                             found++;
                         } else {
                             $(this).hide();
+                            if(colContainer.length) colContainer.hide();
                         }
                     });
 
+                    // 2.2 === [新增] 隐藏空的分类板块 ===
+                    // 遍历所有分类容器 (.main-box)，如果里面没有可见的商品，就隐藏整个容器(包括标题)
+                    $('#goods-container .main-box').each(function() {
+                        // 检查该容器内是否有可见的 product-card-item
+                        const hasVisibleProducts = $(this).find('.product-card-item').filter(function() {
+                            return $(this).css('display') !== 'none';
+                        }).length > 0;
+                        
+                        if (hasVisibleProducts) {
+                            $(this).show();
+                        } else {
+                            $(this).hide(); // 隐藏分类标题和外框
+                        }
+                    });
+
+                    // 2.3 处理无结果情况
                     if (found === 0) {
                          alert('未找到包含 "' + searchKw + '" 的商品');
                     } else {
                         $('html, body').animate({ scrollTop: $("#goods-container").offset().top - 80 }, 500);
                     }
                 });
-
             } else {
                 // 否则加载全部
                 loadProducts();
