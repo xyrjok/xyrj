@@ -148,10 +148,33 @@
         let g_articleCategories = [];
 
         $(document).ready(function() {
+            loadGlobalConfig();
             loadArticleCategories();
             loadArticles();
         });
+// 新增：加载全局配置并渲染页头页尾
+        function loadGlobalConfig() {
+            $.ajax({
+                url: '/api/shop/config',
+                method: 'GET',
+                success: function(res) {
+                    // 兼容不同的返回格式
+                    let config = (res && res.data) ? res.data : (res || {});
+                    
+                    const siteName = config.site_name || '资讯中心';
+                    const siteLogo = config.site_logo || '';
+                    const showName = config.show_site_name;
 
+                    // 调用 header.js 和 footer.js 提供的函数
+                    if (typeof renderHeader === 'function') renderHeader(siteName, siteLogo, showName);
+                    if (typeof renderFooter === 'function') renderFooter(siteName);
+                },
+                error: function() {
+                    // 即使加载配置失败，也显示默认页头
+                    if (typeof renderHeader === 'function') renderHeader('资讯中心');
+                }
+            });
+        }
         // 1. 加载分类
         function loadArticleCategories() {
             $.ajax({
