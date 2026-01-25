@@ -256,7 +256,7 @@ function renderProductList(products, categoryId) {
 /**
  * 加载商品数据
  */
-function loadProducts(categoryId = null) {
+function loadProducts(categoryId = null, callback = null) {
     const listContainer = $('#goods-container');
     // 如果是第一次加载（已有内容是"加载中..."），则不显示Loading，避免闪烁
     // 这里简单处理：每次都显示加载提示，但因为是本地渲染，速度很快
@@ -287,6 +287,7 @@ function loadProducts(categoryId = null) {
                     });
                 }
                 renderProductList(products, categoryId);
+                if (callback) callback();
             } else {
                 listContainer.empty().append(`<div class="main-box"><p class="text-center text-danger p-3">加载失败</p></div>`);
             }
@@ -405,16 +406,41 @@ $(document).ready(function() {
             // === 新增：检查 URL 是否带有 category_id 参数 ===
             const urlParams = new URLSearchParams(window.location.search);
             const targetId = urlParams.get('category_id');
+            const searchKw = urlParams.get('search'); // 1. 获取搜索关键词
 
             if (targetId) {
-                // 如果有参数，加载特定分类商品
+                // 如果有分类参数，加载特定分类商品
                 loadProducts(targetId);
                 // 手动触发布局更新：选中对应的分类按钮
                 $('#category-list button').removeClass('btn-primary shadow-sm').addClass('btn-light text-dark');
                 $(`#category-list button[data-id="${targetId}"]`).removeClass('btn-light text-dark').addClass('btn-primary shadow-sm');
                 
-                // 可选：滚动到商品列表位置
                 $('html, body').animate({ scrollTop: $("#goods-container").offset().top - 100 }, 500);
+            
+            } else if (searchKw) {
+                // 2. 如果有搜索参数，加载全部商品并在回调中进行筛选
+                loadProducts(null, function() {
+                    const kw = searchKw.trim().toLowerCase();
+                    $('#top-search-input').val(searchKw); // 回填搜索框
+                    
+                    let found = 0;
+                    $('.product-card-item').each(function() {
+                        const text = $(this).text().toLowerCase();
+                        if (text.includes(kw)) {
+                            $(this).show();
+                            found++;
+                        } else {
+                            $(this).hide();
+                        }
+                    });
+
+                    if (found === 0) {
+                         alert('未找到包含 "' + searchKw + '" 的商品');
+                    } else {
+                        $('html, body').animate({ scrollTop: $("#goods-container").offset().top - 80 }, 500);
+                    }
+                });
+
             } else {
                 // 否则加载全部
                 loadProducts();
