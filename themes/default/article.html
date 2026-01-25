@@ -160,8 +160,9 @@
 <body>
 
     <div class="container">
-        
-        <article class="article-container flex-1 w-full">
+        <div class="row">
+            <div class="col-lg-9">
+                <article class="article-container flex-1 w-full" style="margin-left: 0; margin-right: 0; max-width: 100%; width: 100%;">
             
             <div class="article-header mx-auto max-w-4xl">
                 
@@ -205,7 +206,18 @@
             </div>
 
         </article>
-        
+        </div> <div class="col-lg-3 d-none d-lg-block">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 100px; margin-top: 30px; border-radius: 0.75rem;">
+                <div class="card-body">
+                    <h5 class="card-title mb-3 fw-bold" style="font-size: 1rem; color: #1e293b; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        文章分类
+                    </h5>
+                    <div class="list-group list-group-flush" id="sidebar-categories">
+                        <div class="text-muted small py-2">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/assets/jquery-3.6.0.min.js"></script>
@@ -224,6 +236,7 @@
 
             // 3. 加载文章内容
             loadArticle();
+            loadSidebarCategories();
         });
 
         // 新增：主动获取全局配置并渲染 Header
@@ -316,6 +329,29 @@
             $('#article-content').html(`<div class="alert alert-danger my-4">${msg}</div>`);
             $('#article-category').text('错误');
             $('#article-time').text('');
+        }
+        // 新增：加载侧边栏分类数据
+        function loadSidebarCategories() {
+            $.ajax({
+                url: '/api/shop/article/categories',
+                method: 'GET',
+                success: function(res) {
+                    const box = $('#sidebar-categories');
+                    box.empty();
+                    if(res && Array.isArray(res) && res.length > 0) {
+                        res.forEach(c => {
+                            // 这里链接指向文章列表页
+                            box.append(`
+                                <a href="/articles" class="list-group-item list-group-item-action border-0 px-0 py-2 text-secondary" style="font-size: 0.95rem;">
+                                    <i class="fas fa-angle-right me-2 text-muted small"></i>${c.name}
+                                </a>
+                            `);
+                        });
+                    } else {
+                        box.append('<div class="text-muted small">暂无分类</div>');
+                    }
+                }
+            });
         }
     </script>
 </body>
