@@ -307,7 +307,19 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                     const text = $(this).text().toLowerCase();
                     if (text.includes(kw)) {
                         $(this).show();
+                        $(this).closest('.col-12').show(); // 确保显示商品所在列
                         found++;
+                    } else {
+                        $(this).hide();
+                        $(this).closest('.col-12').hide(); // 隐藏商品所在列
+                    }
+                });
+
+                // 新增：遍历所有分类大框，如果没有可见商品则隐藏整个框
+                $('#goods-container .main-box').each(function() {
+                    const hasVisible = $(this).find('.product-card-item:visible').length > 0;
+                    if (hasVisible) {
+                        $(this).show();
                     } else {
                         $(this).hide();
                     }
