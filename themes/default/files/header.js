@@ -233,7 +233,7 @@ function renderHeader(siteName = '我的商店', siteLogo = '', showSiteName = t
                         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                             <li class="nav-item">
                                 <a class="nav-link" href="/">
-                                    <i class="fas fa-home"></i>首页
+                                    <i class="fas fa-home"></i>商城首页
                                 </a>
                             </li>
                             <li class="nav-item dropdown">
