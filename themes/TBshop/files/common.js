@@ -40,7 +40,7 @@ const TB_LAYOUT = {
             </a>
 
             <nav class="main-nav d-none d-md-flex">
-                <a href="/" class="nav-link-item ${activePage === 'home' ? 'active' : ''}" style="${activePage==='home'?'color:var(--tb-orange);':''}">首页</a>
+                <a href="/" class="nav-link-item ${activePage === 'home' ? 'active' : ''}" style="${activePage==='home'?'color:var(--tb-orange);':''}">商城首页</a>
                 <a href="/articles" class="nav-link-item ${activePage === 'articles' ? 'active' : ''}" style="${activePage==='articles'?'color:var(--tb-orange);':''}">教程文章</a>
                 <a href="/orders" class="nav-link-item ${activePage === 'orders' ? 'active' : ''}" style="${activePage==='orders'?'color:var(--tb-orange);':''}">查询订单</a>
             </nav>
@@ -72,7 +72,7 @@ const TB_LAYOUT = {
     mobileBottomNav: (activePage) => `
         <a href="/" class="mbn-item ${activePage === 'home' ? 'active' : ''}">
             <i class="fa fa-home"></i>
-            <span>首页</span>
+            <span>商城</span>
         </a>
         <a href="#" class="mbn-item" onclick="event.preventDefault(); togglePanel('mobile-sidebar', 'mobile-overlay');">
             <i class="fa fa-th-large"></i>
@@ -111,7 +111,7 @@ const TB_LAYOUT = {
     footer: `
         <div class="container">
             <div class="footer-links">
-                <a href="/">首页</a>
+                <a href="/">商城首页</a>
                 <a href="/articles">教程文章</a>
                 <a href="/orders">查询订单</a>
                 <a href="#" onclick="event.preventDefault(); togglePanel('mobile-contact-sheet', 'mobile-contact-overlay');">联系客服</a>
