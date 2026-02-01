@@ -1004,6 +1004,44 @@ async function handleApi(request, env, url, ctx) {
             }
         }
         // ===========================
+        // --- [新增] 免密 Cron 接口 (GitHub Actions 专用) ---
+        // ===========================
+        if (path === '/api/cron/outlook') {
+            const config = {};
+            // 读取所有相关的配置项
+            const keys = [
+                'mail_to', 
+                'outlook_client_id', 'outlook_client_secret', 'outlook_refresh_token',
+                'customer_outlook_active', 'customer_outlook_client_id', 'customer_outlook_client_secret', 'customer_outlook_refresh_token'
+            ];
+            try {
+                const placeholders = keys.map(() => '?').join(',');
+                const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...keys).all();
+                confRes.results.forEach(r => config[r.key] = r.value);
+
+                // 1. 刷新管理员 Token (使用 'outlook' 前缀)
+                if (config.outlook_client_id && config.outlook_refresh_token && config.mail_to) {
+                    await sendOutlookMail(db, config, 'outlook', 'Outlook Admin Token Keep-Alive', `
+                        <h3>管理员 Token 保活成功</h3>
+                        <p>时间：${new Date().toLocaleString()}</p>
+                    `);
+                }
+
+                // 2. 刷新客户通知 Token (使用 'customer_outlook' 前缀)
+                // 只有当后台开启了客户通知且配置了独立信息时，才执行此步
+                if (config.customer_outlook_active === '1' && config.customer_outlook_client_id && config.customer_outlook_refresh_token) {
+                    await sendOutlookMail(db, config, 'customer_outlook', 'Outlook Customer Token Keep-Alive', `
+                         <h3>客户通知 Token 保活成功</h3>
+                         <p>时间：${new Date().toLocaleString()}</p>
+                    `);
+                }
+
+                return jsonRes({ success: true, msg: 'Keep-alive tasks executed' });
+            } catch(e) {
+                return jsonRes({ error: e.message }, 500);
+            }
+        }
+        // ===========================
         // --- 公开 API (Shop) ---
         // ===========================
 
@@ -1782,12 +1820,22 @@ ${cardContentForCustomer}
 // === 辅助函数：Outlook Graph API 发信 ===
 async function sendOutlookMail(config, subject, content) {
     try {
-        // 1. 使用 Refresh Token 获取 Access Token
+        // === 辅助函数：Outlook Graph API 发信 (支持自动刷新管理员和客户令牌) ===
+async function sendOutlookMail(db, config, keyPrefix, subject, content) {
+    try {
+        // 兼容处理：如果未传入 keyPrefix，默认尝试读取 outlook_ 前缀
+        const p = keyPrefix || 'outlook';
+        
+        const clientId = config[`${p}_client_id`] || config.outlook_client_id;
+        const clientSecret = config[`${p}_client_secret`] || config.outlook_client_secret || '';
+        const refreshToken = config[`${p}_refresh_token`] || config.outlook_refresh_token;
+
+        // 1. 获取 Access Token
         const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
         const params = new URLSearchParams();
-        params.append('client_id', config.outlook_client_id);
-        params.append('client_secret', config.outlook_client_secret || '');
-        params.append('refresh_token', config.outlook_refresh_token);
+        params.append('client_id', clientId);
+        params.append('client_secret', clientSecret);
+        params.append('refresh_token', refreshToken);
         params.append('grant_type', 'refresh_token');
         params.append('scope', 'Mail.Send offline_access');
 
@@ -1795,36 +1843,44 @@ async function sendOutlookMail(config, subject, content) {
         const tokenData = await tokenRes.json();
 
         if (!tokenData.access_token) {
-            console.error('Outlook Auth Error:', tokenData);
+            console.error(`Outlook Auth Error (${p}):`, tokenData);
             return;
         }
 
-        // 2. 调用 Graph API 发信
-        const mailUrl = 'https://graph.microsoft.com/v1.0/me/sendMail';
-        const emailData = {
-            message: {
-                subject: subject,
-                body: {
-                    // 使用 HTML 格式以便换行符生效
-                    contentType: "Html",
-                    // 将 \n 替换为 <br>
-                    content: content.replace(/\n/g, '<br>')
-                },
-                toRecipients: [
-                    { emailAddress: { address: config.mail_to } }
-                ]
-            },
-            saveToSentItems: "false"
-        };
+        // 2. [核心] 自动更新 Refresh Token 到数据库
+        if (tokenData.refresh_token && tokenData.refresh_token !== refreshToken && db) {
+            try {
+                const dbKey = `${p}_refresh_token`;
+                await db.prepare(`
+                    INSERT INTO site_config (key, value) VALUES (?, ?) 
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                `).bind(dbKey, tokenData.refresh_token).run();
+                console.log(`Refreshed token for ${dbKey}`);
+            } catch (e) { console.error('DB Update Error:', e); }
+        }
 
+        // 3. 发送邮件
+        const mailUrl = 'https://graph.microsoft.com/v1.0/me/sendMail';
         await fetch(mailUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${tokenData.access_token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(emailData)
+            body: JSON.stringify({
+                message: {
+                    subject: subject,
+                    body: { contentType: "Html", content: content.replace(/\n/g, '<br>') },
+                    toRecipients: [{ emailAddress: { address: config.mail_to } }]
+                },
+                saveToSentItems: "false"
+            })
         });
+        
+    } catch (e) {
+        console.error('Outlook Send Error:', e);
+    }
+}
         
     } catch (e) {
         console.error('Outlook Send Error:', e);
