@@ -1153,8 +1153,82 @@ async function handleApi(request, env, url, ctx) {
             return jsonRes(notes);
         }
 
-        // --- 订单与支付 API (Shop) ---
-        
+        // ===========================
+        // --- 定时任务 API (Cron) ---
+        // ===========================
+        // [新增] Outlook Token 保活接口
+        if (path === '/api/cron/outlook') {
+            // 1. 读取配置 (同时读取管理员和客户的 Outlook 配置)
+            const keys = [
+                'outlook_active', 'outlook_client_id', 'outlook_client_secret', 'outlook_refresh_token',
+                'customer_outlook_active', 'customer_outlook_client_id', 'customer_outlook_client_secret', 'customer_outlook_refresh_token'
+            ];
+            // 动态构建占位符
+            const placeholders = keys.map(() => '?').join(',');
+            const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...keys).all();
+            
+            const config = {};
+            if (confRes && confRes.results) {
+                confRes.results.forEach(r => config[r.key] = r.value);
+            }
+
+            const logs = [];
+
+            // 定义刷新逻辑封装函数
+            const refreshTokenLogic = async (prefix) => {
+                const active = config[`${prefix}_active`];
+                const clientId = config[`${prefix}_client_id`];
+                const clientSecret = config[`${prefix}_client_secret`] || ''; // 部分应用可能无需 secret
+                const refreshToken = config[`${prefix}_refresh_token`];
+
+                // 如果未开启或缺少必要参数，直接跳过
+                if (active !== '1' || !clientId || !refreshToken) {
+                    logs.push(`[${prefix}] Skipped: Not active or missing config`);
+                    return;
+                }
+
+                try {
+                    const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+                    const params = new URLSearchParams();
+                    params.append('client_id', clientId);
+                    if (clientSecret) params.append('client_secret', clientSecret);
+                    params.append('refresh_token', refreshToken);
+                    params.append('grant_type', 'refresh_token');
+                    params.append('scope', 'Mail.Send offline_access');
+
+                    const tokenRes = await fetch(tokenUrl, { method: 'POST', body: params });
+                    const tokenData = await tokenRes.json();
+
+                    if (tokenData.refresh_token) {
+                        // 获取到新的 refresh_token，更新数据库
+                        const dbKey = `${prefix}_refresh_token`;
+                        await db.prepare(`
+                            INSERT INTO site_config (key, value) VALUES (?, ?) 
+                            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                        `).bind(dbKey, tokenData.refresh_token).run();
+                        
+                        logs.push(`[${prefix}] Success: Token refreshed and saved.`);
+                    } else if (tokenData.access_token) {
+                        // 某些情况下微软可能只返回 access_token 而不返回新的 refresh_token (此时旧的仍有效，但也算成功)
+                        logs.push(`[${prefix}] Success: Access Token retrieved (No new Refresh Token).`);
+                    } else {
+                        logs.push(`[${prefix}] Failed: ${tokenData.error_description || JSON.stringify(tokenData)}`);
+                    }
+                } catch (e) {
+                    logs.push(`[${prefix}] Error: ${e.message}`);
+                }
+            };
+
+            // 2. 并行执行刷新 (管理员 + 客户)
+            await Promise.all([
+                refreshTokenLogic('outlook'),
+                refreshTokenLogic('customer_outlook')
+            ]);
+
+            return jsonRes({ status: 'finished', logs });
+        }
+
+        // --- 订单与支付 API (Shop) ---   
         // [新增] 联系方式查单接口 (配合 orders.html)
         if (path === '/api/shop/orders/query' && method === 'POST') {
             const { contact, query_password } = await request.json();
