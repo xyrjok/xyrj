@@ -1475,6 +1475,12 @@ async function handleApi(request, env, url, ctx) {
              if (order.status >= 1) return jsonRes({ paid: true });
 
              if (order.payment_method === 'alipay_f2f') {
+             // [新增代码 START] 检查是否有缓存的二维码，有则直接返回，不再请求支付宝
+             const cachedQr = await db.prepare("SELECT value FROM site_config WHERE key=?").bind('qr_' + order.id).first();
+             if (cachedQr && cachedQr.value) {
+                 return jsonRes({ type: 'qrcode', qr_code: cachedQr.value, order_id: order.id, amount: order.total_amount });
+             }
+             // [新增代码 END]
                  const gateway = await db.prepare("SELECT config FROM pay_gateways WHERE type='alipay_f2f' AND active=1").first();
                  if(!gateway) return errRes('支付方式未配置');
                  const config = JSON.parse(gateway.config);
@@ -1501,9 +1507,14 @@ async function handleApi(request, env, url, ctx) {
                  const aliData = await aliRes.json();
 
                  if (aliData.alipay_trade_precreate_response?.code === '10000') {
+                     // [新增代码 START] 将获取到的二维码链接存入数据库
+                     const qrUrl = aliData.alipay_trade_precreate_response.qr_code;
+                     await db.prepare("INSERT INTO site_config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind('qr_' + order.id, qrUrl).run();
+                     // [新增代码 END]
+
                      return jsonRes({
                          type: 'qrcode',
-                         qr_code: aliData.alipay_trade_precreate_response.qr_code,
+                         qr_code: qrUrl, // 使用变量 qrUrl
                          order_id: order.id,
                          amount: order.total_amount
                      });
