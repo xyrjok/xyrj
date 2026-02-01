@@ -1004,44 +1004,6 @@ async function handleApi(request, env, url, ctx) {
             }
         }
         // ===========================
-        // --- [新增] 免密 Cron 接口 (GitHub Actions 专用) ---
-        // ===========================
-        if (path === '/api/cron/outlook') {
-            const config = {};
-            // 读取所有相关的配置项
-            const keys = [
-                'mail_to', 
-                'outlook_client_id', 'outlook_client_secret', 'outlook_refresh_token',
-                'customer_outlook_active', 'customer_outlook_client_id', 'customer_outlook_client_secret', 'customer_outlook_refresh_token'
-            ];
-            try {
-                const placeholders = keys.map(() => '?').join(',');
-                const confRes = await db.prepare(`SELECT key, value FROM site_config WHERE key IN (${placeholders})`).bind(...keys).all();
-                confRes.results.forEach(r => config[r.key] = r.value);
-
-                // 1. 刷新管理员 Token (使用 'outlook' 前缀)
-                if (config.outlook_client_id && config.outlook_refresh_token && config.mail_to) {
-                    await sendOutlookMail(db, config, 'outlook', 'Outlook Admin Token Keep-Alive', `
-                        <h3>管理员 Token 保活成功</h3>
-                        <p>时间：${new Date().toLocaleString()}</p>
-                    `);
-                }
-
-                // 2. 刷新客户通知 Token (使用 'customer_outlook' 前缀)
-                // 只有当后台开启了客户通知且配置了独立信息时，才执行此步
-                if (config.customer_outlook_active === '1' && config.customer_outlook_client_id && config.customer_outlook_refresh_token) {
-                    await sendOutlookMail(db, config, 'customer_outlook', 'Outlook Customer Token Keep-Alive', `
-                         <h3>客户通知 Token 保活成功</h3>
-                         <p>时间：${new Date().toLocaleString()}</p>
-                    `);
-                }
-
-                return jsonRes({ success: true, msg: 'Keep-alive tasks executed' });
-            } catch(e) {
-                return jsonRes({ error: e.message }, 500);
-            }
-        }
-        // ===========================
         // --- 公开 API (Shop) ---
         // ===========================
 
@@ -1714,7 +1676,7 @@ ${contentBody}
                         }));
                     }
                     if (systemConfig.outlook_active === '1' && systemConfig.outlook_client_id && systemConfig.outlook_refresh_token && systemConfig.mail_to) {
-                        notifications.push(sendOutlookMail(systemConfig, `新订单通知：${order.id}`, msgText));
+                        notifications.push(sendOutlookMail(db, systemConfig, 'outlook', `新订单通知：${order.id}`, msgText));
                     }
                     if (systemConfig.brevo_active === '1' && systemConfig.brevo_key && systemConfig.mail_to && systemConfig.brevo_sender) {
                         notifications.push(fetch("https://api.brevo.com/v3/smtp/email", {
@@ -1786,13 +1748,8 @@ ${cardContentForCustomer}
                             const c_refresh = systemConfig.customer_outlook_refresh_token;
 
                             if (c_active && c_client_id && c_refresh) {
-                                const customerOutlookConfig = { 
-                                    outlook_client_id: c_client_id, 
-                                    outlook_client_secret: c_secret, 
-                                    outlook_refresh_token: c_refresh, 
-                                    mail_to: customerEmail 
-                                };
-                                notifications.push(sendOutlookMail(customerOutlookConfig, customerEmailSubject, customerMailBody));
+                                // [修改] 直接传入 systemConfig，并指定前缀为 'customer_outlook'，确保能自动更新对应的 Token
+                                notifications.push(sendOutlookMail(db, systemConfig, 'customer_outlook', customerEmailSubject, customerMailBody));
                             }
                         }
                     } 
@@ -1817,15 +1774,13 @@ ${cardContentForCustomer}
     return errRes('API Not Found', 404);
 }
 
-// === 辅助函数：Outlook Graph API 发信 ===
-async function sendOutlookMail(config, subject, content) {
-    try {
-        // === 辅助函数：Outlook Graph API 发信 (支持自动刷新管理员和客户令牌) ===
+// === 辅助函数：Outlook Graph API 发信 (支持自动刷新管理员和客户令牌) ===
 async function sendOutlookMail(db, config, keyPrefix, subject, content) {
     try {
         // 兼容处理：如果未传入 keyPrefix，默认尝试读取 outlook_ 前缀
         const p = keyPrefix || 'outlook';
         
+        // 动态读取配置：根据前缀 (outlook 或 customer_outlook) 读取对应的 ID/Secret/Token
         const clientId = config[`${p}_client_id`] || config.outlook_client_id;
         const clientSecret = config[`${p}_client_secret`] || config.outlook_client_secret || '';
         const refreshToken = config[`${p}_refresh_token`] || config.outlook_refresh_token;
@@ -1848,15 +1803,21 @@ async function sendOutlookMail(db, config, keyPrefix, subject, content) {
         }
 
         // 2. [核心] 自动更新 Refresh Token 到数据库
+        // 只有当 db 存在，且返回了新的 refresh_token 时才执行
         if (tokenData.refresh_token && tokenData.refresh_token !== refreshToken && db) {
             try {
+                // 构造数据库的键名 (例如 outlook_refresh_token 或 customer_outlook_refresh_token)
                 const dbKey = `${p}_refresh_token`;
+                
                 await db.prepare(`
                     INSERT INTO site_config (key, value) VALUES (?, ?) 
                     ON CONFLICT(key) DO UPDATE SET value = excluded.value
                 `).bind(dbKey, tokenData.refresh_token).run();
-                console.log(`Refreshed token for ${dbKey}`);
-            } catch (e) { console.error('DB Update Error:', e); }
+                
+                console.log(`Refreshed token for ${dbKey} saved to DB.`);
+            } catch (e) { 
+                console.error('DB Update Error:', e); 
+            }
         }
 
         // 3. 发送邮件
@@ -1878,11 +1839,6 @@ async function sendOutlookMail(db, config, keyPrefix, subject, content) {
         });
         
     } catch (e) {
-        console.error('Outlook Send Error:', e);
-    }
-}
-        
-    } catch (e) {
-        console.error('Outlook Send Error:', e);
+        console.error(`Outlook Send Error (${keyPrefix}):`, e);
     }
 }
