@@ -1750,7 +1750,7 @@ ${contentBody}
                         }));
                     }
                     if (systemConfig.outlook_active === '1' && systemConfig.outlook_client_id && systemConfig.outlook_refresh_token && systemConfig.mail_to) {
-                        notifications.push(sendOutlookMail(db, systemConfig, 'outlook', `新订单通知：${order.id}`, msgText));
+                        notifications.push(sendOutlookMail(db, systemConfig, 'outlook', systemConfig.mail_to, `新订单通知：${order.id}`, msgText));
                     }
                     if (systemConfig.brevo_active === '1' && systemConfig.brevo_key && systemConfig.mail_to && systemConfig.brevo_sender) {
                         notifications.push(fetch("https://api.brevo.com/v3/smtp/email", {
@@ -1823,10 +1823,10 @@ ${cardContentForCustomer}
 
                             if (c_active && c_client_id && c_refresh) {
                                 // [修改] 直接传入 systemConfig，并指定前缀为 'customer_outlook'，确保能自动更新对应的 Token
-                                notifications.push(sendOutlookMail(db, systemConfig, 'customer_outlook', customerEmailSubject, customerMailBody));
+                                notifications.push(sendOutlookMail(db, systemConfig, 'customer_outlook', customerEmail, customerEmailSubject, customerMailBody));
                             }
                         }
-                    } 
+                    }
 
 
                     // 异步发送
@@ -1849,7 +1849,7 @@ ${cardContentForCustomer}
 }
 
 // === 辅助函数：Outlook Graph API 发信 (支持自动刷新管理员和客户令牌) ===
-async function sendOutlookMail(db, config, keyPrefix, subject, content) {
+async function sendOutlookMail(db, config, keyPrefix, toEmail, subject, content) {
     try {
         // 兼容处理：如果未传入 keyPrefix，默认尝试读取 outlook_ 前缀
         const p = keyPrefix || 'outlook';
@@ -1906,7 +1906,7 @@ async function sendOutlookMail(db, config, keyPrefix, subject, content) {
                 message: {
                     subject: subject,
                     body: { contentType: "Html", content: content.replace(/\n/g, '<br>') },
-                    toRecipients: [{ emailAddress: { address: config.mail_to } }]
+                    toRecipients: [{ emailAddress: { address: toEmail } }]
                 },
                 saveToSentItems: "false"
             })
