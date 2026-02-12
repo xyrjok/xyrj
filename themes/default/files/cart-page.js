@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             innerWrapperSelector: '.sidebar-inner'
         });
     }
+    loadCartGateways();
 });
 
 /**
@@ -435,4 +436,26 @@ window.handleCheckout = async function() {
         alert('结算失败: ' + e.message);
         btns.forEach(b => { b.disabled = false; b.innerText = '立即结算'; });
     }
+}
+async function loadCartGateways() {
+    try {
+        const res = await fetch('/api/shop/gateways');
+        const list = await res.json();
+        const containers = ['cart-payment-list-pc', 'cart-payment-list-mobile'];
+        if (!list || list.length === 0) return;
+        
+        cartPaymentMethod = list[0].type;
+        const html = list.map((g, index) => {
+            const activeClass = index === 0 ? 'active' : '';
+            let iconHtml = '<i class="fas fa-credit-card"></i>';
+            if (g.type.includes('alipay')) iconHtml = '<i class="fab fa-alipay" style="color:#1678ff;"></i>';
+            else if (g.type.includes('wxpay')) iconHtml = '<i class="fab fa-weixin" style="color:#09bb07;"></i>';
+            else if (g.type.includes('usdt')) iconHtml = '<span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>';
+            return `<div class="payment-option ${activeClass}" data-method="${g.type}" onclick="selectCartPayment('${g.type}', this)">
+                        ${iconHtml}<div class="payment-check-mark"><i class="fas fa-check"></i></div>
+                    </div>`;
+        }).join('');
+
+        containers.forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = html; });
+    } catch(e) {}
 }
