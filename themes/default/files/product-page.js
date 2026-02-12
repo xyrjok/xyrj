@@ -221,20 +221,8 @@ function renderRightSidebar(product) {
 
         <div class="mb-4">
             <div class="fw-bold mb-2 small text-muted">支付方式</div>
-            <div class="d-flex flex-wrap">
-                <div class="payment-option active" onclick="selectPayment('alipay_f2f', this)">
-                    <i class="fab fa-alipay" style="color:#1678ff;"></i>
-                    <div class="payment-check-mark"><i class="fas fa-check"></i></div>
+            <div class="d-flex flex-wrap" id="payment-method-list">
                 </div>
-                <div class="payment-option" onclick="selectPayment('wxpay', this)">
-                    <i class="fab fa-weixin" style="color:#09bb07;"></i>
-                    <div class="payment-check-mark"><i class="fas fa-check"></i></div>
-                </div>
-                <div class="payment-option" onclick="selectPayment('usdt', this)">
-                    <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
-                    <div class="payment-check-mark"><i class="fas fa-check"></i></div>
-                </div>
-            </div>
         </div>
 
         <div class="d-flex gap-2 align-items-center">
@@ -255,6 +243,7 @@ function renderRightSidebar(product) {
     $('#detail-right-content').html(rightHtml);
     initStickySidebar();
     initPageQrcode();
+    loadPaymentGateways();
 
     // 回显缓存信息
     const cachedContact = localStorage.getItem('userContact');
@@ -887,4 +876,25 @@ function initStickySidebar() {
     };
     setTimeout(checkSidebar, 500);
     window.addEventListener('resize', checkSidebar);
+}
+function loadPaymentGateways() {
+    $.ajax({
+        url: '/api/shop/gateways',
+        method: 'GET',
+        success: function(list) {
+            const container = $('#payment-method-list');
+            if (!list || list.length === 0) { container.html('<small class="text-muted">暂无</small>'); return; }
+            let html = '';
+            paymentMethod = list[0].type;
+            list.forEach((g, index) => {
+                const activeClass = index === 0 ? 'active' : '';
+                let iconHtml = '<i class="fas fa-credit-card"></i>';
+                if (g.type.includes('alipay')) iconHtml = '<i class="fab fa-alipay" style="color:#1678ff;"></i>';
+                else if (g.type.includes('wxpay')) iconHtml = '<i class="fab fa-weixin" style="color:#09bb07;"></i>';
+                else if (g.type.includes('usdt')) iconHtml = '<span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>';
+                html += `<div class="payment-option ${activeClass}" onclick="selectPayment('${g.type}', this)">${iconHtml}<div class="payment-check-mark"><i class="fas fa-check"></i></div></div>`;
+            });
+            container.html(html);
+        }
+    });
 }
