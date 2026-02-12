@@ -1012,7 +1012,15 @@ async function handleApi(request, env, url, ctx) {
             const config = {}; res.results.forEach(r => config[r.key] = r.value);
             return jsonRes(config);
         }
-
+        // ====== [开始] 新增代码：获取启用的支付方式 ======
+        if (path === '/api/shop/gateways') {
+            // 获取所有 active=1 的支付网关
+            const { results } = await db.prepare("SELECT name, type, config FROM pay_gateways WHERE active = 1").all();
+            // 过滤敏感信息，仅返回类型和名称
+            const gateways = results.map(g => ({ name: g.name, type: g.type }));
+            return jsonRes(gateways);
+        }
+        // ====== [结束] 新增代码 ======
         // [新增] 获取所有分类 (公开)
         if (path === '/api/shop/categories') {
             const { results } = await db.prepare("SELECT * FROM categories ORDER BY sort DESC, id DESC").all();
