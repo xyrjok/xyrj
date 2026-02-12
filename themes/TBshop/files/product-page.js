@@ -206,19 +206,7 @@ function renderProductDetail(p) {
                         <div class="mb-4 d-flex align-items-center flex-wrap">
                             <span class="text-secondary small me-3 text-nowrap">支付方式：</span>
                             <div class="d-flex align-items-center flex-wrap" id="payment-method-list">
-                                <div class="payment-option active" onclick="selectPayment('alipay_f2f', this)">
-                                    <i class="fab fa-alipay" style="color:#1678ff;"></i>
-                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
-                                </div>
-                                <div class="payment-option" onclick="selectPayment('wxpay', this)">
-                                    <i class="fab fa-weixin" style="color:#09bb07;"></i>
-                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
-                                </div>
-                                <div class="payment-option" onclick="selectPayment('usdt', this)">
-                                    <span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>
-                                    <div class="payment-check-mark"><i class="fa fa-check"></i></div>
-                                </div>
-                                <small class="text-muted ms-2" style="font-size:12px;"></small>
+                                <span class="spinner-border spinner-border-sm text-secondary"></span>
                             </div>
                         </div>
 
@@ -272,6 +260,7 @@ function renderProductDetail(p) {
     }
     // 初始化二维码
     initPageQrcode();
+    loadPaymentGateways();
     // 侧边栏推荐
     if (typeof checkSidebarStatus === 'function') setTimeout(checkSidebarStatus, 200);
     
@@ -1050,4 +1039,28 @@ function manualChangeQty(el) {
     quantity = val;
     el.value = val;
     updateRealTimePrice();
+}
+async function loadPaymentGateways() {
+    try {
+        const res = await fetch('/api/shop/gateways');
+        const list = await res.json();
+        const container = document.getElementById('payment-method-list');
+        if(!container) return;
+        if (!list || list.length === 0) { container.innerHTML = '<small class="text-muted">暂无支付方式</small>'; return; }
+        
+        let html = '';
+        paymentMethod = list[0].type; // 默认选中第一个
+        list.forEach((g, index) => {
+            const activeClass = index === 0 ? 'active' : '';
+            let iconHtml = '<i class="fas fa-credit-card"></i>';
+            if (g.type.includes('alipay')) iconHtml = '<i class="fab fa-alipay" style="color:#1678ff;"></i>';
+            else if (g.type.includes('wxpay')) iconHtml = '<i class="fab fa-weixin" style="color:#09bb07;"></i>';
+            else if (g.type.includes('usdt')) iconHtml = '<span style="font-size:12px; font-weight:bold; color:#26a17b;">USDT</span>';
+            
+            html += `<div class="payment-option ${activeClass}" onclick="selectPayment('${g.type}', this)" title="${g.name}">
+                        ${iconHtml}<div class="payment-check-mark"><i class="fa fa-check"></i></div>
+                     </div>`;
+        });
+        container.innerHTML = html;
+    } catch (e) { console.error(e); }
 }
