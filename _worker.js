@@ -1009,8 +1009,24 @@ async function handleApi(request, env, url, ctx) {
 
         if (path === '/api/shop/config') {
             const res = await db.prepare("SELECT * FROM site_config").all();
-            const config = {}; res.results.forEach(r => config[r.key] = r.value);
-            return jsonRes(config);
+            const allConfig = {}; 
+            if (res.results) res.results.forEach(r => allConfig[r.key] = r.value);
+
+            // 【安全修复】白名单机制：只允许返回这些字段，过滤掉 token/secret 等敏感信息
+            const publicKeys = [
+                'site_name', 'site_logo', 'show_site_name', 'show_site_logo', 
+                'theme', 'announce', 'contact_info', 'site_description',
+                'tg_active', 'outlook_active' 
+            ];
+
+            const safeConfig = {};
+            publicKeys.forEach(key => {
+                if (allConfig[key] !== undefined) {
+                    safeConfig[key] = allConfig[key];
+                }
+            });
+
+            return jsonRes(safeConfig);
         }
         // ====== [开始] 新增代码：获取启用的支付方式 ======
         if (path === '/api/shop/gateways') {
